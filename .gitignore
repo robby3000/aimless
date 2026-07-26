@@ -1,10 +1,46 @@
-# There should be no dependencies. If this directory appears, something
-# has been added that shouldn't have been - see docs/roadmap.md A2.
-node_modules/
+# ---------------------------------------------------------------------
+# Nothing in this repo should ever contain personal data.
+#
+# Aimless stores walks in the browser (IndexedDB), never on disk, and
+# exports download to ~/Downloads by default - they do not touch this
+# folder. The rules below are belt-and-braces in case one is ever moved
+# or saved here by hand.
+# ---------------------------------------------------------------------
 
-# Exported walks contain your photographs and coordinates.
+# Exported walks: these contain base64 photographs AND exact GPS
+# coordinates. The single most sensitive thing this project can produce.
 exports/
 *.aimless.html
+*export*.html
+*export*.json
+walk-*.html
+walk-*.json
+*.gpx
+*.geojson
+
+# Photographs and stray screenshots. The PWA's own icons are the only
+# images that belong in git, so they are re-included below.
+*.jpg
+*.jpeg
+*.heic
+*.heif
+*.webp
+*.png
+!public/icons/**
+
+# Secrets. Phase 2 adds an AI key - it lives in the environment, never here.
+.env
+.env.*
+!.env.example
+
+# Local databases, should any appear
+*.db
+*.sqlite
+*.sqlite3
+
+# There should be no dependencies at all. If this directory appears,
+# something has been added that shouldn't have been - see docs/roadmap.md A2.
+node_modules/
 
 .DS_Store
 *.log
