@@ -1,0 +1,10 @@
+# There should be no dependencies. If this directory appears, something
+# has been added that shouldn't have been - see docs/roadmap.md A2.
+node_modules/
+
+# Exported walks contain your photographs and coordinates.
+exports/
+*.aimless.html
+
+.DS_Store
+*.log

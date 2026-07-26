@@ -1,0 +1,46 @@
+initialize:
+  - run: |
+      # Nothing to install. Aimless has zero dependencies by design
+      # (see docs/roadmap.md A2) - no framework, no bundler, no CDN.
+      # package.json exists only to declare "type": "module" and the
+      # test script. Do not add dependencies without flagging it.
+      node --version
+      test -f package.json && cat package.json || echo "package.json not created yet (step W1)"
+
+maintenance:
+  - run: |
+      # No dependency install step. Confirm the test runner still works.
+      node --version
+
+knowledge:
+  - name: test
+    contents: |
+      # Node's built-in test runner over the pure logic in public/lib/.
+      # No node_modules, no Vitest. Matches the sibling pomo-day-sync repo.
+      npm test
+  - name: startup
+    contents: |
+      # Static files - serve public/ over localhost, which is a secure
+      # context so geolocation works. Phone testing needs real HTTPS:
+      # use the Tailscale *.ts.net certificate pattern from pomo-day-sync.
+      # See docs/roadmap.md section 5.
+      cd public && python3 -m http.server 8080
+  - name: simulator
+    contents: |
+      # You cannot debug a GPS app at a desk without this.
+      # Drives the walk logic from a synthetic track.
+      # http://localhost:8080/sim.html
+  - name: plan
+    contents: |
+      # Build plan: docs/roadmap.md - six steps, roughly 15 hours total.
+      # Read docs/deck.md before step W3 (the card content, and the
+      # largest single time sink - it is writing, not coding).
+      #
+      # Do NOT build Phase 2 (AI cards) until five real walks are logged
+      # in docs/verdict.md. That constraint is the reason this repo exists.
+  - name: scope
+    contents: |
+      # This is a weekend build. Before adding anything, check
+      # docs/blueprint.md section 8 (explicitly out of scope) and
+      # docs/roadmap.md section 6 (the temptations table).
+      # No map. No accounts. No server DB. No sync. No dependencies.
