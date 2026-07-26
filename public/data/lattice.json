@@ -1,0 +1,36 @@
+{
+  "slug": "lattice",
+  "name": "The Lattice",
+  "epithet": "the grid that does not fit",
+  "lore": "The lattice does not care how the streets are arranged. It has its own grid and it is imposing it.",
+  "directives": [
+    "Record",
+    "Count",
+    "Photograph",
+    "Measure by eye",
+    "Locate",
+    "Log",
+    "Verify",
+    "Survey",
+    "Enumerate",
+    "Establish",
+    "Align yourself with",
+    "Cross"
+  ],
+  "targets": [
+    "every straight line visible from here",
+    "the point where two systems disagree",
+    "an angle that should not exist",
+    "the oldest surface in view",
+    "where a plan collided with an older plan",
+    "all the ways out of this spot",
+    "the nearest right angle that is wrong",
+    "a repeated element, and its exceptions",
+    "the seam between two materials",
+    "everything here that was installed rather than built",
+    "the number of decisions visible from where you stand",
+    "a grid that has been overruled",
+    "the boundary between two authorities",
+    "whatever is numbered"
+  ]
+}

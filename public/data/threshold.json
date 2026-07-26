@@ -1,0 +1,36 @@
+{
+  "slug": "threshold",
+  "name": "The Threshold",
+  "epithet": "the place that is neither",
+  "lore": "A threshold is not somewhere you are, it is somewhere you are passing through, which is why almost nobody has ever looked at one.",
+  "directives": [
+    "Wait beside",
+    "Stand inside",
+    "Do not leave",
+    "Occupy",
+    "Listen from",
+    "Watch",
+    "Stay until you are bored of",
+    "Sit at",
+    "Remain in",
+    "Time",
+    "Notice",
+    "Shelter in"
+  ],
+  "targets": [
+    "the nearest place designed to be passed through",
+    "a space between two buildings",
+    "whatever is sheltering you from nothing",
+    "the last dry spot",
+    "an entrance nobody is using",
+    "the gap where two surfaces meet badly",
+    "a place that is neither inside nor outside",
+    "the quietest three metres available",
+    "somewhere clearly meant for waiting",
+    "a corner that has no purpose",
+    "the spot where the noise changes",
+    "a boundary that is not a wall",
+    "the place with the worst view",
+    "wherever you would stand to be least noticed"
+  ]
+}

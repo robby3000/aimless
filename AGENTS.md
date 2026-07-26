@@ -1,26 +1,50 @@
 # Aimless — Agent Notes
 
-**Nothing is built yet. This repo currently contains documentation only.**
+A walking app with no map. Press Go, follow a compass arrow to five random points, get a card
+at each one, take a photo if you want, end up with a drawing of the shape you walked and a
+self-contained HTML file you can keep. Zero dependencies, zero build step, zero server.
 
 ## Start here
 
 1. [`docs/roadmap.md`](./docs/roadmap.md) — the build plan. Executive summary, 12 decisions, six
    steps. **It is short on purpose.**
 2. [`docs/blueprint.md`](./docs/blueprint.md) — what and why.
-3. [`docs/deck.md`](./docs/deck.md) — the card content. Binding. Read before step W3.
+3. [`docs/deck.md`](./docs/deck.md) — the card content. Binding. Read before touching `deck.js`.
 4. [`docs/verdict.md`](./docs/verdict.md) — the template the human fills in after five real walks.
    Do not delete it and do not fill it in yourself.
 
 ## Commands
 
-To be confirmed as W1 lands. There is no build step and no `node_modules`.
+No build step, no `node_modules`.
 
-- Tests: `npm test` → `node --test test/`
+- Tests: `npm test` → `node --test test/**/*.test.js`
 - Dev: serve `public/` over `http://localhost` (a secure context, so geolocation works).
-  `python3 -m http.server` from `public/` is sufficient.
+  `cd public && python3 -m http.server 8080` is sufficient for desktop.
 - Phone testing: needs HTTPS. Use the Tailscale + `*.ts.net` certificate pattern already set up for
   the sibling `pomo-day-sync` project.
+- Icons: `npm run icons` → `node scripts/make-icons.mjs` (uses `sips` on macOS).
 - Simulator: `public/sim.html` — drives the walk logic from a synthetic track. Use it constantly.
+
+## Repo shape
+
+```
+public/
+  index.html          # the app: inline CSS + UI JS, all screens
+  sim.html            # GPS simulator (roadmap A11)
+  manifest.json
+  sw.js               # precaches the shell for offline use
+  icons/              # generated PNGs (192, 512, 512-maskable)
+  lib/
+    geo.js  rng.js  walk.js  deck.js  store.js  export.js
+  data/
+    crow.json  threshold.json  lattice.json
+test/
+  geo.test.js  rng.test.js  walk.test.js  deck.test.js  proximity.test.js
+scripts/
+  make-icons.mjs
+docs/
+package.json          # no dependencies; "test": "node --test test/**/*.test.js"
+```
 
 ## Hard constraints
 

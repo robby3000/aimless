@@ -1,0 +1,36 @@
+{
+  "slug": "crow",
+  "name": "The Crow",
+  "epithet": "the appraising eye",
+  "lore": "The crow does not search; it appraises. It knows the difference between a thing that has been dropped and a thing that has been left.",
+  "directives": [
+    "Find",
+    "Appraise",
+    "Photograph",
+    "Count",
+    "Stand beside",
+    "Go back for",
+    "Ignore",
+    "Look under",
+    "Wait beside",
+    "Price",
+    "Judge",
+    "Take an interest in"
+  ],
+  "targets": [
+    "the brightest thing at ground level",
+    "something dropped rather than placed",
+    "the most recently disturbed surface here",
+    "a repair someone hoped you would not notice",
+    "the thing nobody else has taken",
+    "an arrangement made entirely by accident",
+    "whatever a bird would land on first",
+    "the shiniest object within twenty paces",
+    "something that has been moved and not put back",
+    "the smallest thing here that was once expensive",
+    "a thing that is pretending to be another thing",
+    "whatever is directly beneath your feet",
+    "the object here with the least dignity",
+    "something that has outlasted its purpose"
+  ]
+}

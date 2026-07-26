@@ -1,0 +1,174 @@
+// Walk export. Two formats:
+// 1. A self-contained HTML file with inline base64 images - the keepsake.
+// 2. A JSON file for backup and re-import.
+// Pure: takes data, returns strings. No DOM, no storage.
+
+import { unreachableRate } from './proximity.js';
+import { formatDistance } from './geo.js';
+
+/**
+ * Convert a blob to a base64 data URL.
+ */
+export function blobToDataURL(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
+/**
+ * Build a self-contained HTML document for a walk.
+ * @param {object} walk  The walk record from IndexedDB.
+ * @param {Array} photos Array of { stopSeq, blob } for this walk.
+ * @param {string} svgTrace  Pre-rendered SVG string of the trace.
+ */
+export async function buildHTMLExport(walk, photos, svgTrace) {
+  const photoMap = new Map();
+  for (const p of photos) photoMap.set(p.stopSeq, p);
+
+  const photoDataUrls = new Map();
+  for (const [seq, p] of photoMap) {
+    if (p.blob) {
+      const url = await blobToDataURL(p.blob);
+      photoDataUrls.set(seq, url);
+    }
+  }
+
+  const date = walk.started ? new Date(walk.started).toLocaleString() : 'Unknown date';
+  const unreachable = unreachableRate(walk.stops);
+  const reached = walk.stops.filter((s) => s.reachedAt).length;
+
+  const stopCards = walk.stops.map((s, i) => {
+    const photoUrl = photoDataUrls.get(s.seq);
+    const photoHtml = photoUrl
+      ? `<img src="${photoUrl}" style="max-width:100%;border-radius:8px;margin-top:8px;">`
+      : '';
+    const status = s.approached
+      ? '<span class="status approached">close as I can get</span>'
+      : s.reachedAt
+        ? '<span class="status reached">reached</span>'
+        : '<span class="status missed">not reached</span>';
+    return `<div class="stop">
+      <div class="stop-num">${i + 1}</div>
+      <div class="stop-body">
+        <div class="stop-meta">${status}</div>
+        <div class="card-text">${s.cardText || ''}</div>
+        ${photoHtml}
+      </div>
+    </div>`;
+  }).join('\n');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aimless — Walk ${walk.seed}</title>
+<style>
+  :root { --bg: #0a0a0a; --surface: #161616; --fg: #e8e8e8; --fg-dim: #888; --accent: #7ab8ff; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg); color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    line-height: 1.6; padding: 24px; max-width: 640px; margin: 0 auto;
+  }
+  h1 { font-size: 1.4rem; margin-bottom: 4px; }
+  .seed { font-family: monospace; color: var(--accent); font-size: 0.9rem; }
+  .date { color: var(--fg-dim); font-size: 0.9rem; margin-bottom: 16px; }
+  .summary { color: var(--fg-dim); font-size: 0.9rem; margin-bottom: 24px; }
+  .summary b { color: var(--fg); }
+  .trace { background: var(--surface); border-radius: 12px; padding: 16px; margin-bottom: 24px; text-align: center; }
+  .trace svg { max-width: 100%; height: auto; }
+  .stop {
+    display: flex; gap: 12px; margin-bottom: 20px;
+    border-bottom: 1px solid #222; padding-bottom: 16px;
+  }
+  .stop-num {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--accent); color: #0a0a0a;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 0.9rem; flex-shrink: 0;
+  }
+  .stop-body { flex: 1; }
+  .stop-meta { margin-bottom: 8px; }
+  .status { font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .status.reached { background: #2a4a2a; color: #8c8; }
+  .status.approached { background: #4a3a2a; color: #fc8; }
+  .status.missed { background: #4a2a2a; color: #c88; }
+  .card-text { font-size: 1.1rem; line-height: 1.6; }
+  footer { margin-top: 32px; color: var(--fg-dim); font-size: 0.8rem; text-align: center; }
+  @media print {
+    body { background: white; color: black; max-width: none; }
+    .trace { background: white; border: 1px solid #ccc; }
+    .stop { border-bottom: 1px solid #ddd; }
+    .stop-num { background: #333; color: white; }
+    .status.reached { background: #d4e8d4; color: #264; }
+    .status.approached { background: #f0e4d4; color: #642; }
+    .status.missed { background: #f0d4d4; color: #622; }
+    .seed { color: #448; }
+  }
+</style>
+</head>
+<body>
+  <h1>Aimless</h1>
+  <div class="seed">${walk.seed}</div>
+  <div class="date">${date}</div>
+  <div class="summary">
+    <b>${reached}</b> of ${walk.stops.length} stops reached.
+    ${unreachable.approached > 0 ? `<b>${unreachable.approached}</b> marked "close as I can get" (${Math.round(unreachable.rate * 100)}%).` : ''}
+    ${walk.gaveUp ? '<br>Walk ended early.' : ''}
+  </div>
+  <div class="trace">${svgTrace}</div>
+  ${stopCards}
+  <footer>Generated by Aimless. This file is self-contained — no network needed.</footer>
+</body>
+</html>`;
+}
+
+/**
+ * Build a JSON export of a walk and its photos.
+ * Photos are included as base64 data URLs.
+ */
+export async function buildJSONExport(walk, photos) {
+  const photoData = [];
+  for (const p of photos) {
+    if (p.blob) {
+      const url = await blobToDataURL(p.blob);
+      photoData.push({ stopSeq: p.stopSeq, dataUrl: url });
+    }
+  }
+  return JSON.stringify({ walk, photos: photoData }, null, 2);
+}
+
+/**
+ * Parse a JSON export back into a walk and photo blobs.
+ */
+export async function parseJSONExport(text) {
+  const data = JSON.parse(text);
+  const photos = [];
+  for (const p of data.photos || []) {
+    const blob = await dataURLToBlob(p.dataUrl);
+    photos.push({ stopSeq: p.stopSeq, blob });
+  }
+  return { walk: data.walk, photos };
+}
+
+/** Convert a data URL back to a blob. */
+export function dataURLToBlob(dataUrl) {
+  return fetch(dataUrl).then((r) => r.blob());
+}
+
+/**
+ * Trigger a download in the browser.
+ */
+export function downloadFile(filename, content, mimeType) {
+  const blob = content instanceof Blob ? content : new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}

@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aimless — GPS Simulator</title>
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --surface: #161616;
+      --surface-2: #1e1e1e;
+      --fg: #e8e8e8;
+      --fg-dim: #888;
+      --accent: #7ab8ff;
+      --danger: #ff6b6b;
+      --radius: 12px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+      font-size: 14px;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 1.3rem; margin-bottom: 8px; }
+    h2 { font-size: 1rem; margin: 16px 0 8px; color: var(--fg-dim); }
+    p { color: var(--fg-dim); margin-bottom: 12px; line-height: 1.5; }
+    .row { display: flex; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+    button {
+      background: var(--surface);
+      color: var(--fg);
+      border: 1px solid var(--surface-2);
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    button:active { background: var(--surface-2); }
+    button.primary { background: var(--accent); color: #0a0a0a; border-color: var(--accent); font-weight: 600; }
+    button.danger { border-color: var(--danger); color: var(--danger); }
+    label { display: flex; flex-direction: column; gap: 4px; font-size: 0.85rem; color: var(--fg-dim); }
+    input, select {
+      background: var(--surface);
+      color: var(--fg);
+      border: 1px solid var(--surface-2);
+      border-radius: 8px;
+      padding: 8px;
+      font-size: 0.9rem;
+      font-family: inherit;
+    }
+    .map {
+      background: var(--surface);
+      border: 1px solid var(--surface-2);
+      border-radius: var(--radius);
+      height: 300px;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+    .map svg { width: 100%; height: 100%; }
+    .log {
+      background: var(--surface);
+      border: 1px solid var(--surface-2);
+      border-radius: 8px;
+      padding: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+      font-family: 'SF Mono', Menlo, monospace;
+      font-size: 0.8rem;
+      line-height: 1.6;
+    }
+    .log div { color: var(--fg-dim); }
+    .log .arrival { color: var(--accent); }
+    .log .error { color: var(--danger); }
+    .stats { display: flex; gap: 16px; font-size: 0.85rem; color: var(--fg-dim); margin-bottom: 12px; }
+    .stats b { color: var(--fg); }
+    iframe { width: 100%; height: 600px; border: 1px solid var(--surface-2); border-radius: var(--radius); }
+  </style>
+</head>
+<body>
+  <h1>Aimless — GPS Simulator</h1>
+  <p>Drives the walk logic from a synthetic GPS track. The app runs in the iframe below;
+     this page injects fake geolocation fixes so you can test arrival, compass, and trace
+     without going outside.</p>
+
+  <div class="row">
+    <label>Origin lat <input id="sim-lat" value="55.8642" step="0.0001"></label>
+    <label>Origin lng <input id="sim-lng" value="-4.2518" step="0.0001"></label>
+    <label>Stops <select id="sim-stops"><option>3</option><option selected>5</option><option>7</option></select></label>
+    <label>Minutes <select id="sim-budget"><option>30</option><option selected>45</option><option>60</option></select></label>
+    <label>Voice <select id="sim-voice"><option value="crow">Crow</option><option value="threshold">Threshold</option><option value="lattice">Lattice</option></select></label>
+  </div>
+
+  <div class="row">
+    <button id="btn-start" class="primary">Start walk</button>
+    <button id="btn-step">Step forward 50m</button>
+    <button id="btn-arrive">Jump to next stop</button>
+    <button id="btn-spike">Inject GPS spike</button>
+    <button id="btn-end" class="danger">End walk</button>
+  </div>
+
+  <div class="stats">
+    <span>Fixes: <b id="stat-fixes">0</b></span>
+    <span>Distance to target: <b id="stat-dist">---</b></span>
+    <span>Stops reached: <b id="stat-reached">0</b></span>
+  </div>
+
+  <div class="map" id="map"></div>
+
+  <h2>App (simulated GPS)</h2>
+  <iframe id="app-frame" src="/index.html"></iframe>
+
+  <h2>Log</h2>
+  <div class="log" id="log"></div>
+
+  <script type="module">
+    import { planWalk, estimate, nextStopIndex } from '/lib/walk.js';
+    import { randomSeed } from '/lib/rng.js';
+    import { drawWalk } from '/lib/deck.js';
+    import { createTracker, reachStop } from '/lib/proximity.js';
+    import { haversine, bearing, destination, simplify, bounds } from '/lib/geo.js';
+
+    const log = document.getElementById('log');
+    const map = document.getElementById('map');
+    const appFrame = document.getElementById('app-frame');
+    const statFixes = document.getElementById('stat-fixes');
+    const statDist = document.getElementById('stat-dist');
+    const statReached = document.getElementById('stat-reached');
+
+    function logMsg(msg, cls = '') {
+      const div = document.createElement('div');
+      div.className = cls;
+      div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      log.appendChild(div);
+      log.scrollTop = log.scrollHeight;
+    }
+
+    // --- Simulated state ---
+    let sim = null;
+    // sim = { plan, tracker, pos, heading, fixes, trace, stops }
+
+    // --- Geolocation mock ---
+    // We override the app iframe's navigator.geolocation with a controllable one.
+    function setupGeolocationMock() {
+      const frame = appFrame.contentWindow;
+      const mockWatch = (success, error, opts) => {
+        sim.watchSuccess = success;
+        sim.watchError = error;
+        return 1;
+      };
+      const mockClearWatch = (id) => {};
+      const mockGetCurrent = (success, error, opts) => {
+        success({
+          coords: { latitude: sim.pos.lat, longitude: sim.pos.lng, accuracy: 10 },
+          timestamp: Date.now(),
+        });
+      };
+
+      // Inject into the iframe.
+      try {
+        Object.defineProperty(frame.navigator, 'geolocation', {
+          value: {
+            watchPosition: mockWatch,
+            clearWatch: mockClearWatch,
+            getCurrentPosition: mockGetCurrent,
+          },
+          configurable: true,
+        });
+      } catch (e) {
+        logMsg(`Failed to override geolocation: ${e.message}`, 'error');
+      }
+
+      // Also override device orientation for the compass.
+      try {
+        frame.addEventListener = frame.addEventListener.bind(frame);
+      } catch {}
+    }
+
+    function sendFix(lat, lng, accuracy = 10, age = 0) {
+      if (!sim || !sim.watchSuccess) return;
+      sim.fixes++;
+      sim.trace.push({ lat, lng, t: Date.now() });
+      sim.pos = { lat, lng };
+      statFixes.textContent = sim.fixes;
+
+      const fix = {
+        coords: { latitude: lat, longitude: lng, accuracy },
+        timestamp: Date.now() - age,
+      };
+      sim.watchSuccess(fix);
+    }
+
+    // --- Start ---
+    document.getElementById('btn-start').addEventListener('click', async () => {
+      const lat = parseFloat(document.getElementById('sim-lat').value);
+      const lng = parseFloat(document.getElementById('sim-lng').value);
+      const stops = parseInt(document.getElementById('sim-stops').value, 10);
+      const budgetMin = parseInt(document.getElementById('sim-budget').value, 10);
+      const voiceSlug = document.getElementById('sim-voice').value;
+      const seed = randomSeed();
+
+      const origin = { lat, lng };
+      const plan = planWalk({ origin, stops, budgetMin, seed });
+      const voice = await fetch(`/data/${voiceSlug}.json`).then(r => r.json());
+      const { cards } = drawWalk({ seed, voice, stops });
+      plan.stops = plan.stops.map((s, i) => ({ ...s, card: cards[i] }));
+
+      sim = {
+        plan, voice, tracker: createTracker(plan.stops),
+        pos: { ...origin }, heading: 0, fixes: 0, trace: [{ ...origin }],
+        watchSuccess: null, watchError: null,
+      };
+
+      setupGeolocationMock();
+      logMsg(`Walk started: seed=${seed}, ${stops} stops, voice=${voiceSlug}`);
+      logMsg(`Stops: ${plan.stops.map(s => `(${s.lat.toFixed(4)}, ${s.lng.toFixed(4)})`).join(' → ')}`);
+
+      // Trigger the Go button in the app iframe.
+      // The app will call getCurrentPosition (which returns our origin) and then watchPosition.
+      const frame = appFrame.contentWindow;
+      const goBtn = frame.document.getElementById('btn-go');
+      if (goBtn) {
+        // Sync settings.
+        frame.document.getElementById('setting-stops').value = String(stops);
+        frame.document.getElementById('setting-budget').value = String(budgetMin);
+        frame.document.getElementById('setting-voice').value = voiceSlug;
+        goBtn.click();
+      }
+
+      renderMap();
+      updateStats();
+    });
+
+    // --- Step forward ---
+    document.getElementById('btn-step').addEventListener('click', () => {
+      if (!sim) return;
+      const target = sim.plan.stops.find(s => !s.reachedAt);
+      if (!target) { logMsg('All stops reached.'); return; }
+
+      // Move 50m toward the target.
+      const brg = bearing(sim.pos, target);
+      const dist = haversine(sim.pos, target);
+      const step = Math.min(50, dist);
+      const next = destination(sim.pos, brg, step);
+      sendFix(next.lat, next.lng);
+
+      logMsg(`Step 50m toward stop ${target.seq} (brg ${Math.round(brg)}°, ${Math.round(dist)}m to go)`);
+
+      checkArrival();
+      renderMap();
+      updateStats();
+    });
+
+    // --- Jump to next stop ---
+    document.getElementById('btn-arrive').addEventListener('click', () => {
+      if (!sim) return;
+      const target = sim.plan.stops.find(s => !s.reachedAt);
+      if (!target) { logMsg('All stops reached.'); return; }
+
+      // Send two fixes at the target (for hysteresis).
+      sendFix(target.lat, target.lng);
+      sendFix(target.lat, target.lng);
+
+      logMsg(`Jumped to stop ${target.seq}`, 'arrival');
+      checkArrival();
+      renderMap();
+      updateStats();
+    });
+
+    // --- GPS spike ---
+    document.getElementById('btn-spike').addEventListener('click', () => {
+      if (!sim) return;
+      // Send a fix with terrible accuracy.
+      const target = sim.plan.stops.find(s => !s.reachedAt);
+      if (target) {
+        sendFix(target.lat, target.lng, 200);   // 200m accuracy — should be rejected
+        logMsg('Injected GPS spike (accuracy=200m)', 'error');
+      }
+    });
+
+    // --- End ---
+    document.getElementById('btn-end').addEventListener('click', () => {
+      if (!sim) return;
+      const frame = appFrame.contentWindow;
+      const btn = frame.document.getElementById('btn-give-up');
+      if (btn) btn.click();
+      logMsg('Walk ended.');
+      sim = null;
+      statDist.textContent = '---';
+      statReached.textContent = '0';
+      statFixes.textContent = '0';
+    });
+
+    // --- Arrival check ---
+    function checkArrival() {
+      if (!sim) return;
+      const fix = { lat: sim.pos.lat, lng: sim.pos.lng, accuracy: 10, timestamp: Date.now() };
+      const r = sim.tracker.update(fix, Date.now());
+      if (r.arrived) {
+        reachStop(r.arrived);
+        logMsg(`Arrived at stop ${r.arrived.seq}`, 'arrival');
+      }
+    }
+
+    // --- Stats ---
+    function updateStats() {
+      if (!sim) { return; }
+      const target = sim.plan.stops.find(s => !s.reachedAt);
+      if (target) {
+        const d = haversine(sim.pos, target);
+        statDist.textContent = `${Math.round(d)}m`;
+      } else {
+        statDist.textContent = 'done';
+      }
+      statReached.textContent = sim.plan.stops.filter(s => s.reachedAt).length;
+    }
+
+    // --- Map rendering ---
+    function renderMap() {
+      if (!sim) return;
+      const pts = [sim.plan.origin, ...sim.plan.stops];
+      const all = [...sim.trace, ...pts];
+      const b = bounds(all);
+      const w = 800, h = 300;
+      const rangeLat = (b.maxLat - b.minLat) || 0.001;
+      const rangeLng = (b.maxLng - b.minLng) || 0.001;
+      const scale = Math.min(w / rangeLng, h / rangeLat) * 0.85;
+      const cx = w / 2, cy = h / 2;
+      const midLat = (b.minLat + b.maxLat) / 2;
+      const midLng = (b.minLng + b.maxLng) / 2;
+      const project = (p) => ({
+        x: cx + (p.lng - midLng) * scale,
+        y: cy - (p.lat - midLat) * scale,
+      });
+
+      const tracePath = sim.trace.map((p, i) => {
+        const { x, y } = project(p);
+        return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(' ');
+
+      const planPath = pts.map((p, i) => {
+        const { x, y } = project(p);
+        return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(' ');
+
+      const markers = pts.map((p, i) => {
+        const { x, y } = project(p);
+        const reached = i > 0 && sim.plan.stops[i - 1].reachedAt;
+        return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${i === 0 ? 6 : 5}" fill="${i === 0 ? '#7ab8ff' : reached ? '#4a4' : '#e8e8e8'}"/>`;
+      }).join('');
+
+      const pos = project(sim.pos);
+      const posMarker = `<circle cx="${pos.x.toFixed(1)}" cy="${pos.y.toFixed(1)}" r="4" fill="#ff6b6b"/>`;
+
+      map.innerHTML = `<svg viewBox="0 0 ${w} ${h}">
+        <path d="${planPath}" fill="none" stroke="#333" stroke-width="1.5" stroke-dasharray="4,4"/>
+        <path d="${tracePath}" fill="none" stroke="#7ab8ff" stroke-width="2" stroke-linejoin="round"/>
+        ${markers}
+        ${posMarker}
+      </svg>`;
+    }
+
+    logMsg('Simulator ready. Set origin and click "Start walk".');
+  </script>
+</body>
+</html>

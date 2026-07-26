@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#0a0a0a">
+  <meta name="description" content="Go nowhere, on purpose. A walking app with no map.">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="/icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Aimless</title>
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --surface: #161616;
+      --surface-2: #1e1e1e;
+      --fg: #e8e8e8;
+      --fg-dim: #888;
+      --accent: #7ab8ff;
+      --accent-dim: #3a6a9a;
+      --danger: #ff6b6b;
+      --radius: 12px;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      overscroll-behavior: none;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      padding-top: var(--safe-top);
+      padding-bottom: var(--safe-bottom);
+    }
+
+    /* --- Screens --- */
+    .screen {
+      flex: 1;
+      display: none;
+      flex-direction: column;
+      padding: 20px;
+      max-width: 600px;
+      margin: 0 auto;
+      width: 100%;
+    }
+    .screen.active { display: flex; }
+
+    /* --- Header --- */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--surface);
+    }
+    .logo {
+      font-size: 1.1rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      color: var(--fg);
+    }
+    .logo span { color: var(--accent); }
+
+    /* --- Buttons --- */
+    button {
+      background: var(--surface);
+      color: var(--fg);
+      border: 1px solid var(--surface-2);
+      border-radius: var(--radius);
+      padding: 14px 20px;
+      font-size: 1rem;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    button:active { background: var(--surface-2); }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #0a0a0a;
+      border-color: var(--accent);
+      font-weight: 600;
+    }
+    .btn-primary:active { background: var(--accent-dim); }
+
+    .btn-danger {
+      border-color: var(--danger);
+      color: var(--danger);
+    }
+
+    .btn-full { width: 100%; }
+
+    /* --- Go screen --- */
+    #screen-go {
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      gap: 24px;
+    }
+    #screen-go .title {
+      font-size: 2.2rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    #screen-go .subtitle {
+      color: var(--fg-dim);
+      font-size: 1rem;
+      max-width: 320px;
+    }
+    #btn-go {
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      font-size: 1.4rem;
+      font-weight: 700;
+      border: 2px solid var(--accent);
+      background: var(--surface);
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #btn-go:active { background: var(--accent-dim); color: var(--fg); }
+
+    .settings-row {
+      display: flex;
+      gap: 12px;
+      width: 100%;
+      max-width: 320px;
+    }
+    .settings-row label {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.85rem;
+      color: var(--fg-dim);
+    }
+    .settings-row select {
+      background: var(--surface);
+      color: var(--fg);
+      border: 1px solid var(--surface-2);
+      border-radius: 8px;
+      padding: 8px;
+      font-size: 0.95rem;
+      font-family: inherit;
+    }
+
+    /* --- Walk screen --- */
+    #screen-walk { gap: 16px; }
+    .walk-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.9rem;
+      color: var(--fg-dim);
+    }
+    .compass {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 300px;
+    }
+    .compass-arrow {
+      font-size: 6rem;
+      line-height: 1;
+      color: var(--accent);
+      transition: transform 0.2s ease-out;
+      will-change: transform;
+    }
+    .compass-dist {
+      font-size: 2.5rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    .compass-bearing {
+      font-size: 0.9rem;
+      color: var(--fg-dim);
+    }
+    .stop-counter {
+      font-size: 0.85rem;
+      color: var(--fg-dim);
+      text-align: center;
+    }
+    .stop-counter b { color: var(--accent); font-size: 1.1rem; }
+
+    .card-display {
+      background: var(--surface);
+      border: 1px solid var(--surface-2);
+      border-radius: var(--radius);
+      padding: 24px;
+      font-size: 1.15rem;
+      line-height: 1.6;
+      display: none;
+    }
+    .card-display.visible { display: block; }
+    .card-display .voice {
+      font-size: 0.8rem;
+      color: var(--accent);
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .walk-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    /* --- Archive screen --- */
+    #screen-archive { gap: 12px; }
+    .archive-empty {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--fg-dim);
+      text-align: center;
+    }
+    .walk-item {
+      background: var(--surface);
+      border: 1px solid var(--surface-2);
+      border-radius: var(--radius);
+      padding: 16px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .walk-item:active { border-color: var(--accent-dim); }
+    .walk-item .meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      color: var(--fg-dim);
+    }
+    .walk-item .seed {
+      font-family: 'SF Mono', 'Menlo', monospace;
+      font-size: 0.8rem;
+      color: var(--accent);
+    }
+
+    /* --- Bottom nav --- */
+    nav {
+      display: flex;
+      border-top: 1px solid var(--surface);
+    }
+    nav button {
+      flex: 1;
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      padding: 12px 0;
+      font-size: 0.8rem;
+      color: var(--fg-dim);
+      border-top: 2px solid transparent;
+    }
+    nav button.active {
+      color: var(--accent);
+      border-top-color: var(--accent);
+    }
+
+    /* --- Status / error --- */
+    .status-msg {
+      text-align: center;
+      color: var(--fg-dim);
+      font-size: 0.9rem;
+      padding: 8px;
+    }
+    .error-msg {
+      color: var(--danger);
+      text-align: center;
+      font-size: 0.9rem;
+      padding: 8px;
+    }
+
+    /* --- Flash for arrival --- */
+    #arrival-flash {
+      position: fixed;
+      inset: 0;
+      background: var(--accent);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 100;
+      transition: opacity 0.3s;
+    }
+    #arrival-flash.flash { opacity: 0.3; }
+
+    /* --- Photo row --- */
+    .photo-row {
+      display: none;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+    }
+    .photo-row.visible { display: flex; }
+    .photo-thumb {
+      max-width: 120px;
+      max-height: 120px;
+      border-radius: 8px;
+      border: 1px solid var(--surface-2);
+      display: none;
+    }
+    .photo-thumb.visible { display: block; }
+
+    /* --- Done screen --- */
+    #screen-done { gap: 16px; }
+    .done-view {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .done-view h2 {
+      text-align: center;
+      font-size: 1.5rem;
+    }
+    .done-trace {
+      background: var(--surface);
+      border: 1px solid var(--surface-2);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      justify-content: center;
+    }
+    .done-trace svg {
+      max-width: 100%;
+      height: auto;
+    }
+    .done-summary {
+      font-size: 0.95rem;
+      color: var(--fg-dim);
+      line-height: 1.6;
+    }
+    .done-summary b { color: var(--fg); }
+
+    /* --- Detail screen --- */
+    #screen-detail { gap: 16px; }
+    #detail-content { display: flex; flex-direction: column; gap: 16px; }
+    .detail-header h2 { font-size: 1.3rem; margin-bottom: 4px; }
+    .detail-header .seed { font-family: 'SF Mono', Menlo, monospace; font-size: 0.85rem; color: var(--accent); }
+    .detail-header .date { color: var(--fg-dim); font-size: 0.85rem; }
+    .detail-summary { font-size: 0.9rem; color: var(--fg-dim); }
+    .detail-summary b { color: var(--fg); }
+    .detail-trace {
+      background: var(--surface); border: 1px solid var(--surface-2);
+      border-radius: var(--radius); padding: 16px; text-align: center;
+    }
+    .detail-trace svg { max-width: 100%; height: auto; }
+    .detail-stop {
+      background: var(--surface); border: 1px solid var(--surface-2);
+      border-radius: var(--radius); padding: 16px; margin-bottom: 12px;
+    }
+    .detail-stop .stop-head {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+      font-size: 0.8rem; color: var(--fg-dim);
+    }
+    .detail-stop .stop-num {
+      width: 24px; height: 24px; border-radius: 50%;
+      background: var(--accent); color: #0a0a0a;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.75rem;
+    }
+    .detail-stop .stop-status { text-transform: uppercase; letter-spacing: 0.05em; }
+    .detail-stop .card-text { font-size: 1.05rem; line-height: 1.6; }
+    .detail-stop img { max-width: 100%; border-radius: 8px; margin-top: 8px; }
+
+    @media print {
+      body { background: white; color: black; }
+      header, nav, .walk-actions, #screen-go, #screen-walk, #screen-archive { display: none !important; }
+      #screen-detail { display: flex !important; }
+      .detail-trace { background: white; border: 1px solid #ccc; }
+      .detail-stop { background: white; border: 1px solid #ddd; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">Aimless<span>.</span></div>
+  </header>
+
+  <!-- Go screen -->
+  <section id="screen-go" class="screen active">
+    <div class="title">Go nowhere,<br>on purpose.</div>
+    <div class="subtitle">Press go. Follow a compass arrow. Get a card at each stop. No map, no route, no account.</div>
+    <button id="btn-go">Go</button>
+    <div class="settings-row">
+      <label>
+        Stops
+        <select id="setting-stops">
+          <option value="3">3</option>
+          <option value="5" selected>5</option>
+          <option value="7">7</option>
+        </select>
+      </label>
+      <label>
+        Minutes
+        <select id="setting-budget">
+          <option value="30">30</option>
+          <option value="45" selected>45</option>
+          <option value="60">60</option>
+        </select>
+      </label>
+      <label>
+        Voice
+        <select id="setting-voice">
+          <option value="crow">The Crow</option>
+          <option value="threshold">The Threshold</option>
+          <option value="lattice">The Lattice</option>
+        </select>
+      </label>
+    </div>
+    <div id="go-status" class="status-msg"></div>
+  </section>
+
+  <!-- Walk screen -->
+  <section id="screen-walk" class="screen">
+    <div class="walk-header">
+      <span id="walk-seed" class="seed"></span>
+      <span id="walk-timer"></span>
+    </div>
+    <div id="compass-view" class="compass">
+      <div id="compass-arrow" class="compass-arrow">&#8593;</div>
+      <div id="compass-dist" class="compass-dist">---</div>
+      <div id="compass-bearing" class="compass-bearing">---&deg;</div>
+    </div>
+    <div id="stop-counter" class="stop-counter">Stop <b>1</b> of 5</div>
+    <div id="card-display" class="card-display">
+      <div id="card-voice" class="voice"></div>
+      <div id="card-text"></div>
+    </div>
+    <div id="photo-row" class="photo-row">
+      <button id="btn-photo" class="btn-full">&#128247; Photograph</button>
+      <input type="file" id="photo-input" accept="image/*" capture="environment" hidden>
+      <img id="photo-thumb" class="photo-thumb" alt="">
+    </div>
+    <div class="walk-actions">
+      <button id="btn-approach" class="btn-full">Close as I can get</button>
+      <button id="btn-continue" class="btn-primary btn-full" hidden>Continue</button>
+      <button id="btn-give-up" class="btn-danger btn-full">Give up</button>
+    </div>
+    <div id="walk-status" class="status-msg"></div>
+  </section>
+
+  <!-- Walk complete screen -->
+  <section id="screen-done" class="screen">
+    <div class="done-view">
+      <h2 id="done-title">Walk complete</h2>
+      <div id="done-trace" class="done-trace"></div>
+      <div id="done-summary" class="done-summary"></div>
+      <div class="walk-actions">
+        <button id="btn-done-archive" class="btn-primary btn-full">View in archive</button>
+        <button id="btn-done-go" class="btn-full">Done</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Archive screen -->
+  <section id="screen-archive" class="screen">
+    <div id="archive-list"></div>
+    <div id="archive-empty" class="archive-empty">No walks yet.<br>Press go.</div>
+  </section>
+
+  <!-- Walk detail screen -->
+  <section id="screen-detail" class="screen">
+    <div id="detail-content"></div>
+    <div class="walk-actions">
+      <button id="btn-detail-export-html" class="btn-primary btn-full">Export as HTML</button>
+      <button id="btn-detail-export-json" class="btn-full">Export as JSON</button>
+      <button id="btn-detail-back" class="btn-full">Back to archive</button>
+    </div>
+  </section>
+
+  <nav>
+    <button id="nav-go" class="active">Go</button>
+    <button id="nav-walk" disabled>Walk</button>
+    <button id="nav-archive">Archive</button>
+  </nav>
+
+  <div id="arrival-flash"></div>
+
+  <script type="module">
+    import { planWalk, estimate, nextStopIndex } from '/lib/walk.js';
+    import { randomSeed } from '/lib/rng.js';
+    import { drawWalk, pushRecent, recentKeys } from '/lib/deck.js';
+    import { openDB, getPrefs, setPrefs, put, get, all, byIndex, del } from '/lib/store.js';
+    import { createTracker, reachStop, unreachableRate } from '/lib/proximity.js';
+    import { haversine, bearing, simplify, formatDistance, compassPoint, bounds } from '/lib/geo.js';
+    import { buildHTMLExport, buildJSONExport, downloadFile, blobToDataURL } from '/lib/export.js';
+
+    // --- Screen navigation ---
+    const screens = {
+      go: document.getElementById('screen-go'),
+      walk: document.getElementById('screen-walk'),
+      archive: document.getElementById('screen-archive'),
+      done: document.getElementById('screen-done'),
+      detail: document.getElementById('screen-detail'),
+    };
+    const navButtons = {
+      go: document.getElementById('nav-go'),
+      walk: document.getElementById('nav-walk'),
+      archive: document.getElementById('nav-archive'),
+    };
+
+    function showScreen(name) {
+      for (const [key, el] of Object.entries(screens)) {
+        el.classList.toggle('active', key === name);
+      }
+      for (const [key, el] of Object.entries(navButtons)) {
+        el.classList.toggle('active', key === name);
+      }
+    }
+
+    navButtons.go.addEventListener('click', () => showScreen('go'));
+    navButtons.archive.addEventListener('click', () => { renderArchive(); showScreen('archive'); });
+
+    // --- Service worker registration ---
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch((err) => {
+        console.warn('SW registration failed:', err);
+      });
+    }
+
+    // --- DB ---
+    const dbPromise = openDB().catch((err) => {
+      console.error('IndexedDB open failed:', err);
+      return null;
+    });
+
+    // --- Settings ---
+    const elStops = document.getElementById('setting-stops');
+    const elBudget = document.getElementById('setting-budget');
+    const elVoice = document.getElementById('setting-voice');
+    const DEFAULT_PREFS = { stops: 5, budgetMin: 45, voice: 'crow' };
+
+    async function loadPrefs() {
+      const db = await dbPromise;
+      if (!db) return DEFAULT_PREFS;
+      const prefs = await getPrefs(db, DEFAULT_PREFS);
+      elStops.value = String(prefs.stops ?? DEFAULT_PREFS.stops);
+      elBudget.value = String(prefs.budgetMin ?? DEFAULT_PREFS.budgetMin);
+      elVoice.value = prefs.voice ?? DEFAULT_PREFS.voice;
+      return prefs;
+    }
+
+    async function savePrefs() {
+      const db = await dbPromise;
+      if (!db) return;
+      await setPrefs(db, {
+        stops: parseInt(elStops.value, 10),
+        budgetMin: parseInt(elBudget.value, 10),
+        voice: elVoice.value,
+      });
+    }
+
+    [elStops, elBudget, elVoice].forEach((el) => el.addEventListener('change', savePrefs));
+    loadPrefs();
+
+    // --- Voice loading ---
+    async function loadVoice(slug) {
+      const res = await fetch(`/data/${slug}.json`);
+      return res.json();
+    }
+
+    // --- DOM refs ---
+    const btnGo = document.getElementById('btn-go');
+    const goStatus = document.getElementById('go-status');
+    const compassArrow = document.getElementById('compass-arrow');
+    const compassDist = document.getElementById('compass-dist');
+    const compassBearing = document.getElementById('compass-bearing');
+    const stopCounter = document.getElementById('stop-counter');
+    const cardDisplay = document.getElementById('card-display');
+    const cardVoice = document.getElementById('card-voice');
+    const cardText = document.getElementById('card-text');
+    const btnApproach = document.getElementById('btn-approach');
+    const btnContinue = document.getElementById('btn-continue');
+    const btnGiveUp = document.getElementById('btn-give-up');
+    const walkStatus = document.getElementById('walk-status');
+    const walkSeed = document.getElementById('walk-seed');
+    const walkTimer = document.getElementById('walk-timer');
+    const arrivalFlash = document.getElementById('arrival-flash');
+    const photoRow = document.getElementById('photo-row');
+    const btnPhoto = document.getElementById('btn-photo');
+    const photoInput = document.getElementById('photo-input');
+    const photoThumb = document.getElementById('photo-thumb');
+    const compassView = document.getElementById('compass-view');
+
+    // --- Active walk state ---
+    let walk = null;
+    // walk = { plan, voice, tracker, trace, photos, watchId, wakeLock,
+    //          audioCtx, startTime, heading, timerInterval, recentBuffer }
+
+    // --- Audio (primed on Go tap per device note 2) ---
+    let audioCtx = null;
+    function primeAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    function playArrivalTone() {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.frequency.value = 880;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0, audioCtx.currentTime);
+      gain.gain.linearRampToValueAtTime(0.3, audioCtx.currentTime + 0.05);
+      gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.5);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.5);
+    }
+
+    function flashArrival() {
+      arrivalFlash.classList.add('flash');
+      setTimeout(() => arrivalFlash.classList.remove('flash'), 400);
+    }
+
+    function vibrateArrival() {
+      if (navigator.vibrate) navigator.vibrate(200);
+    }
+
+    // --- Wake lock (device note 4) ---
+    let wakeLock = null;
+    async function requestWakeLock() {
+      if (!navigator.wakeLock) return null;
+      try {
+        wakeLock = await navigator.wakeLock.request('screen');
+        return wakeLock;
+      } catch (err) {
+        console.warn('Wake lock failed:', err);
+        return null;
+      }
+    }
+
+    async function releaseWakeLock() {
+      if (wakeLock) {
+        try { await wakeLock.release(); } catch {}
+        wakeLock = null;
+      }
+    }
+
+    // Re-request on visibilitychange (device note 4).
+    document.addEventListener('visibilitychange', async () => {
+      if (document.visibilityState === 'visible' && walk) {
+        await requestWakeLock();
+      }
+    });
+
+    // --- Device orientation (compass heading) ---
+    let heading = 0;   // degrees clockwise from north
+
+    async function requestOrientationPermission() {
+      if (typeof DeviceOrientationEvent !== 'undefined' &&
+          typeof DeviceOrientationEvent.requestPermission === 'function') {
+        try {
+          const perm = await DeviceOrientationEvent.requestPermission();
+          if (perm !== 'granted') return false;
+        } catch {
+          return false;
+        }
+      }
+      window.addEventListener('deviceorientation', handleOrientation);
+      return true;
+    }
+
+    function handleOrientation(event) {
+      // iOS provides webkitCompassHeading (degrees clockwise from north).
+      if (typeof event.webkitCompassHeading === 'number') {
+        heading = event.webkitCompassHeading;
+      } else if (event.absolute && typeof event.alpha === 'number') {
+        // Android: alpha is counterclockwise from north.
+        heading = (360 - event.alpha) % 360;
+      }
+    }
+
+    // --- Geolocation ---
+    function getPosition(options = {}) {
+      return new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0,
+          ...options,
+        });
+      });
+    }
+
+    function startWatch(onFix, onError) {
+      return navigator.geolocation.watchPosition(onFix, onError, {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 1000,
+      });
+    }
+
+    function stopWatch(id) {
+      if (id != null) navigator.geolocation.clearWatch(id);
+    }
+
+    // --- Timer ---
+    function formatElapsed(ms) {
+      const s = Math.floor(ms / 1000);
+      const m = Math.floor(s / 60);
+      const sec = s % 60;
+      return `${m}:${String(sec).padStart(2, '0')}`;
+    }
+
+    // --- Go button ---
+    btnGo.addEventListener('click', async () => {
+      primeAudio();
+      goStatus.textContent = 'Getting your location...';
+      btnGo.disabled = true;
+      try {
+        const pos = await getPosition();
+        const origin = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        const seed = randomSeed();
+        const stops = parseInt(elStops.value, 10);
+        const budgetMin = parseInt(elBudget.value, 10);
+        const voiceSlug = elVoice.value;
+
+        const plan = planWalk({ origin, stops, budgetMin, seed });
+        const est = estimate(plan);
+        const voice = await loadVoice(voiceSlug);
+
+        // Load recent pairs for cross-walk dedup.
+        const db = await dbPromise;
+        let recentBuffer = [];
+        if (db) {
+          const prefs = await getPrefs(db);
+          recentBuffer = prefs.recentPairs || [];
+        }
+        const recent = recentKeys(recentBuffer);
+        const { cards, used } = drawWalk({ seed, voice, stops, recent });
+
+        // Attach cards to stops.
+        plan.stops = plan.stops.map((s, i) => ({ ...s, card: cards[i] }));
+
+        // Save updated recent buffer.
+        if (db) {
+          const newBuffer = pushRecent(recentBuffer, used);
+          await setPrefs(db, { recentPairs: newBuffer });
+        }
+
+        // Create tracker and start the walk.
+        const tracker = createTracker(plan.stops);
+        walk = {
+          plan, voice, tracker, est,
+          trace: [{ lat: origin.lat, lng: origin.lng, t: Date.now() }],
+          photos: {},
+          watchId: null,
+          startTime: Date.now(),
+          timerInterval: null,
+          recentBuffer,
+        };
+
+        // Request wake lock and orientation permission.
+        await requestWakeLock();
+        await requestOrientationPermission();
+
+        // Start GPS watch.
+        walk.watchId = startWatch((pos) => onFix(pos), (err) => {
+          walkStatus.textContent = `GPS: ${err.message}`;
+        });
+
+        // Start timer.
+        walk.timerInterval = setInterval(() => {
+          walkTimer.textContent = formatElapsed(Date.now() - walk.startTime);
+        }, 1000);
+
+        // Show the walk screen.
+        walkSeed.textContent = seed;
+        updateStopCounter();
+        compassDist.textContent = '---';
+        compassBearing.textContent = '---\u00b0';
+        hideCard();
+        navButtons.walk.disabled = false;
+        showScreen('walk');
+        goStatus.textContent = '';
+      } catch (err) {
+        goStatus.textContent = err.message || 'Failed to start.';
+      } finally {
+        btnGo.disabled = false;
+      }
+    });
+
+    // --- GPS fix handler ---
+    function onFix(pos) {
+      if (!walk) return;
+      const fix = {
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        accuracy: pos.coords.accuracy,
+        timestamp: pos.timestamp,
+      };
+
+      // Buffer trace point (every fix, simplified on save).
+      walk.trace.push({ lat: fix.lat, lng: fix.lng, t: fix.timestamp });
+
+      // Feed tracker.
+      const r = walk.tracker.update(fix, Date.now());
+
+      if (r.band === 'done') {
+        finishWalk();
+        return;
+      }
+
+      // Update compass.
+      if (r.distance != null) {
+        compassDist.textContent = formatDistance(r.distance);
+        compassBearing.textContent = `${Math.round(r.bearing)}\u00b0 ${compassPoint(r.bearing)}`;
+        // Arrow points relative to user's heading.
+        const relative = (r.bearing - heading + 360) % 360;
+        compassArrow.style.transform = `rotate(${relative}deg)`;
+      }
+
+      // Arrival detection.
+      if (r.arrived) {
+        arriveAtStop(r.target, false);
+      }
+    }
+
+    // --- Arrival ---
+    function arriveAtStop(stop, approached) {
+      reachStop(stop, { approached });
+      vibrateArrival();
+      playArrivalTone();
+      flashArrival();
+
+      // Show the card.
+      showCard(stop.card, walk.voice);
+
+      // Show photo row and continue button.
+      photoRow.classList.add('visible');
+      btnContinue.hidden = false;
+      btnApproach.hidden = true;
+
+      walkStatus.textContent = approached
+        ? 'Marked as close as you can get.'
+        : 'Arrived.';
+    }
+
+    function showCard(card, voice) {
+      cardVoice.textContent = `${voice.name} — ${voice.epithet}`;
+      cardText.textContent = card.text;
+      cardDisplay.classList.add('visible');
+    }
+
+    function hideCard() {
+      cardDisplay.classList.remove('visible');
+      photoRow.classList.remove('visible');
+      photoThumb.classList.remove('visible');
+      photoThumb.src = '';
+      btnContinue.hidden = true;
+      btnApproach.hidden = false;
+    }
+
+    function updateStopCounter() {
+      const idx = nextStopIndex(walk.plan.stops);
+      if (idx < 0) {
+        stopCounter.innerHTML = 'Walk complete';
+      } else {
+        stopCounter.innerHTML = `Stop <b>${idx + 1}</b> of ${walk.plan.stops.length}`;
+      }
+    }
+
+    // --- Continue button: advance to next stop ---
+    btnContinue.addEventListener('click', () => {
+      hideCard();
+      updateStopCounter();
+      // If all stops done, finish.
+      if (nextStopIndex(walk.plan.stops) < 0) {
+        finishWalk();
+      } else {
+        walkStatus.textContent = '';
+      }
+    });
+
+    // --- Close as I can get ---
+    btnApproach.addEventListener('click', () => {
+      if (!walk) return;
+      const target = walk.plan.stops.find((s) => !s.reachedAt);
+      if (!target) return;
+      arriveAtStop(target, true);
+    });
+
+    // --- Photo capture ---
+    btnPhoto.addEventListener('click', () => photoInput.click());
+
+    photoInput.addEventListener('change', async () => {
+      const file = photoInput.files[0];
+      if (!file) return;
+      const blob = await downscaleImage(file, 800);
+      walk.photos[walk.plan.stops.filter((s) => s.reachedAt).length - 1] = blob;
+      photoThumb.src = URL.createObjectURL(blob);
+      photoThumb.classList.add('visible');
+      photoInput.value = '';   // allow re-capture
+    });
+
+    function downscaleImage(file, maxDim) {
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > height && width > maxDim) {
+            height = (height * maxDim) / width;
+            width = maxDim;
+          } else if (height > maxDim) {
+            width = (width * maxDim) / height;
+            height = maxDim;
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob((blob) => resolve(blob), 'image/jpeg', 0.8);
+        };
+        img.src = URL.createObjectURL(file);
+      });
+    }
+
+    // --- Give up ---
+    btnGiveUp.addEventListener('click', () => {
+      if (!walk) return;
+      finishWalk(true);
+    });
+
+    // --- Finish walk ---
+    async function finishWalk(gaveUp = false) {
+      if (!walk) return;
+
+      // Tear down GPS watch (device note 6).
+      stopWatch(walk.watchId);
+      clearInterval(walk.timerInterval);
+      await releaseWakeLock();
+
+      // Simplify the trace.
+      const trace = simplify(walk.trace.map((p) => ({ lat: p.lat, lng: p.lng })), 8)
+        .map((p) => ({ lat: p.lat, lng: p.lng }));
+
+      // Build the walk record.
+      const id = `walk-${Date.now()}`;
+      const reached = walk.plan.stops.filter((s) => s.reachedAt).length;
+      const record = {
+        id,
+        seed: walk.plan.seed,
+        started: walk.startTime,
+        ended: Date.now(),
+        voice: walk.voice.slug,
+        budgetMin: walk.plan.budgetMin,
+        origin: walk.plan.origin,
+        stops: walk.plan.stops.map((s) => ({
+          seq: s.seq,
+          lat: s.lat,
+          lng: s.lng,
+          reachedAt: s.reachedAt,
+          approached: s.approached,
+          cardText: s.card?.text,
+          cardVoice: s.card?.voice,
+        })),
+        trace,
+        gaveUp,
+      };
+
+      // Save to IndexedDB.
+      const db = await dbPromise;
+      if (db) {
+        await put(db, 'walks', record);
+        // Save photos.
+        for (const [seq, blob] of Object.entries(walk.photos)) {
+          await put(db, 'photos', {
+            id: `${id}-photo-${seq}`,
+            walkId: id,
+            stopSeq: parseInt(seq, 10),
+            blob,
+            taken: Date.now(),
+          });
+        }
+      }
+
+      // Show the done screen.
+      const unreachable = unreachableRate(walk.plan.stops);
+      document.getElementById('done-title').textContent = gaveUp ? 'Walk ended' : 'Walk complete';
+      document.getElementById('done-trace').innerHTML = traceSVG(walk.plan, trace);
+      document.getElementById('done-summary').innerHTML = `
+        <b>${reached}</b> of ${walk.plan.stops.length} stops reached.
+        ${unreachable.approached > 0 ? `<b>${unreachable.approached}</b> marked "close as I can get" (${Math.round(unreachable.rate * 100)}%).` : ''}
+        <br>Walked ~${formatDistance(walk.est.walkedM)} in ${formatElapsed(Date.now() - walk.startTime)}.
+        <br>Seed: <span class="seed">${walk.plan.seed}</span>
+      `;
+
+      walk = null;
+      navButtons.walk.disabled = true;
+      showScreen('done');
+    }
+
+    // --- Trace SVG (abstract drawing) ---
+    function traceSVG(plan, trace) {
+      const pts = [plan.origin, ...plan.stops];
+      const all = [...trace, ...pts];
+      const b = bounds(all);
+      const pad = 0.0001;
+      const w = 300;
+      const h = 300;
+      const rangeLat = (b.maxLat - b.minLat) || 0.001;
+      const rangeLng = (b.maxLng - b.minLng) || 0.001;
+      const scale = Math.min(w / rangeLng, h / rangeLat) * 0.85;
+      const cx = w / 2;
+      const cy = h / 2;
+      const midLat = (b.minLat + b.maxLat) / 2;
+      const midLng = (b.minLng + b.maxLng) / 2;
+
+      const project = (p) => ({
+        x: cx + (p.lng - midLng) * scale,
+        y: cy - (p.lat - midLat) * scale,   // invert: north is up
+      });
+
+      // Trace path.
+      const tracePath = trace.map((p, i) => {
+        const { x, y } = project(p);
+        return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(' ');
+
+      // Stop markers.
+      const stopMarkers = pts.map((p, i) => {
+        const { x, y } = project(p);
+        const isOrigin = i === 0;
+        const r = isOrigin ? 5 : 4;
+        return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="${isOrigin ? '#7ab8ff' : '#e8e8e8'}" opacity="${isOrigin ? 1 : 0.7}"/>`;
+      }).join('');
+
+      // Lines between stops (the plan).
+      const planPath = pts.map((p, i) => {
+        const { x, y } = project(p);
+        return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(' ');
+
+      return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">
+        <path d="${planPath}" fill="none" stroke="#333" stroke-width="1" stroke-dasharray="3,3"/>
+        <path d="${tracePath}" fill="none" stroke="#7ab8ff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+        ${stopMarkers}
+      </svg>`;
+    }
+
+    // --- Done screen buttons ---
+    document.getElementById('btn-done-go').addEventListener('click', () => showScreen('go'));
+    document.getElementById('btn-done-archive').addEventListener('click', () => {
+      renderArchive();
+      showScreen('archive');
+    });
+
+    // --- Archive ---
+    async function renderArchive() {
+      const db = await dbPromise;
+      const list = document.getElementById('archive-list');
+      const empty = document.getElementById('archive-empty');
+      list.innerHTML = '';
+      if (!db) { empty.style.display = 'flex'; return; }
+      const walks = await all(db, 'walks');
+      if (walks.length === 0) {
+        empty.style.display = 'flex';
+        return;
+      }
+      empty.style.display = 'none';
+      walks.sort((a, b) => (b.started || 0) - (a.started || 0));
+      for (const w of walks) {
+        const item = document.createElement('div');
+        item.className = 'walk-item';
+        const date = w.started ? new Date(w.started).toLocaleDateString() : '?';
+        const reached = (w.stops || []).filter((s) => s.reachedAt).length;
+        const approached = (w.stops || []).filter((s) => s.approached).length;
+        const approachStr = approached > 0 ? ` (${approached} fudged)` : '';
+        item.innerHTML = `
+          <div class="meta">
+            <span>${date}</span>
+            <span>${reached}/${w.stops?.length || 0} reached${approachStr}</span>
+          </div>
+          <div class="seed">${w.seed || ''}</div>
+        `;
+        item.addEventListener('click', () => showWalkDetail(w.id));
+        list.appendChild(item);
+      }
+    }
+
+    // --- Walk detail ---
+    let currentDetailWalk = null;
+
+    async function showWalkDetail(walkId) {
+      const db = await dbPromise;
+      if (!db) return;
+      const walk = await get(db, 'walks', walkId);
+      if (!walk) return;
+      currentDetailWalk = walk;
+
+      // Load photos.
+      const photos = await byIndex(db, 'photos', 'walkId', walkId);
+
+      // Build the detail content.
+      const date = walk.started ? new Date(walk.started).toLocaleString() : '?';
+      const unreachable = unreachableRate(walk.stops);
+      const reached = walk.stops.filter((s) => s.reachedAt).length;
+
+      // Build trace SVG.
+      const trace = walk.trace || [];
+      const svg = traceSVG({ origin: walk.origin, stops: walk.stops }, trace);
+
+      // Build stop cards with photos.
+      const photoMap = new Map();
+      for (const p of photos) photoMap.set(p.stopSeq, p);
+
+      const stopHtml = walk.stops.map((s, i) => {
+        const photo = photoMap.get(s.seq);
+        const photoHtml = photo
+          ? `<img src="${URL.createObjectURL(photo.blob)}" alt="photo">`
+          : '';
+        const status = s.approached
+          ? '<span class="stop-status" style="color: #fc8;">close as I can get</span>'
+          : s.reachedAt
+            ? '<span class="stop-status" style="color: #8c8;">reached</span>'
+            : '<span class="stop-status" style="color: #c88;">not reached</span>';
+        return `<div class="detail-stop">
+          <div class="stop-head">
+            <div class="stop-num">${i + 1}</div>
+            ${status}
+          </div>
+          <div class="card-text">${s.cardText || ''}</div>
+          ${photoHtml}
+        </div>`;
+      }).join('');
+
+      document.getElementById('detail-content').innerHTML = `
+        <div class="detail-header">
+          <h2>Aimless</h2>
+          <div class="seed">${walk.seed}</div>
+          <div class="date">${date}</div>
+        </div>
+        <div class="detail-summary">
+          <b>${reached}</b> of ${walk.stops.length} stops reached.
+          ${unreachable.approached > 0 ? `<b>${unreachable.approached}</b> marked "close as I can get" (${Math.round(unreachable.rate * 100)}%).` : ''}
+          ${walk.gaveUp ? '<br>Walk ended early.' : ''}
+        </div>
+        <div class="detail-trace">${svg}</div>
+        ${stopHtml}
+      `;
+
+      showScreen('detail');
+    }
+
+    document.getElementById('btn-detail-back').addEventListener('click', () => {
+      renderArchive();
+      showScreen('archive');
+    });
+
+    document.getElementById('btn-detail-export-html').addEventListener('click', async () => {
+      if (!currentDetailWalk) return;
+      const db = await dbPromise;
+      const photos = await byIndex(db, 'photos', 'walkId', currentDetailWalk.id);
+      const trace = currentDetailWalk.trace || [];
+      const svg = traceSVG({ origin: currentDetailWalk.origin, stops: currentDetailWalk.stops }, trace);
+      const html = await buildHTMLExport(currentDetailWalk, photos, svg);
+      downloadFile(`aimless-${currentDetailWalk.seed}.html`, html, 'text/html');
+    });
+
+    document.getElementById('btn-detail-export-json').addEventListener('click', async () => {
+      if (!currentDetailWalk) return;
+      const db = await dbPromise;
+      const photos = await byIndex(db, 'photos', 'walkId', currentDetailWalk.id);
+      const json = await buildJSONExport(currentDetailWalk, photos);
+      downloadFile(`aimless-${currentDetailWalk.seed}.json`, json, 'application/json');
+    });
+
+    // --- Page unload: tear down watch and wake lock (device note 6) ---
+    window.addEventListener('beforeunload', () => {
+      if (walk) {
+        stopWatch(walk.watchId);
+        clearInterval(walk.timerInterval);
+        releaseWakeLock();
+      }
+    });
+
+    // --- Initial load ---
+    renderArchive();
+  </script>
+</body>
+</html>

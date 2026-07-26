@@ -1,0 +1,12 @@
+{
+  "name": "aimless",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Go nowhere, on purpose. A walking app with no map. Zero dependencies by design - see docs/roadmap.md A2.",
+  "scripts": {
+    "test": "node --test test/**/*.test.js",
+    "serve": "cd public && python3 -m http.server 8080",
+    "icons": "node scripts/make-icons.mjs"
+  }
+}
