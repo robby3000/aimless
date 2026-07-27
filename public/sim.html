@@ -120,17 +120,17 @@
   <div class="map" id="map"></div>
 
   <h2>App (simulated GPS)</h2>
-  <iframe id="app-frame" src="/index.html"></iframe>
+  <iframe id="app-frame" src="./index.html"></iframe>
 
   <h2>Log</h2>
   <div class="log" id="log"></div>
 
   <script type="module">
-    import { planWalk, estimate, nextStopIndex } from '/lib/walk.js';
-    import { randomSeed } from '/lib/rng.js';
-    import { drawWalk } from '/lib/deck.js';
-    import { createTracker, reachStop } from '/lib/proximity.js';
-    import { haversine, bearing, destination, simplify, bounds } from '/lib/geo.js';
+    import { planWalk, estimate, nextStopIndex } from './lib/walk.js';
+    import { randomSeed } from './lib/rng.js';
+    import { drawWalk } from './lib/deck.js';
+    import { createTracker, reachStop } from './lib/proximity.js';
+    import { haversine, bearing, destination, simplify, bounds } from './lib/geo.js';
 
     const log = document.getElementById('log');
     const map = document.getElementById('map');
@@ -238,7 +238,7 @@
 
       const origin = { lat, lng };
       const plan = planWalk({ origin, stops, budgetMin, seed });
-      const voice = await fetch(`/data/${voiceSlug}.json`).then(r => r.json());
+      const voice = await fetch(`./data/${voiceSlug}.json`).then(r => r.json());
       const { cards } = drawWalk({ seed, voice, stops });
       plan.stops = plan.stops.map((s, i) => ({ ...s, card: cards[i] }));
 

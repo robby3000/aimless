@@ -18,8 +18,14 @@ self-contained HTML file you can keep. Zero dependencies, zero build step, zero 
 No build step, no `node_modules`.
 
 - Tests: `npm test` → `node --test test/**/*.test.js`
+- Stamp the service worker cache name: `npm run stamp` — **required after any change under
+  `public/`**, or phones keep the old files. `npm run stamp:check` fails CI if you forget.
+  See [`docs/cache-busting.md`](./docs/cache-busting.md).
 - Dev: serve `public/` over `http://localhost` (a secure context, so geolocation works).
   `cd public && python3 -m http.server 8080` is sufficient for desktop.
+- Deploy: push to `main`. `.github/workflows/pages.yml` runs the tests and the stamp check,
+  then publishes `public/` to GitHub Pages. All paths in the app are relative, so it works at a
+  domain root or under a `/aimless/` project-site prefix.
 - Phone testing: needs HTTPS. Use the Tailscale + `*.ts.net` certificate pattern already set up for
   the sibling `pomo-day-sync` project.
 - Icons: `npm run icons` → `node scripts/make-icons.mjs` (uses `sips` on macOS).

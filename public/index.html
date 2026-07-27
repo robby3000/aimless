@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#0a0a0a">
   <meta name="description" content="Go nowhere, on purpose. A walking app with no map.">
-  <link rel="manifest" href="/manifest.json">
-  <link rel="icon" href="/icons/icon-192.png" type="image/png">
-  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" href="./icons/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Aimless</title>
@@ -496,13 +496,13 @@
   <div id="arrival-flash"></div>
 
   <script type="module">
-    import { planWalk, estimate, nextStopIndex } from '/lib/walk.js';
-    import { randomSeed } from '/lib/rng.js';
-    import { drawWalk, pushRecent, recentKeys } from '/lib/deck.js';
-    import { openDB, getPrefs, setPrefs, put, get, all, byIndex, del } from '/lib/store.js';
-    import { createTracker, reachStop, unreachableRate } from '/lib/proximity.js';
-    import { haversine, bearing, simplify, formatDistance, compassPoint, bounds, headingFromAlpha } from '/lib/geo.js';
-    import { buildHTMLExport, buildJSONExport, downloadFile, blobToDataURL } from '/lib/export.js';
+    import { planWalk, estimate, nextStopIndex } from './lib/walk.js';
+    import { randomSeed } from './lib/rng.js';
+    import { drawWalk, pushRecent, recentKeys } from './lib/deck.js';
+    import { openDB, getPrefs, setPrefs, put, get, all, byIndex, del } from './lib/store.js';
+    import { createTracker, reachStop, unreachableRate } from './lib/proximity.js';
+    import { haversine, bearing, simplify, formatDistance, compassPoint, bounds, headingFromAlpha } from './lib/geo.js';
+    import { buildHTMLExport, buildJSONExport, downloadFile, blobToDataURL } from './lib/export.js';
 
     // --- Screen navigation ---
     const screens = {
@@ -532,7 +532,7 @@
 
     // --- Service worker registration ---
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch((err) => {
+      navigator.serviceWorker.register('./sw.js').catch((err) => {
         console.warn('SW registration failed:', err);
       });
     }
@@ -574,7 +574,7 @@
 
     // --- Voice loading ---
     async function loadVoice(slug) {
-      const res = await fetch(`/data/${slug}.json`);
+      const res = await fetch(`./data/${slug}.json`);
       return res.json();
     }
 
@@ -673,9 +673,9 @@
     // without waiting for a new GPS fix.
     let lastBearing = null;
     let lastDistance = null;
-    // Debug: track which orientation event type is actually firing.
+    // Which orientation event won. 'abs' wins over the relative fallback
+    // in handleOrientation, so the source has to be tracked, not just used.
     let orientationSource = 'none';
-    let orientationEventCount = 0;
 
     // Screen rotation in degrees. alpha is reported relative to the device's
     // native orientation, so a rotated screen has to be corrected for.
@@ -693,9 +693,6 @@
       compassBearing.textContent = `${Math.round(bearing)}\u00b0 ${compassPoint(bearing)}`;
       const relative = (bearing - heading + 360) % 360;
       compassArrow.style.transform = `rotate(${relative}deg)`;
-      // Debug readout — tiny text below the bearing so we can see what's
-      // happening on the phone. Remove after compass is confirmed working.
-      compassBearing.textContent += `  [h=${Math.round(heading)}° src=${orientationSource}#${orientationEventCount}]`;
     }
 
     async function requestOrientationPermission() {
@@ -744,7 +741,6 @@
       if (typeof event.alpha === 'number') {
         heading = headingFromAlpha(event.alpha, screenAngle());
         orientationSource = 'abs';
-        orientationEventCount++;
         if (walk && lastBearing != null) renderCompass(lastBearing, lastDistance);
       }
     }
@@ -754,19 +750,16 @@
       if (typeof event.webkitCompassHeading === 'number') {
         heading = event.webkitCompassHeading;
         orientationSource = 'webkit';
-        orientationEventCount++;
       } else if (event.absolute && typeof event.alpha === 'number') {
         // Android deviceorientation with absolute=true: alpha is counterclockwise
         // from north, so invert to get clockwise compass heading.
         heading = headingFromAlpha(event.alpha, screenAngle());
         orientationSource = 'abs-true';
-        orientationEventCount++;
       } else if (typeof event.alpha === 'number' && orientationSource !== 'abs') {
         // Last resort: relative orientation. Better than nothing — the arrow
         // will at least move, even if it's not pointing at true north.
         heading = headingFromAlpha(event.alpha, screenAngle());
         orientationSource = 'rel';
-        orientationEventCount++;
       } else {
         return;   // no useful data
       }

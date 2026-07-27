@@ -2,25 +2,30 @@
 // A walking app must work with no signal - precache the shell, fall back to
 // cache for everything else. No CDN, no external resources (roadmap A2).
 
-const CACHE = 'aimless-v0.1.1';
+const CACHE = 'aimless-v0.1.0-1721aaab';
+
+// Resolved against the worker's own URL, so the app works at a domain root
+// or under a subpath (GitHub Pages project sites) with no changes.
+const ROOT = new URL('./', self.location).pathname;
 
 const PRECACHE = [
-  '/',
-  '/index.html',
-  '/sim.html',
-  '/manifest.json',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
-  '/icons/icon-512-maskable.png',
-  '/lib/geo.js',
-  '/lib/rng.js',
-  '/lib/walk.js',
-  '/lib/deck.js',
-  '/lib/store.js',
-  '/lib/export.js',
-  '/data/crow.json',
-  '/data/threshold.json',
-  '/data/lattice.json',
+  './',
+  './index.html',
+  './sim.html',
+  './manifest.json',
+  './icons/icon-192.png',
+  './icons/icon-512.png',
+  './icons/icon-512-maskable.png',
+  './lib/geo.js',
+  './lib/rng.js',
+  './lib/walk.js',
+  './lib/deck.js',
+  './lib/store.js',
+  './lib/proximity.js',
+  './lib/export.js',
+  './data/crow.json',
+  './data/threshold.json',
+  './data/lattice.json',
 ];
 
 self.addEventListener('install', (event) => {
@@ -54,7 +59,7 @@ self.addEventListener('fetch', (event) => {
   if (url.origin !== self.location.origin || event.request.method !== 'GET') return;
 
   // HTML and JSON: network-first so updates land, cache fallback offline.
-  if (url.pathname.endsWith('.html') || url.pathname === '/' || url.pathname.endsWith('.json')) {
+  if (url.pathname.endsWith('.html') || url.pathname === ROOT || url.pathname.endsWith('.json')) {
     event.respondWith(networkFirst(event.request));
     return;
   }

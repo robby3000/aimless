@@ -7,6 +7,8 @@
   "scripts": {
     "test": "node --test test/**/*.test.js",
     "serve": "cd public && python3 -m http.server 8080",
-    "icons": "node scripts/make-icons.mjs"
+    "icons": "node scripts/make-icons.mjs",
+    "stamp": "node scripts/stamp-sw.mjs",
+    "stamp:check": "node scripts/stamp-sw.mjs --check"
   }
 }
