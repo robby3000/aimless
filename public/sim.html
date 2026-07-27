@@ -204,9 +204,11 @@
     function sendOrientation(headingDeg) {
       if (!sim || !sim.orientationListeners) return;
       sim.heading = headingDeg;
-      // Build a deviceorientationabsolute-like event.
-      const absEvent = { alpha: headingDeg, beta: 0, gamma: 0, absolute: true };
-      const normEvent = { alpha: headingDeg, beta: 0, gamma: 0, absolute: true };
+      // Build a deviceorientationabsolute-like event. Real devices report
+      // alpha counter-clockwise from north, so emit that, not the heading.
+      const alpha = (360 - headingDeg) % 360;
+      const absEvent = { alpha, beta: 0, gamma: 0, absolute: true };
+      const normEvent = { alpha, beta: 0, gamma: 0, absolute: true };
       for (const fn of sim.orientationListeners.absolute) fn(absEvent);
       for (const fn of sim.orientationListeners.normal) fn(normEvent);
     }

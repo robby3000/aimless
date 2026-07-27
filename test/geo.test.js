@@ -10,6 +10,7 @@ import {
   bounds,
   formatDistance,
   compassPoint,
+  headingFromAlpha,
 } from '../public/lib/geo.js';
 
 const GLA = { lat: 55.8642, lng: -4.2518 };   // Glasgow
@@ -132,4 +133,40 @@ test('compassPoint returns correct cardinal', () => {
   assert.equal(compassPoint(180), 'S');
   assert.equal(compassPoint(270), 'W');
   assert.equal(compassPoint(45), 'NE');
+});
+
+test('headingFromAlpha inverts the counter-clockwise alpha', () => {
+  // Facing north, alpha is 0; facing east, alpha is 270.
+  assert.equal(headingFromAlpha(0), 0);
+  assert.equal(headingFromAlpha(270), 90);
+  assert.equal(headingFromAlpha(180), 180);
+  assert.equal(headingFromAlpha(90), 270);
+});
+
+test('headingFromAlpha adds the screen rotation angle', () => {
+  assert.equal(headingFromAlpha(0, 90), 90);
+  assert.equal(headingFromAlpha(270, 90), 180);
+  assert.equal(headingFromAlpha(0, 270), 270);
+});
+
+test('headingFromAlpha always returns [0, 360)', () => {
+  for (let a = 0; a < 360; a += 7) {
+    for (const angle of [0, 90, 180, 270]) {
+      const h = headingFromAlpha(a, angle);
+      assert.ok(h >= 0 && h < 360, `alpha=${a} angle=${angle} gave ${h}`);
+    }
+  }
+});
+
+test('arrow points at the target bearing regardless of heading', () => {
+  // The bug: the arrow was rendered at (bearing - alpha), which puts it at
+  // bearing + 2*heading in the world - correct only when facing north.
+  const target = 90;
+  for (let h = 0; h < 360; h += 15) {
+    const alpha = (360 - h) % 360;
+    const heading = headingFromAlpha(alpha);
+    const relative = (target - heading + 360) % 360;   // on-screen rotation
+    const world = (heading + relative) % 360;          // where it really points
+    assert.equal(Math.round(world), target, `heading ${h}`);
+  }
 });

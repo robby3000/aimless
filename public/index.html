@@ -501,7 +501,7 @@
     import { drawWalk, pushRecent, recentKeys } from '/lib/deck.js';
     import { openDB, getPrefs, setPrefs, put, get, all, byIndex, del } from '/lib/store.js';
     import { createTracker, reachStop, unreachableRate } from '/lib/proximity.js';
-    import { haversine, bearing, simplify, formatDistance, compassPoint, bounds } from '/lib/geo.js';
+    import { haversine, bearing, simplify, formatDistance, compassPoint, bounds, headingFromAlpha } from '/lib/geo.js';
     import { buildHTMLExport, buildJSONExport, downloadFile, blobToDataURL } from '/lib/export.js';
 
     // --- Screen navigation ---
@@ -677,6 +677,13 @@
     let orientationSource = 'none';
     let orientationEventCount = 0;
 
+    // Screen rotation in degrees. alpha is reported relative to the device's
+    // native orientation, so a rotated screen has to be corrected for.
+    function screenAngle() {
+      if (screen.orientation && typeof screen.orientation.angle === 'number') return screen.orientation.angle;
+      return typeof window.orientation === 'number' ? window.orientation : 0;
+    }
+
     // Render the compass readout (arrow, distance, bearing label) from the
     // given bearing/distance plus the current heading. Pure DOM write; safe
     // to call from either onFix or handleOrientation.
@@ -731,12 +738,11 @@
     }
 
     function handleOrientationAbsolute(event) {
-      // deviceorientationabsolute: event.alpha is absolute compass heading.
-      // On Android Chrome, alpha is reported as degrees from north, but the
-      // direction (clockwise vs counterclockwise) varies by implementation.
-      // We try the direct value first; the debug readout lets us verify on-device.
+      // deviceorientationabsolute: event.alpha is absolute orientation about Z,
+      // counter-clockwise from north, relative to the device's native
+      // orientation. headingFromAlpha turns that into a compass heading.
       if (typeof event.alpha === 'number') {
-        heading = event.alpha;
+        heading = headingFromAlpha(event.alpha, screenAngle());
         orientationSource = 'abs';
         orientationEventCount++;
         if (walk && lastBearing != null) renderCompass(lastBearing, lastDistance);
@@ -752,13 +758,13 @@
       } else if (event.absolute && typeof event.alpha === 'number') {
         // Android deviceorientation with absolute=true: alpha is counterclockwise
         // from north, so invert to get clockwise compass heading.
-        heading = (360 - event.alpha) % 360;
+        heading = headingFromAlpha(event.alpha, screenAngle());
         orientationSource = 'abs-true';
         orientationEventCount++;
       } else if (typeof event.alpha === 'number' && orientationSource !== 'abs') {
         // Last resort: relative orientation. Better than nothing — the arrow
         // will at least move, even if it's not pointing at true north.
-        heading = (360 - event.alpha) % 360;
+        heading = headingFromAlpha(event.alpha, screenAngle());
         orientationSource = 'rel';
         orientationEventCount++;
       } else {

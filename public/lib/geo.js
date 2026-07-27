@@ -106,3 +106,15 @@ export function compassPoint(deg) {
   const pts = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
   return pts[Math.round((((deg % 360) + 360) % 360) / 45) % 8];
 }
+
+/**
+ * Compass heading (degrees clockwise from north) from a DeviceOrientationEvent
+ * alpha. Spec alpha is rotation about Z measured counter-clockwise from north,
+ * relative to the device's native orientation - so it must be negated, and
+ * corrected by the screen rotation angle when the phone is not held upright.
+ * Not for iOS webkitCompassHeading, which is already clockwise and
+ * screen-relative.
+ */
+export function headingFromAlpha(alpha, screenAngle = 0) {
+  return (((360 - alpha + screenAngle) % 360) + 360) % 360;
+}

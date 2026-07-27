@@ -2,7 +2,7 @@
 // A walking app must work with no signal - precache the shell, fall back to
 // cache for everything else. No CDN, no external resources (roadmap A2).
 
-const CACHE = 'aimless-v0.1.0';
+const CACHE = 'aimless-v0.1.1';
 
 const PRECACHE = [
   '/',
