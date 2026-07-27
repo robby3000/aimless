@@ -668,6 +668,22 @@
 
     // --- Device orientation (compass heading) ---
     let heading = 0;   // degrees clockwise from north
+    // Last known bearing/distance to the current destination, set by onFix.
+    // Kept so handleOrientation can re-render the arrow on phone rotation
+    // without waiting for a new GPS fix.
+    let lastBearing = null;
+    let lastDistance = null;
+
+    // Render the compass readout (arrow, distance, bearing label) from the
+    // given bearing/distance plus the current heading. Pure DOM write; safe
+    // to call from either onFix or handleOrientation.
+    function renderCompass(bearing, distance) {
+      if (bearing == null) return;
+      compassDist.textContent = formatDistance(distance);
+      compassBearing.textContent = `${Math.round(bearing)}\u00b0 ${compassPoint(bearing)}`;
+      const relative = (bearing - heading + 360) % 360;
+      compassArrow.style.transform = `rotate(${relative}deg)`;
+    }
 
     async function requestOrientationPermission() {
       if (typeof DeviceOrientationEvent !== 'undefined' &&
@@ -690,6 +706,12 @@
       } else if (event.absolute && typeof event.alpha === 'number') {
         // Android: alpha is counterclockwise from north.
         heading = (360 - event.alpha) % 360;
+      }
+      // Re-render the arrow immediately so it tracks phone rotation
+      // between GPS fixes (real-compass behaviour). Only when a walk is
+      // active and we already have a bearing from onFix.
+      if (walk && lastBearing != null) {
+        renderCompass(lastBearing, lastDistance);
       }
     }
 
@@ -792,6 +814,8 @@
         updateStopCounter();
         compassDist.textContent = '---';
         compassBearing.textContent = '---\u00b0';
+        lastBearing = null;
+        lastDistance = null;
         hideCard();
         navButtons.walk.disabled = false;
         showScreen('walk');
@@ -826,11 +850,9 @@
 
       // Update compass.
       if (r.distance != null) {
-        compassDist.textContent = formatDistance(r.distance);
-        compassBearing.textContent = `${Math.round(r.bearing)}\u00b0 ${compassPoint(r.bearing)}`;
-        // Arrow points relative to user's heading.
-        const relative = (r.bearing - heading + 360) % 360;
-        compassArrow.style.transform = `rotate(${relative}deg)`;
+        lastBearing = r.bearing;
+        lastDistance = r.distance;
+        renderCompass(lastBearing, lastDistance);
       }
 
       // Arrival detection.
@@ -1010,6 +1032,8 @@
       `;
 
       walk = null;
+      lastBearing = null;
+      lastDistance = null;
       navButtons.walk.disabled = true;
       showScreen('done');
     }
