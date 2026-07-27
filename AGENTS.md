@@ -33,22 +33,30 @@ No build step, no `node_modules`.
 
 ## Repo shape
 
+This listing is the inventory `sw.js` precaches from. Keep it exact: `lib/proximity.js` was
+once missing here, was therefore missing from `PRECACHE` too, and would have broken the app
+offline. If you add a file under `public/`, add it in both places.
+
 ```
 public/
   index.html          # the app: inline CSS + UI JS, all screens
   sim.html            # GPS simulator (roadmap A11)
-  manifest.json
-  sw.js               # precaches the shell for offline use
+  manifest.json       # no "id" (defaults to start_url) and no "version" (not a manifest member)
+  sw.js               # precaches the shell for offline use; cache name is generated, see below
   icons/              # generated PNGs (192, 512, 512-maskable)
   lib/
-    geo.js  rng.js  walk.js  deck.js  store.js  export.js
+    geo.js  rng.js  walk.js  deck.js  store.js  proximity.js  export.js
   data/
     crow.json  threshold.json  lattice.json
 test/
   geo.test.js  rng.test.js  walk.test.js  deck.test.js  proximity.test.js
 scripts/
-  make-icons.mjs
+  make-icons.mjs      # npm run icons
+  stamp-sw.mjs        # npm run stamp -- rewrites the sw.js cache name
 docs/
+  roadmap.md  blueprint.md  deck.md  verdict.md  cache-busting.md
+.github/workflows/
+  pages.yml           # test + stamp check, then deploy public/ to GitHub Pages
 package.json          # no dependencies; "test": "node --test test/**/*.test.js"
 ```
 
@@ -88,6 +96,11 @@ in the sibling `glyph-drift` repo at `docs/device-reality.md`.
 - **Tear down `watchPosition`** on end, give-up and unload.
 
 ## Conventions
+
+**Every asset path is relative** (`./lib/geo.js`, `start_url: "./"`, `'./data/x.json'`), and
+`sw.js` derives its root from `new URL('./', self.location)`. This is what lets the same build
+serve from a domain root and from the `/aimless/` GitHub Pages prefix. Do not "tidy" them back
+to absolute paths.
 
 Vanilla ES modules. Pure logic in `public/lib/*.js`, tested with `node --test`; anything touching
 the DOM, storage or geolocation stays in `public/index.html` or `sim.html` and is verified manually
