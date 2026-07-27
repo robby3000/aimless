@@ -103,6 +103,14 @@
     <button id="btn-end" class="danger">End walk</button>
   </div>
 
+  <div class="row">
+    <label>Compass heading (&deg;)
+      <input id="sim-heading" type="range" min="0" max="359" value="0" style="width:200px">
+    </label>
+    <button id="btn-rotate">Auto-rotate</button>
+    <span id="heading-display" style="align-self:center;color:var(--accent);font-family:monospace;">0&deg;</span>
+  </div>
+
   <div class="stats">
     <span>Fixes: <b id="stat-fixes">0</b></span>
     <span>Distance to target: <b id="stat-dist">---</b></span>
@@ -144,9 +152,13 @@
     // sim = { plan, tracker, pos, heading, fixes, trace, stops }
 
     // --- Geolocation mock ---
-    // We override the app iframe's navigator.geolocation with a controllable one.
+    // We override the app iframe's navigator.geolocation with a controllable one,
+    // and intercept addEventListener for deviceorientation so we can inject
+    // synthetic compass readings.
     function setupGeolocationMock() {
       const frame = appFrame.contentWindow;
+
+      // --- Geolocation ---
       const mockWatch = (success, error, opts) => {
         sim.watchSuccess = success;
         sim.watchError = error;
@@ -160,7 +172,6 @@
         });
       };
 
-      // Inject into the iframe.
       try {
         Object.defineProperty(frame.navigator, 'geolocation', {
           value: {
@@ -174,10 +185,30 @@
         logMsg(`Failed to override geolocation: ${e.message}`, 'error');
       }
 
-      // Also override device orientation for the compass.
-      try {
-        frame.addEventListener = frame.addEventListener.bind(frame);
-      } catch {}
+      // --- Device orientation ---
+      // Intercept addEventListener on the iframe window so we capture the
+      // app's orientation listeners. Then we can dispatch synthetic events.
+      const origAddEventListener = frame.addEventListener.bind(frame);
+      sim.orientationListeners = { absolute: [], normal: [] };
+      frame.addEventListener = (type, listener, opts) => {
+        if (type === 'deviceorientationabsolute') {
+          sim.orientationListeners.absolute.push(listener);
+        } else if (type === 'deviceorientation') {
+          sim.orientationListeners.normal.push(listener);
+        }
+        return origAddEventListener(type, listener, opts);
+      };
+    }
+
+    /** Send a synthetic orientation event to the app's listeners. */
+    function sendOrientation(headingDeg) {
+      if (!sim || !sim.orientationListeners) return;
+      sim.heading = headingDeg;
+      // Build a deviceorientationabsolute-like event.
+      const absEvent = { alpha: headingDeg, beta: 0, gamma: 0, absolute: true };
+      const normEvent = { alpha: headingDeg, beta: 0, gamma: 0, absolute: true };
+      for (const fn of sim.orientationListeners.absolute) fn(absEvent);
+      for (const fn of sim.orientationListeners.normal) fn(normEvent);
     }
 
     function sendFix(lat, lng, accuracy = 10, age = 0) {
@@ -363,6 +394,34 @@
         ${posMarker}
       </svg>`;
     }
+
+    // --- Compass heading slider ---
+    const simHeading = document.getElementById('sim-heading');
+    const headingDisplay = document.getElementById('heading-display');
+    let rotateInterval = null;
+
+    simHeading.addEventListener('input', () => {
+      const h = parseInt(simHeading.value, 10);
+      headingDisplay.textContent = `${h}\u00b0`;
+      sendOrientation(h);
+    });
+
+    document.getElementById('btn-rotate').addEventListener('click', () => {
+      if (rotateInterval) {
+        clearInterval(rotateInterval);
+        rotateInterval = null;
+        logMsg('Auto-rotate stopped.');
+      } else {
+        logMsg('Auto-rotate started (10°/s).');
+        rotateInterval = setInterval(() => {
+          let h = parseInt(simHeading.value, 10);
+          h = (h + 10) % 360;
+          simHeading.value = h;
+          headingDisplay.textContent = `${h}\u00b0`;
+          sendOrientation(h);
+        }, 1000);
+      }
+    });
 
     logMsg('Simulator ready. Set origin and click "Start walk".');
   </script>

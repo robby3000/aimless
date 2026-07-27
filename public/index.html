@@ -673,6 +673,9 @@
     // without waiting for a new GPS fix.
     let lastBearing = null;
     let lastDistance = null;
+    // Debug: track which orientation event type is actually firing.
+    let orientationSource = 'none';
+    let orientationEventCount = 0;
 
     // Render the compass readout (arrow, distance, bearing label) from the
     // given bearing/distance plus the current heading. Pure DOM write; safe
@@ -683,9 +686,13 @@
       compassBearing.textContent = `${Math.round(bearing)}\u00b0 ${compassPoint(bearing)}`;
       const relative = (bearing - heading + 360) % 360;
       compassArrow.style.transform = `rotate(${relative}deg)`;
+      // Debug readout — tiny text below the bearing so we can see what's
+      // happening on the phone. Remove after compass is confirmed working.
+      compassBearing.textContent += `  [h=${Math.round(heading)}° src=${orientationSource}#${orientationEventCount}]`;
     }
 
     async function requestOrientationPermission() {
+      // iOS 13+ requires an explicit permission request on a user gesture.
       if (typeof DeviceOrientationEvent !== 'undefined' &&
           typeof DeviceOrientationEvent.requestPermission === 'function') {
         try {
@@ -695,17 +702,67 @@
           return false;
         }
       }
+      // Android: some browsers (Brave) gate sensors behind the Permissions API.
+      // Requesting is harmless where unsupported; the query just returns 'denied'.
+      for (const name of ['accelerometer', 'gyroscope', 'magnetometer']) {
+        try {
+          const p = await navigator.permissions.query({ name });
+          // If the permission can be requested, request it. (No standard API to
+          // request sensor permissions — they're granted on user gesture, which
+          // the Go tap satisfies. This query just checks state.)
+        } catch { /* permission name not supported — ignore */ }
+      }
+
+      // Android Chrome/Brave: deviceorientationabsolute gives true compass
+      // heading. deviceorientation alone gives relative orientation (absolute=false)
+      // on most Android devices, which is useless for a compass.
+      if (typeof window.DeviceOrientationEvent !== 'undefined') {
+        window.addEventListener('deviceorientationabsolute', handleOrientationAbsolute);
+      }
+      // iOS: no deviceorientationabsolute; use deviceorientation + webkitCompassHeading.
+      // Also a fallback for Android devices that do provide absolute=true.
       window.addEventListener('deviceorientation', handleOrientation);
+      // Prompt for compass calibration if the device thinks it needs it.
+      window.addEventListener('compassneedscalibration', (e) => {
+        e.preventDefault();
+        walkStatus.textContent = 'Compass needs calibration — figure-8 your phone.';
+      });
       return true;
+    }
+
+    function handleOrientationAbsolute(event) {
+      // deviceorientationabsolute: event.alpha is absolute compass heading.
+      // On Android Chrome, alpha is reported as degrees from north, but the
+      // direction (clockwise vs counterclockwise) varies by implementation.
+      // We try the direct value first; the debug readout lets us verify on-device.
+      if (typeof event.alpha === 'number') {
+        heading = event.alpha;
+        orientationSource = 'abs';
+        orientationEventCount++;
+        if (walk && lastBearing != null) renderCompass(lastBearing, lastDistance);
+      }
     }
 
     function handleOrientation(event) {
       // iOS provides webkitCompassHeading (degrees clockwise from north).
       if (typeof event.webkitCompassHeading === 'number') {
         heading = event.webkitCompassHeading;
+        orientationSource = 'webkit';
+        orientationEventCount++;
       } else if (event.absolute && typeof event.alpha === 'number') {
-        // Android: alpha is counterclockwise from north.
+        // Android deviceorientation with absolute=true: alpha is counterclockwise
+        // from north, so invert to get clockwise compass heading.
         heading = (360 - event.alpha) % 360;
+        orientationSource = 'abs-true';
+        orientationEventCount++;
+      } else if (typeof event.alpha === 'number' && orientationSource !== 'abs') {
+        // Last resort: relative orientation. Better than nothing — the arrow
+        // will at least move, even if it's not pointing at true north.
+        heading = (360 - event.alpha) % 360;
+        orientationSource = 'rel';
+        orientationEventCount++;
+      } else {
+        return;   // no useful data
       }
       // Re-render the arrow immediately so it tracks phone rotation
       // between GPS fixes (real-compass behaviour). Only when a walk is
