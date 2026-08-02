@@ -45,7 +45,7 @@ public/
   sw.js               # precaches the shell for offline use; cache name is generated, see below
   icons/              # generated PNGs (192, 512, 512-maskable)
   lib/
-    geo.js  rng.js  walk.js  deck.js  store.js  proximity.js  export.js
+    geo.js  rng.js  walk.js  deck.js  store.js  dexie.mjs  proximity.js  export.js
   data/
     crow.json  threshold.json  lattice.json
 test/
@@ -64,7 +64,8 @@ package.json          # no dependencies; "test": "node --test test/**/*.test.js"
 
 - **Zero runtime dependencies.** No npm packages, no CDN scripts, no framework, no bundler. A CDN
   breaks first-load offline, which is fatal for a walking app. `package.json` declares no
-  dependencies.
+  dependencies. Sole exception: **Dexie is vendored** at `public/lib/dexie.mjs` (Apache-2.0) and
+  used by `store.js` — local file, no CDN.
 - **No map, no basemap, no tile provider, ever** (roadmap A5). The walk view is a compass; the
   gallery is an abstract SVG trace. The absence is the design, not a gap to fill.
 - **No accounts, no server database, no sync.** Everything is IndexedDB and an export file.

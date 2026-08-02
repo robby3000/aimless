@@ -1,67 +1,46 @@
-// Raw IndexedDB, ~80 lines. Three stores (blueprint section 9).
-// No Dexie, no idb-keyval (roadmap A4).
+// IndexedDB via Dexie (vendored ESM build at ./dexie.mjs, Apache-2.0).
+// Three stores (blueprint section 9). The schema matches the original
+// hand-rolled IndexedDB version 1 exactly, so existing databases open
+// without an upgrade.
+
+import Dexie from './dexie.mjs';
 
 const DB_NAME = 'aimless';
-const DB_VERSION = 1;
 
-/** Open (and upgrade) the database. */
+/** Open the database. Resolves to the Dexie instance. */
 export function openDB() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = () => {
-      const db = req.result;
-      if (!db.objectStoreNames.contains('walks')) {
-        const walks = db.createObjectStore('walks', { keyPath: 'id' });
-        walks.createIndex('started', 'started');
-      }
-      if (!db.objectStoreNames.contains('photos')) {
-        const photos = db.createObjectStore('photos', { keyPath: 'id' });
-        photos.createIndex('walkId', 'walkId');
-        photos.createIndex('walkSeq', ['walkId', 'stopSeq']);
-      }
-      if (!db.objectStoreNames.contains('prefs')) {
-        db.createObjectStore('prefs', { keyPath: 'key' });
-      }
-    };
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
+  const db = new Dexie(DB_NAME);
+  db.version(1).stores({
+    walks: 'id, started',
+    photos: 'id, walkId, [walkId+stopSeq]',
+    prefs: 'key',
   });
-}
-
-function tx(db, store, mode = 'readonly') {
-  return db.transaction(store, mode).objectStore(store);
-}
-
-function reqAsPromise(request) {
-  return new Promise((resolve, reject) => {
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
-  });
+  return db.open().then(() => db);
 }
 
 /** Put a record into a store. */
 export async function put(db, store, value) {
-  return reqAsPromise(tx(db, store, 'readwrite').put(value));
+  return db.table(store).put(value);
 }
 
 /** Get a record by key. */
 export async function get(db, store, key) {
-  return reqAsPromise(tx(db, store).get(key));
+  return db.table(store).get(key);
 }
 
 /** Get all records from a store. */
 export async function all(db, store) {
-  return reqAsPromise(tx(db, store).getAll());
+  return db.table(store).toArray();
 }
 
 /** Delete a record by key. */
 export async function del(db, store, key) {
-  return reqAsPromise(tx(db, store, 'readwrite').delete(key));
+  return db.table(store).delete(key);
 }
 
 /** Get all records from an index matching a key. */
 export async function byIndex(db, store, index, query) {
-  return reqAsPromise(tx(db, store).index(index).getAll(query));
+  return db.table(store).where(index).equals(query).toArray();
 }
 
 // --- Prefs helpers (single-record store keyed by 'key') -----------------
