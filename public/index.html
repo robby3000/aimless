@@ -243,8 +243,12 @@
       padding: 16px;
       cursor: pointer;
       transition: border-color 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 12px;
     }
     .walk-item:active { border-color: var(--accent-dim); }
+    .walk-item .body { flex: 1; min-width: 0; }
     .walk-item .meta {
       display: flex;
       justify-content: space-between;
@@ -255,6 +259,11 @@
       font-family: 'SF Mono', 'Menlo', monospace;
       font-size: 0.8rem;
       color: var(--accent);
+    }
+    .walk-delete {
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      flex-shrink: 0;
     }
 
     /* --- Bottom nav --- */
@@ -1174,13 +1183,24 @@
         const approached = (w.stops || []).filter((s) => s.approached).length;
         const approachStr = approached > 0 ? ` (${approached} fudged)` : '';
         item.innerHTML = `
-          <div class="meta">
-            <span>${date}</span>
-            <span>${reached}/${w.stops?.length || 0} reached${approachStr}</span>
+          <div class="body">
+            <div class="meta">
+              <span>${date}</span>
+              <span>${reached}/${w.stops?.length || 0} reached${approachStr}</span>
+            </div>
+            <div class="seed">${w.seed || ''}</div>
           </div>
-          <div class="seed">${w.seed || ''}</div>
+          <button class="btn-danger walk-delete" aria-label="Delete walk">Delete</button>
         `;
         item.addEventListener('click', () => showWalkDetail(w.id));
+        item.querySelector('.walk-delete').addEventListener('click', async (e) => {
+          e.stopPropagation();
+          if (!confirm('Delete this walk? This cannot be undone.')) return;
+          const photos = await byIndex(db, 'photos', 'walkId', w.id);
+          for (const p of photos) await del(db, 'photos', p.id);
+          await del(db, 'walks', w.id);
+          renderArchive();
+        });
         list.appendChild(item);
       }
     }
