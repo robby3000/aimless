@@ -899,10 +899,10 @@
       // Feed tracker.
       const r = walk.tracker.update(fix, Date.now());
 
-      if (r.band === 'done') {
-        finishWalk();
-        return;
-      }
+      // All stops reached: nothing left to point at. Stay on the walk screen
+      // so the user can photograph the final stop; finishWalk runs from the
+      // Finish button instead.
+      if (r.band === 'done') return;
 
       // Update compass.
       if (r.distance != null) {
@@ -927,9 +927,11 @@
       // Show the card.
       showCard(stop.card, walk.voice);
 
-      // Show photo row and continue button.
+      // Show photo row and continue button. On the final stop the button
+      // ends the walk, so label it Finish.
       photoRow.classList.add('visible');
       btnContinue.hidden = false;
+      btnContinue.textContent = nextStopIndex(walk.plan.stops) < 0 ? 'Finish' : 'Continue';
       btnApproach.hidden = true;
 
       walkStatus.textContent = approached
@@ -949,6 +951,7 @@
       photoThumb.classList.remove('visible');
       photoThumb.src = '';
       btnContinue.hidden = true;
+      btnContinue.textContent = 'Continue';
       btnApproach.hidden = false;
     }
 
