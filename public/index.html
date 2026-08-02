@@ -483,7 +483,7 @@
     <div class="walk-actions">
       <button id="btn-detail-export-html" class="btn-primary btn-full">Export as HTML</button>
       <button id="btn-detail-export-json" class="btn-full">Export as JSON</button>
-      <button id="btn-detail-back" class="btn-full">Back to archive</button>
+      <button id="btn-detail-share" class="btn-full">Share</button>
     </div>
   </section>
 
@@ -1249,18 +1249,36 @@
       showScreen('detail');
     }
 
-    document.getElementById('btn-detail-back').addEventListener('click', () => {
-      renderArchive();
-      showScreen('archive');
-    });
-
-    document.getElementById('btn-detail-export-html').addEventListener('click', async () => {
-      if (!currentDetailWalk) return;
+    // Build the current walk's self-contained HTML export (shared by the
+    // Export and Share buttons).
+    async function buildCurrentDetailHTML() {
       const db = await dbPromise;
       const photos = await byIndex(db, 'photos', 'walkId', currentDetailWalk.id);
       const trace = currentDetailWalk.trace || [];
       const svg = traceSVG({ origin: currentDetailWalk.origin, stops: currentDetailWalk.stops }, trace);
-      const html = await buildHTMLExport(currentDetailWalk, photos, svg);
+      return buildHTMLExport(currentDetailWalk, photos, svg);
+    }
+
+    document.getElementById('btn-detail-share').addEventListener('click', async () => {
+      if (!currentDetailWalk) return;
+      const html = await buildCurrentDetailHTML();
+      const filename = `aimless-${currentDetailWalk.seed}.html`;
+      const file = new File([html], filename, { type: 'text/html' });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: `Aimless walk ${currentDetailWalk.seed}` });
+        } catch (err) {
+          if (err.name !== 'AbortError') console.warn('Share failed:', err);
+        }
+      } else {
+        // No share sheet (or HTML files not shareable): fall back to download.
+        downloadFile(filename, html, 'text/html');
+      }
+    });
+
+    document.getElementById('btn-detail-export-html').addEventListener('click', async () => {
+      if (!currentDetailWalk) return;
+      const html = await buildCurrentDetailHTML();
       downloadFile(`aimless-${currentDetailWalk.seed}.html`, html, 'text/html');
     });
 
