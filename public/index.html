@@ -516,7 +516,6 @@
         <select id="detail-skin"></select>
       </label>
       <button id="btn-detail-export-html" class="btn-primary btn-full">Export as HTML</button>
-      <button id="btn-detail-export-json" class="btn-full">Export as JSON</button>
       <button id="btn-detail-share" class="btn-full">Share</button>
     </div>
   </section>
@@ -536,7 +535,7 @@
     import { openDB, getPrefs, setPrefs, put, get, all, byIndex, del } from './lib/store.js';
     import { createTracker, reachStop, unreachableRate } from './lib/proximity.js';
     import { haversine, bearing, simplify, formatDistance, compassPoint, bounds, headingFromAlpha } from './lib/geo.js';
-    import { buildHTMLExport, buildJSONExport, downloadFile, blobToDataURL } from './lib/export.js';
+    import { buildHTMLExport, downloadFile, blobToDataURL } from './lib/export.js';
     import { SKINS, getSkin, scopeCSS } from './lib/skins.js';
 
     // --- Screen navigation ---
@@ -1351,14 +1350,6 @@
       if (!currentDetailWalk) return;
       const html = await buildCurrentDetailHTML();
       downloadFile(`aimless-${currentDetailWalk.seed}.html`, html, 'text/html');
-    });
-
-    document.getElementById('btn-detail-export-json').addEventListener('click', async () => {
-      if (!currentDetailWalk) return;
-      const db = await dbPromise;
-      const photos = await byIndex(db, 'photos', 'walkId', currentDetailWalk.id);
-      const json = await buildJSONExport(currentDetailWalk, photos);
-      downloadFile(`aimless-${currentDetailWalk.seed}.json`, json, 'application/json');
     });
 
     // --- Page unload: tear down watch and wake lock (device note 6) ---
