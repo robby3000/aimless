@@ -1063,6 +1063,7 @@
         lastBearing = null;
         lastDistance = null;
         hideCard();
+        walkStatus.textContent = '';   // no stale status from the last walk
         navButtons.walk.disabled = false;
         showScreen('walk');
         goStatus.textContent = '';
@@ -1541,6 +1542,7 @@
         lastBearing = null;
         lastDistance = null;
         hideCard();
+        walkStatus.textContent = '';
         navButtons.walk.disabled = false;
         resumeRow.hidden = true;
         showScreen('walk');
