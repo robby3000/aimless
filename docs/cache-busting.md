@@ -17,8 +17,13 @@ Aimless uses two strategies, set in `public/sw.js`:
 
 | Asset | Strategy | Sees a deploy? |
 |---|---|---|
-| `.html`, `.json` | network-first | Yes, on the next online load |
+| `.html`, `.json` | network-first, 3s timeout, then cache | Yes, on the next online load |
 | everything else (`lib/*.js`, icons) | **cache-first** | **No. Never.** |
+
+The 3s timeout exists because a fetch with no reception can hang for tens of
+seconds on a dead-but-not-refused connection — without it, launching the
+installed app offline looked exactly like "the app won't load". Navigation
+requests also fall back to the cached root if the exact URL is not cached.
 
 Cache-first is right for the JS modules — they are the thing you most need offline, and
 re-fetching them on every load would be wasteful. But it means a change to

@@ -45,11 +45,23 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)))
-    )
-  );
+  event.waitUntil((async () => {
+    // Purge old caches only when the new one holds the complete shell.
+    // Precache misses are tolerated at install (a missing icon must not block
+    // the shell), but deleting the old cache after a partial fill would
+    // strand an installed phone with no working offline copy at all.
+    const cache = await caches.open(CACHE);
+    const missing = [];
+    for (const u of PRECACHE) {
+      if (!(await cache.match(new URL(u, self.location).href))) missing.push(u);
+    }
+    if (missing.length > 0) {
+      console.warn('[sw] precache incomplete, keeping old caches:', missing);
+      return;
+    }
+    const keys = await caches.keys();
+    await Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)));
+  })());
   self.clients.claim();
 });
 
@@ -84,17 +96,33 @@ async function cacheFirst(request) {
   }
 }
 
+// How long network-first waits before serving the cache. With no reception a
+// fetch can hang for tens of seconds on a dead-but-not-refused connection,
+// which reads as "the app won't load" when launching offline.
+const NETWORK_TIMEOUT_MS = 3000;
+
 async function networkFirst(request) {
   try {
-    const response = await fetch(request);
+    const response = await withTimeout(fetch(request), NETWORK_TIMEOUT_MS);
     if (response.ok) {
       const cache = await caches.open(CACHE);
       cache.put(request, response.clone());
     }
     return response;
   } catch {
-    const cached = await caches.match(request);
+    const cached = (await caches.match(request))
+      ?? (request.mode === 'navigate' ? await caches.match(ROOT) : null);
     if (cached) return cached;
     return new Response('Offline', { status: 503, statusText: 'Offline' });
   }
+}
+
+function withTimeout(promise, ms) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error('network timeout')), ms);
+    promise.then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      (err) => { clearTimeout(timer); reject(err); }
+    );
+  });
 }
