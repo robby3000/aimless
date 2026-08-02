@@ -1,6 +1,6 @@
 {
   "name": "aimless",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Go nowhere, on purpose. A walking app with no map. Zero dependencies by design - see docs/roadmap.md A2.",
