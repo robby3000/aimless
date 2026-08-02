@@ -284,6 +284,12 @@
       font-family: inherit;
     }
 
+    /* --- Info screen --- */
+    .info-content { display: flex; flex-direction: column; gap: 8px; }
+    .info-content h2 { font-size: 1.05rem; margin-top: 16px; color: var(--accent); }
+    .info-content h2:first-child { margin-top: 0; }
+    .info-content p { color: var(--fg-dim); font-size: 0.95rem; }
+
     /* --- Bottom nav --- */
     nav {
       display: flex;
@@ -413,7 +419,7 @@
 
     @media print {
       body { background: white; color: black; }
-      header, nav, .walk-actions, #screen-go, #screen-walk, #screen-archive { display: none !important; }
+      header, nav, .walk-actions, #screen-go, #screen-walk, #screen-archive, #screen-info { display: none !important; }
       #screen-detail { display: flex !important; }
       .detail-trace { background: white; border: 1px solid #ccc; }
       .detail-stop { background: white; border: 1px solid #ddd; }
@@ -507,6 +513,22 @@
     <div id="archive-empty" class="archive-empty">No walks yet.<br>Press go.</div>
   </section>
 
+  <!-- Info screen -->
+  <section id="screen-info" class="screen">
+    <div class="info-content">
+      <h2>How Aimless works</h2>
+      <p>Placeholder: what the app is and what a walk is.</p>
+      <h2>Starting a walk</h2>
+      <p>Placeholder: the Go button, choosing stops, minutes and voice.</p>
+      <h2>During a walk</h2>
+      <p>Placeholder: follow the compass arrow; what happens at a waypoint; the card, the photo, "Close as I can get"; the focused walk state.</p>
+      <h2>After a walk</h2>
+      <p>Placeholder: the Walk Result screen, designs, export and share; the archive; deleting walks.</p>
+      <h2>Offline and privacy</h2>
+      <p>Placeholder: works fully offline; everything stays on the device.</p>
+    </div>
+  </section>
+
   <!-- Walk detail screen -->
   <section id="screen-detail" class="screen">
     <div id="detail-content"></div>
@@ -524,6 +546,7 @@
     <button id="nav-go" class="active">Go</button>
     <button id="nav-walk" disabled>Walk</button>
     <button id="nav-archive">Archive</button>
+    <button id="nav-info">Info</button>
   </nav>
 
   <div id="arrival-flash"></div>
@@ -543,6 +566,7 @@
       go: document.getElementById('screen-go'),
       walk: document.getElementById('screen-walk'),
       archive: document.getElementById('screen-archive'),
+      info: document.getElementById('screen-info'),
       done: document.getElementById('screen-done'),
       detail: document.getElementById('screen-detail'),
     };
@@ -550,6 +574,7 @@
       go: document.getElementById('nav-go'),
       walk: document.getElementById('nav-walk'),
       archive: document.getElementById('nav-archive'),
+      info: document.getElementById('nav-info'),
     };
 
     function showScreen(name) {
@@ -563,6 +588,7 @@
 
     navButtons.go.addEventListener('click', () => showScreen('go'));
     navButtons.archive.addEventListener('click', () => { renderArchive(); showScreen('archive'); });
+    navButtons.info.addEventListener('click', () => showScreen('info'));
 
     // --- Service worker registration ---
     if ('serviceWorker' in navigator) {
