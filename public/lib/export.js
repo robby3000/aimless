@@ -23,8 +23,10 @@ export function blobToDataURL(blob) {
  * @param {object} walk  The walk record from IndexedDB.
  * @param {Array} photos Array of { stopSeq, blob } for this walk.
  * @param {string} svgTrace  Pre-rendered SVG string of the trace.
+ * @param {string} [skinCss]  Optional skin CSS fragment (lib/skins.js),
+ *   embedded after the base styles. CSS only - no scripts, ever.
  */
-export async function buildHTMLExport(walk, photos, svgTrace) {
+export async function buildHTMLExport(walk, photos, svgTrace, skinCss = '') {
   const photoMap = new Map();
   for (const p of photos) photoMap.set(p.stopSeq, p);
 
@@ -110,6 +112,7 @@ export async function buildHTMLExport(walk, photos, svgTrace) {
     .seed { color: #448; }
   }
 </style>
+${skinCss ? `<style id="skin">\n${skinCss}\n</style>` : ''}
 </head>
 <body>
   <h1>Aimless</h1>

@@ -45,11 +45,11 @@ public/
   sw.js               # precaches the shell for offline use; cache name is generated, see below
   icons/              # generated PNGs (192, 512, 512-maskable)
   lib/
-    geo.js  rng.js  walk.js  deck.js  store.js  dexie.mjs  proximity.js  export.js
+    geo.js  rng.js  walk.js  deck.js  store.js  dexie.mjs  proximity.js  export.js  skins.js
   data/
     crow.json  threshold.json  lattice.json
 test/
-  geo.test.js  rng.test.js  walk.test.js  deck.test.js  proximity.test.js
+  geo.test.js  rng.test.js  walk.test.js  deck.test.js  proximity.test.js  skins.test.js
 scripts/
   make-icons.mjs      # npm run icons
   stamp-sw.mjs        # npm run stamp -- rewrites the sw.js cache name

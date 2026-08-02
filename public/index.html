@@ -266,6 +266,24 @@
       flex-shrink: 0;
     }
 
+    /* --- Skin selector (detail screen) --- */
+    .skin-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.85rem;
+      color: var(--fg-dim);
+    }
+    .skin-row select {
+      background: var(--surface);
+      color: var(--fg);
+      border: 1px solid var(--surface-2);
+      border-radius: 8px;
+      padding: 8px;
+      font-size: 0.95rem;
+      font-family: inherit;
+    }
+
     /* --- Bottom nav --- */
     nav {
       display: flex;
@@ -387,6 +405,9 @@
       font-weight: 700; font-size: 0.75rem;
     }
     .detail-stop .stop-status { text-transform: uppercase; letter-spacing: 0.05em; }
+    .detail-stop .status.reached { color: #8c8; }
+    .detail-stop .status.approached { color: #fc8; }
+    .detail-stop .status.missed { color: #c88; }
     .detail-stop .card-text { font-size: 1.05rem; line-height: 1.6; }
     .detail-stop img { max-width: 100%; border-radius: 8px; margin-top: 8px; }
 
@@ -490,6 +511,10 @@
   <section id="screen-detail" class="screen">
     <div id="detail-content"></div>
     <div class="walk-actions">
+      <label class="skin-row">
+        Design
+        <select id="detail-skin"></select>
+      </label>
       <button id="btn-detail-export-html" class="btn-primary btn-full">Export as HTML</button>
       <button id="btn-detail-export-json" class="btn-full">Export as JSON</button>
       <button id="btn-detail-share" class="btn-full">Share</button>
@@ -512,6 +537,7 @@
     import { createTracker, reachStop, unreachableRate } from './lib/proximity.js';
     import { haversine, bearing, simplify, formatDistance, compassPoint, bounds, headingFromAlpha } from './lib/geo.js';
     import { buildHTMLExport, buildJSONExport, downloadFile, blobToDataURL } from './lib/export.js';
+    import { SKINS, getSkin, scopeCSS } from './lib/skins.js';
 
     // --- Screen navigation ---
     const screens = {
@@ -552,11 +578,30 @@
       return null;
     });
 
+    // --- Walk Result skins ---
+    const elSkin = document.getElementById('detail-skin');
+    elSkin.innerHTML = SKINS.map((s) => `<option value="${s.id}">${s.name}</option>`).join('');
+    // Skin CSS is injected scoped to the detail view so it cannot leak into
+    // the rest of the app; the export embeds the same fragment unscoped.
+    const skinStyle = document.createElement('style');
+    document.head.appendChild(skinStyle);
+    let currentSkin = 'default';
+
+    function applySkin() {
+      skinStyle.textContent = scopeCSS(getSkin(currentSkin).css, '#detail-content');
+    }
+
+    elSkin.addEventListener('change', () => {
+      currentSkin = elSkin.value;
+      applySkin();
+      savePrefs();
+    });
+
     // --- Settings ---
     const elStops = document.getElementById('setting-stops');
     const elBudget = document.getElementById('setting-budget');
     const elVoice = document.getElementById('setting-voice');
-    const DEFAULT_PREFS = { stops: 5, budgetMin: 45, voice: 'crow' };
+    const DEFAULT_PREFS = { stops: 5, budgetMin: 45, voice: 'crow', skin: 'default' };
 
     async function loadPrefs() {
       const db = await dbPromise;
@@ -565,6 +610,9 @@
       elStops.value = String(prefs.stops ?? DEFAULT_PREFS.stops);
       elBudget.value = String(prefs.budgetMin ?? DEFAULT_PREFS.budgetMin);
       elVoice.value = prefs.voice ?? DEFAULT_PREFS.voice;
+      currentSkin = prefs.skin ?? DEFAULT_PREFS.skin;
+      elSkin.value = currentSkin;
+      applySkin();
       return prefs;
     }
 
@@ -575,6 +623,7 @@
         stops: parseInt(elStops.value, 10),
         budgetMin: parseInt(elBudget.value, 10),
         voice: elVoice.value,
+        skin: elSkin.value,
       });
     }
 
@@ -1237,11 +1286,11 @@
           ? `<img src="${URL.createObjectURL(photo.blob)}" alt="photo">`
           : '';
         const status = s.approached
-          ? '<span class="stop-status" style="color: #fc8;">close as I can get</span>'
+          ? '<span class="stop-status status approached">close as I can get</span>'
           : s.reachedAt
-            ? '<span class="stop-status" style="color: #8c8;">reached</span>'
-            : '<span class="stop-status" style="color: #c88;">not reached</span>';
-        return `<div class="detail-stop">
+            ? '<span class="stop-status status reached">reached</span>'
+            : '<span class="stop-status status missed">not reached</span>';
+        return `<div class="detail-stop stop">
           <div class="stop-head">
             <div class="stop-num">${i + 1}</div>
             ${status}
@@ -1257,15 +1306,17 @@
           <div class="seed">${walk.seed}</div>
           <div class="date">${date}</div>
         </div>
-        <div class="detail-summary">
+        <div class="detail-summary summary">
           <b>${reached}</b> of ${walk.stops.length} stops reached.
           ${unreachable.approached > 0 ? `<b>${unreachable.approached}</b> marked "close as I can get" (${Math.round(unreachable.rate * 100)}%).` : ''}
           ${walk.gaveUp ? '<br>Walk ended early.' : ''}
         </div>
-        <div class="detail-trace">${svg}</div>
+        <div class="detail-trace trace">${svg}</div>
         ${stopHtml}
       `;
 
+      elSkin.value = currentSkin;
+      applySkin();
       showScreen('detail');
     }
 
@@ -1276,7 +1327,7 @@
       const photos = await byIndex(db, 'photos', 'walkId', currentDetailWalk.id);
       const trace = currentDetailWalk.trace || [];
       const svg = traceSVG({ origin: currentDetailWalk.origin, stops: currentDetailWalk.stops }, trace);
-      return buildHTMLExport(currentDetailWalk, photos, svg);
+      return buildHTMLExport(currentDetailWalk, photos, svg, getSkin(currentSkin).css);
     }
 
     document.getElementById('btn-detail-share').addEventListener('click', async () => {
