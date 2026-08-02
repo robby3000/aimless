@@ -284,6 +284,21 @@
       font-family: inherit;
     }
 
+    /* --- Focused walk state: everything but the compass fades out and
+       becomes unresponsive, so pocket taps cannot end the walk --- */
+    header, nav, .walk-header, #stop-counter, #card-display, #photo-row,
+    #screen-walk .walk-actions, #walk-status {
+      transition: opacity 0.4s;
+    }
+    body.walk-focused header, body.walk-focused nav,
+    body.walk-focused .walk-header, body.walk-focused #stop-counter,
+    body.walk-focused #card-display, body.walk-focused #photo-row,
+    body.walk-focused #screen-walk .walk-actions, body.walk-focused #walk-status {
+      opacity: 0;
+      pointer-events: none;
+    }
+    #compass-view { cursor: pointer; }
+
     /* --- Info screen --- */
     .info-content { display: flex; flex-direction: column; gap: 8px; }
     .info-content h2 { font-size: 1.05rem; margin-top: 16px; color: var(--accent); }
@@ -463,6 +478,10 @@
       </label>
     </div>
     <div id="go-status" class="status-msg"></div>
+    <div id="resume-row" class="walk-actions" style="width:100%; max-width:320px;" hidden>
+      <button id="btn-resume" class="btn-primary btn-full">Resume walk in progress</button>
+      <button id="btn-discard-walk" class="btn-danger btn-full">Discard it</button>
+    </div>
   </section>
 
   <!-- Walk screen -->
@@ -728,6 +747,11 @@
       if (!navigator.wakeLock) return null;
       try {
         wakeLock = await navigator.wakeLock.request('screen');
+        // If the OS drops the lock mid-walk (interruption, low battery),
+        // take it back as long as a walk is live and the page is visible.
+        wakeLock.onrelease = () => {
+          if (walk && document.visibilityState === 'visible') requestWakeLock();
+        };
         return wakeLock;
       } catch (err) {
         console.warn('Wake lock failed:', err);
@@ -737,17 +761,93 @@
 
     async function releaseWakeLock() {
       if (wakeLock) {
+        wakeLock.onrelease = null;   // deliberate release: do not re-acquire
         try { await wakeLock.release(); } catch {}
         wakeLock = null;
       }
     }
 
-    // Re-request on visibilitychange (device note 4).
+    // Re-request on visibilitychange (device note 4); snapshot the walk
+    // whenever the page hides so an interruption never loses it.
     document.addEventListener('visibilitychange', async () => {
       if (document.visibilityState === 'visible' && walk) {
         await requestWakeLock();
+      } else if (document.visibilityState === 'hidden') {
+        saveActiveWalk();
       }
     });
+    window.addEventListener('pagehide', () => saveActiveWalk());
+
+    // --- Focused walk state ---
+    // Ten seconds into the walk (and after each interaction) everything but
+    // the compass fades out and goes unresponsive, so a pocketed phone
+    // cannot end the walk. Tapping the compass area wakes the screen.
+    const FOCUS_DELAY_MS = 10000;
+    let focusTimer = null;
+
+    function enterFocus() {
+      if (!walk) return;
+      // Never blank the screen while a card is up or the walk screen hidden.
+      if (!screens.walk.classList.contains('active') ||
+          cardDisplay.classList.contains('visible')) {
+        resetFocusTimer();
+        return;
+      }
+      document.body.classList.add('walk-focused');
+    }
+
+    function exitFocus() {
+      document.body.classList.remove('walk-focused');
+    }
+
+    function resetFocusTimer() {
+      clearTimeout(focusTimer);
+      if (walk) focusTimer = setTimeout(enterFocus, FOCUS_DELAY_MS);
+    }
+
+    function clearFocus() {
+      clearTimeout(focusTimer);
+      focusTimer = null;
+      exitFocus();
+    }
+
+    compassView.addEventListener('pointerdown', () => {
+      exitFocus();
+      resetFocusTimer();
+    });
+
+    // --- In-progress walk persistence ---
+    // Snapshotted to IndexedDB on arrival, photo and every 30s tick, so a
+    // killed or interrupted session (phone call, app eviction, accidental
+    // close) can be resumed from the Go screen instead of lost.
+    async function saveActiveWalk() {
+      const db = await dbPromise;
+      if (!db || !walk) return;
+      try {
+        await put(db, 'prefs', { key: 'activeWalk', value: {
+          plan: walk.plan,
+          voiceSlug: walk.voice.slug,
+          startTime: walk.startTime,
+          trace: walk.trace,
+          photos: walk.photos,
+        }});
+      } catch (err) {
+        console.warn('Active walk save failed:', err);
+      }
+    }
+
+    async function loadActiveWalk() {
+      const db = await dbPromise;
+      if (!db) return null;
+      const row = await get(db, 'prefs', 'activeWalk');
+      return row?.value ?? null;
+    }
+
+    async function clearActiveWalk() {
+      const db = await dbPromise;
+      if (!db) return;
+      await del(db, 'prefs', 'activeWalk');
+    }
 
     // --- Device orientation (compass heading) ---
     let heading = 0;   // degrees clockwise from north
@@ -886,6 +986,15 @@
       return `${m}:${String(sec).padStart(2, '0')}`;
     }
 
+    // Timer tick; every 30th tick also snapshots the in-progress walk.
+    function startWalkTimer() {
+      let tick = 0;
+      walk.timerInterval = setInterval(() => {
+        walkTimer.textContent = formatElapsed(Date.now() - walk.startTime);
+        if (++tick % 30 === 0) saveActiveWalk();
+      }, 1000);
+    }
+
     // --- Go button ---
     btnGo.addEventListener('click', async () => {
       primeAudio();
@@ -944,9 +1053,7 @@
         });
 
         // Start timer.
-        walk.timerInterval = setInterval(() => {
-          walkTimer.textContent = formatElapsed(Date.now() - walk.startTime);
-        }, 1000);
+        startWalkTimer();
 
         // Show the walk screen.
         walkSeed.textContent = seed;
@@ -959,6 +1066,9 @@
         navButtons.walk.disabled = false;
         showScreen('walk');
         goStatus.textContent = '';
+        resumeRow.hidden = true;
+        resetFocusTimer();
+        saveActiveWalk();
       } catch (err) {
         goStatus.textContent = err.message || 'Failed to start.';
       } finally {
@@ -1006,6 +1116,10 @@
       vibrateArrival();
       playArrivalTone();
       flashArrival();
+      // Wake the screen for the card, restart the focus clock, snapshot.
+      exitFocus();
+      resetFocusTimer();
+      saveActiveWalk();
 
       // Show the card.
       showCard(stop.card, walk.voice);
@@ -1051,6 +1165,7 @@
     btnContinue.addEventListener('click', () => {
       hideCard();
       updateStopCounter();
+      resetFocusTimer();
       // If all stops done, finish.
       if (nextStopIndex(walk.plan.stops) < 0) {
         finishWalk();
@@ -1078,6 +1193,8 @@
       photoThumb.src = URL.createObjectURL(blob);
       photoThumb.classList.add('visible');
       photoInput.value = '';   // allow re-capture
+      resetFocusTimer();
+      saveActiveWalk();
     });
 
     function downscaleImage(file, maxDim) {
@@ -1116,6 +1233,7 @@
       // Tear down GPS watch (device note 6).
       stopWatch(walk.watchId);
       clearInterval(walk.timerInterval);
+      clearFocus();
       await releaseWakeLock();
 
       // Simplify the trace.
@@ -1160,6 +1278,8 @@
             taken: Date.now(),
           });
         }
+        // The walk is safely stored; drop the in-progress snapshot.
+        await clearActiveWalk();
       }
 
       // Show the done screen.
@@ -1383,12 +1503,65 @@
       if (walk) {
         stopWatch(walk.watchId);
         clearInterval(walk.timerInterval);
+        clearTimeout(focusTimer);
         releaseWakeLock();
       }
     });
 
+    // --- Resume an interrupted walk ---
+    const resumeRow = document.getElementById('resume-row');
+
+    document.getElementById('btn-resume').addEventListener('click', async () => {
+      const saved = await loadActiveWalk();
+      if (!saved) { resumeRow.hidden = true; return; }
+      primeAudio();
+      try {
+        const voice = await loadVoice(saved.voiceSlug);
+        const plan = saved.plan;
+        const tracker = createTracker(plan.stops);
+        walk = {
+          plan, voice, tracker, est: estimate(plan),
+          trace: saved.trace || [],
+          photos: saved.photos || {},
+          watchId: null,
+          startTime: saved.startTime,
+          timerInterval: null,
+          recentBuffer: [],
+        };
+        await requestWakeLock();
+        await requestOrientationPermission();
+        walk.watchId = startWatch((pos) => onFix(pos), (err) => {
+          walkStatus.textContent = `GPS: ${err.message}`;
+        });
+        startWalkTimer();
+        walkSeed.textContent = plan.seed;
+        updateStopCounter();
+        compassDist.textContent = '---';
+        compassBearing.textContent = '---°';
+        lastBearing = null;
+        lastDistance = null;
+        hideCard();
+        navButtons.walk.disabled = false;
+        resumeRow.hidden = true;
+        showScreen('walk');
+        resetFocusTimer();
+      } catch (err) {
+        goStatus.textContent = err.message || 'Failed to resume.';
+      }
+    });
+
+    document.getElementById('btn-discard-walk').addEventListener('click', async () => {
+      await clearActiveWalk();
+      resumeRow.hidden = true;
+    });
+
     // --- Initial load ---
     renderArchive();
+    // Offer to resume if a walk was in progress (and unfinished) when the
+    // app last went away.
+    loadActiveWalk().then((saved) => {
+      if (saved && nextStopIndex(saved.plan.stops) >= 0) resumeRow.hidden = false;
+    });
   </script>
 </body>
 </html>

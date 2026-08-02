@@ -95,6 +95,11 @@ in the sibling `glyph-drift` repo at `docs/device-reality.md`.
 - **Reject fixes with `accuracy > 50` or older than 30s**, and require two consecutive in-radius
   fixes before firing arrival. GPS spikes cause phantom arrivals.
 - **Tear down `watchPosition`** on end, give-up and unload.
+- **The walk snapshots itself** to `prefs/activeWalk` on arrival, photo capture and every 30s;
+  `finishWalk` clears it. The Go screen offers "Resume walk" when a snapshot with unreached stops
+  exists. True background GPS is impossible for a PWA — the snapshot + wake lock is the mitigation.
+- **The focused walk state** (`body.walk-focused`, 10s idle) blanks everything but the compass and
+  disables taps; it must never engage while a card is showing, and any interaction resets the clock.
 
 ## Conventions
 
