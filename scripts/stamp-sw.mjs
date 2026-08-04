@@ -17,7 +17,9 @@ const SW = join(PUBLIC, 'sw.js');
 
 // sw.js is excluded: it is the file we are about to rewrite, so including it
 // would make the hash depend on itself and never settle.
-const EXCLUDE = new Set(['sw.js']);
+// .DS_Store is excluded: macOS metadata that exists locally but not in CI,
+// so including it makes the stamp pass on macOS and fail on Linux.
+const EXCLUDE = new Set(['sw.js', '.DS_Store']);
 
 /** Every file under public/, as paths relative to public/, sorted. */
 function walk(dir) {
