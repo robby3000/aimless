@@ -2,7 +2,7 @@
 // A walking app must work with no signal - precache the shell, fall back to
 // cache for everything else. No CDN, no external resources (roadmap A2).
 
-const CACHE = 'aimless-v0.2.0-099665b3';
+const CACHE = 'aimless-v0.2.0-1c91b198';
 
 // Resolved against the worker's own URL, so the app works at a domain root
 // or under a subpath (GitHub Pages project sites) with no changes.
@@ -13,9 +13,14 @@ const PRECACHE = [
   './index.html',
   './sim.html',
   './manifest.json',
+  './icons/apple-touch-icon.png',
+  './icons/favicon-16.png',
+  './icons/favicon-32.png',
+  './icons/favicon-48.png',
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/icon-512-maskable.png',
+  './icons/icon-master.png',
   './lib/geo.js',
   './lib/rng.js',
   './lib/walk.js',
