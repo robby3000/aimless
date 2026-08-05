@@ -1534,14 +1534,80 @@
       return buildHTMLExport(currentDetailWalk, photos, svg, getSkin(currentSkin).css);
     }
 
+    // --- Share preview card ---
+    // Share sheets show a generic file icon for a local HTML file, so we
+    // render a PNG card in the active skin's style - the walk's first photo
+    // over the skin background, captioned "my aimless walk" - and attach it
+    // alongside the HTML file, where it shows up as the preview thumbnail.
+    const CARD_W = 1200;
+    const CARD_H = 630;
+    const CARD_BAND = 150;   // caption band height
+
+    function loadImageFromBlob(blob) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = URL.createObjectURL(blob);
+      });
+    }
+
+    async function buildShareCard(photoBlob) {
+      const { card } = getSkin(currentSkin);
+      const canvas = document.createElement('canvas');
+      canvas.width = CARD_W;
+      canvas.height = CARD_H;
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = card.bg;
+      ctx.fillRect(0, 0, CARD_W, CARD_H);
+
+      if (photoBlob) {
+        // Cover-fit the photo into the area above the caption band.
+        const img = await loadImageFromBlob(photoBlob);
+        const areaH = CARD_H - CARD_BAND;
+        const scale = Math.max(CARD_W / img.width, areaH / img.height);
+        const dw = img.width * scale;
+        const dh = img.height * scale;
+        ctx.drawImage(img, (CARD_W - dw) / 2, (areaH - dh) / 2, dw, dh);
+        URL.revokeObjectURL(img.src);
+      }
+
+      // Caption band with an accent divider.
+      ctx.fillStyle = card.bg;
+      ctx.fillRect(0, CARD_H - CARD_BAND, CARD_W, CARD_BAND);
+      ctx.fillStyle = card.accent;
+      ctx.fillRect(0, CARD_H - CARD_BAND, CARD_W, 6);
+      ctx.fillStyle = card.fg;
+      ctx.font = card.font;
+      ctx.textBaseline = 'middle';
+      ctx.fillText('my aimless walk', 48, CARD_H - CARD_BAND / 2 + 4);
+
+      return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+    }
+
     document.getElementById('btn-detail-share').addEventListener('click', async () => {
       if (!currentDetailWalk) return;
       const html = await buildCurrentDetailHTML();
       const filename = `aimless-${currentDetailWalk.seed}.html`;
-      const file = new File([html], filename, { type: 'text/html' });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      const htmlFile = new File([html], filename, { type: 'text/html' });
+
+      // First photo of the walk (lowest stop sequence), if any.
+      const db = await dbPromise;
+      const photos = db ? await byIndex(db, 'photos', 'walkId', currentDetailWalk.id) : [];
+      photos.sort((a, b) => a.stopSeq - b.stopSeq);
+      const cardBlob = await buildShareCard(photos[0]?.blob ?? null);
+      const cardFile = new File([cardBlob], `aimless-${currentDetailWalk.seed}-card.png`, { type: 'image/png' });
+
+      if (navigator.canShare && navigator.canShare({ files: [htmlFile, cardFile] })) {
         try {
-          await navigator.share({ files: [file], title: `Aimless walk ${currentDetailWalk.seed}` });
+          await navigator.share({ files: [htmlFile, cardFile], title: 'my aimless walk' });
+        } catch (err) {
+          if (err.name !== 'AbortError') console.warn('Share failed:', err);
+        }
+      } else if (navigator.canShare && navigator.canShare({ files: [htmlFile] })) {
+        try {
+          await navigator.share({ files: [htmlFile], title: `Aimless walk ${currentDetailWalk.seed}` });
         } catch (err) {
           if (err.name !== 'AbortError') console.warn('Share failed:', err);
         }
