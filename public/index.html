@@ -516,6 +516,7 @@
       <button id="btn-approach" class="btn-full">Close as I can get</button>
       <button id="btn-continue" class="btn-primary btn-full" hidden>Continue</button>
       <button id="btn-give-up" class="btn-danger btn-full">Give up</button>
+      <button id="btn-home-done" class="btn-primary btn-full" hidden>I'm home</button>
     </div>
     <div id="walk-status" class="status-msg"></div>
   </section>
@@ -527,6 +528,7 @@
       <div id="done-trace" class="done-trace"></div>
       <div id="done-summary" class="done-summary"></div>
       <div class="walk-actions">
+        <button id="btn-done-home" class="btn-full">Take me home</button>
         <button id="btn-done-archive" class="btn-primary btn-full">View in archive</button>
         <button id="btn-done-go" class="btn-full">Done</button>
       </div>
@@ -715,6 +717,12 @@
     // walk = { plan, voice, tracker, trace, photos, watchId, wakeLock,
     //          audioCtx, startTime, heading, timerInterval, recentBuffer }
 
+    // --- Homeward session ("Take me home") ---
+    // After a walk ends, the done screen can point the compass back at the
+    // walk's origin. A lightweight session: no stops, no cards, no trace.
+    let homeSession = null;   // { origin, watchId }
+    let lastDoneRecord = null;
+
     // --- Audio (primed on Go tap per device note 2) ---
     let audioCtx = null;
     function primeAudio() {
@@ -757,7 +765,7 @@
         // If the OS drops the lock mid-walk (interruption, low battery),
         // take it back as long as a walk is live and the page is visible.
         wakeLock.onrelease = () => {
-          if (walk && document.visibilityState === 'visible') requestWakeLock();
+          if ((walk || homeSession) && document.visibilityState === 'visible') requestWakeLock();
         };
         return wakeLock;
       } catch (err) {
@@ -777,7 +785,7 @@
     // Re-request on visibilitychange (device note 4); snapshot the walk
     // whenever the page hides so an interruption never loses it.
     document.addEventListener('visibilitychange', async () => {
-      if (document.visibilityState === 'visible' && walk) {
+      if (document.visibilityState === 'visible' && (walk || homeSession)) {
         await requestWakeLock();
       } else if (document.visibilityState === 'hidden') {
         saveActiveWalk();
@@ -793,7 +801,7 @@
     let focusTimer = null;
 
     function enterFocus() {
-      if (!walk) return;
+      if (!walk && !homeSession) return;
       // Never blank the screen while a card is up or the walk screen hidden.
       if (!screens.walk.classList.contains('active') ||
           cardDisplay.classList.contains('visible')) {
@@ -809,7 +817,7 @@
 
     function resetFocusTimer() {
       clearTimeout(focusTimer);
-      if (walk) focusTimer = setTimeout(enterFocus, FOCUS_DELAY_MS);
+      if (walk || homeSession) focusTimer = setTimeout(enterFocus, FOCUS_DELAY_MS);
     }
 
     function clearFocus() {
@@ -938,7 +946,7 @@
       if (typeof event.alpha === 'number') {
         heading = headingFromAlpha(event.alpha, screenAngle());
         orientationSource = 'abs';
-        if (walk && lastBearing != null) renderCompass(lastBearing, lastDistance);
+        if ((walk || homeSession) && lastBearing != null) renderCompass(lastBearing, lastDistance);
       }
     }
 
@@ -961,9 +969,9 @@
         return;   // no useful data
       }
       // Re-render the arrow immediately so it tracks phone rotation
-      // between GPS fixes (real-compass behaviour). Only when a walk is
-      // active and we already have a bearing from onFix.
-      if (walk && lastBearing != null) {
+      // between GPS fixes (real-compass behaviour). Only when a walk (or
+      // homeward session) is active and we already have a bearing from onFix.
+      if ((walk || homeSession) && lastBearing != null) {
         renderCompass(lastBearing, lastDistance);
       }
     }
@@ -1283,6 +1291,7 @@
         trace,
         gaveUp,
       };
+      lastDoneRecord = record;   // the done screen's "Take me home" reads this
 
       // Save to IndexedDB.
       const db = await dbPromise;
@@ -1374,6 +1383,66 @@
       renderArchive();
       showScreen('archive');
     });
+
+    // --- Take me home ---
+    // Point the compass back at the walk's origin on the walk screen.
+    const btnHomeDone = document.getElementById('btn-home-done');
+
+    document.getElementById('btn-done-home').addEventListener('click', async () => {
+      if (!lastDoneRecord?.origin) return;
+      primeAudio();
+      homeSession = { origin: lastDoneRecord.origin, watchId: null };
+      await requestWakeLock();
+      await requestOrientationPermission();
+      homeSession.watchId = startWatch((pos) => onHomeFix(pos), (err) => {
+        walkStatus.textContent = `GPS: ${err.message}`;
+      });
+
+      walkSeed.textContent = 'Homeward';
+      walkTimer.textContent = '';
+      stopCounter.textContent = 'Take me home';
+      compassDist.textContent = '---';
+      compassBearing.textContent = '---°';
+      lastBearing = null;
+      lastDistance = null;
+      arrowRotation = 0;
+      hideCard();
+      walkStatus.textContent = '';
+      // Only the "I'm home" button is relevant in this mode.
+      btnApproach.hidden = true;
+      btnContinue.hidden = true;
+      btnGiveUp.hidden = true;
+      btnHomeDone.hidden = false;
+      navButtons.walk.disabled = false;
+      showScreen('walk');
+      resetFocusTimer();
+    });
+
+    function onHomeFix(pos) {
+      if (!homeSession) return;
+      const fix = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      lastBearing = bearing(fix, homeSession.origin);
+      lastDistance = haversine(fix, homeSession.origin);
+      renderCompass(lastBearing, lastDistance);
+      walkStatus.textContent = lastDistance < 20 ? "You're home." : '';
+    }
+
+    function endHomeSession() {
+      if (!homeSession) return;
+      stopWatch(homeSession.watchId);
+      homeSession = null;
+      clearFocus();
+      releaseWakeLock();
+      lastBearing = null;
+      lastDistance = null;
+      btnHomeDone.hidden = true;
+      btnApproach.hidden = false;
+      btnGiveUp.hidden = false;
+      navButtons.walk.disabled = true;
+      showScreen('go');
+    }
+
+    btnHomeDone.addEventListener('click', endHomeSession);
 
     // --- Archive ---
     async function renderArchive() {
