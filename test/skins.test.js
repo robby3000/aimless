@@ -43,6 +43,13 @@ test('scopeCSS maps body onto the scope itself', () => {
   assert.ok(!out.includes('#detail-content body'));
 });
 
+test('scopeCSS maps :root onto the scope itself', () => {
+  // Custom properties in BASE_CSS must still be defined after scoping.
+  const out = scopeCSS(':root { --x: 1; }', '#detail-content');
+  assert.ok(out.includes('#detail-content {'));
+  assert.ok(!out.includes('#detail-content :root'));
+});
+
 test('scopeCSS handles comma-separated selectors', () => {
   const out = scopeCSS('h1, h2 { color: green; }', '#x');
   assert.ok(out.includes('#x h1'));
@@ -52,6 +59,21 @@ test('scopeCSS handles comma-separated selectors', () => {
 test('scopeCSS handles descendant selectors under body', () => {
   const out = scopeCSS('body .trace { padding: 1px; }', '#x');
   assert.ok(out.includes('#x .trace {'));
+});
+
+test('every skin has a share-card palette', () => {
+  // The share-sheet preview card is drawn on a canvas, which cannot apply
+  // CSS, so each skin carries its colours and font as data.
+  for (const s of SKINS) {
+    assert.ok(s.card, `${s.id} is missing a card palette`);
+    for (const key of ['bg', 'fg', 'accent', 'font']) {
+      assert.equal(typeof s.card[key], 'string', `${s.id}.card.${key} must be a string`);
+      assert.ok(s.card[key].length > 0, `${s.id}.card.${key} must not be empty`);
+    }
+    for (const key of ['bg', 'fg', 'accent']) {
+      assert.ok(/^#[0-9a-f]{6}$/i.test(s.card[key]), `${s.id}.card.${key} must be a hex colour`);
+    }
+  }
 });
 
 test('every skin survives scoping (produces output, no dangling braces)', () => {

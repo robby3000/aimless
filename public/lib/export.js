@@ -3,6 +3,16 @@
 
 import { unreachableRate } from './proximity.js';
 import { formatDistance } from './geo.js';
+import { BASE_CSS, PRINT_CSS } from './skins.js';
+
+/**
+ * The app icon as a hand-authored vector, matching icons/icon-master.png
+ * (dark green field, three cream waypoints, one green origin, orange dashed
+ * legs). Inlined into exports as a data URI so the keepsake needs no network.
+ */
+export const ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024"><rect width="1024" height="1024" fill="#12201b"/><path d="M348 520 L480 556 L600 405 M480 556 L685 615" fill="none" stroke="#ffb43d" stroke-width="26" stroke-dasharray="46 40"/><ellipse cx="295" cy="512" rx="68" ry="62" fill="#ede4d4" transform="rotate(-28 295 512)"/><circle cx="349" cy="673" r="66" fill="#5fa98d"/><ellipse cx="615" cy="350" rx="74" ry="64" fill="#ede4d4" transform="rotate(-18 615 350)"/><circle cx="727" cy="619" r="66" fill="#ede4d4"/></svg>`;
+
+export const ICON_DATA_URI = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(ICON_SVG)}`;
 
 /**
  * Convert a blob to a base64 data URL.
@@ -67,53 +77,15 @@ export async function buildHTMLExport(walk, photos, svgTrace, skinCss = '') {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Aimless — Walk ${walk.seed}</title>
 <style>
-  :root { --bg: #0a0a0a; --surface: #161616; --fg: #e8e8e8; --fg-dim: #888; --accent: #7ab8ff; }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body {
-    background: var(--bg); color: var(--fg);
-    font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-    line-height: 1.6; padding: 24px; max-width: 640px; margin: 0 auto;
-  }
-  h1 { font-size: 1.4rem; margin-bottom: 4px; }
-  .seed { font-family: monospace; color: var(--accent); font-size: 0.9rem; }
-  .date { color: var(--fg-dim); font-size: 0.9rem; margin-bottom: 16px; }
-  .summary { color: var(--fg-dim); font-size: 0.9rem; margin-bottom: 24px; }
-  .summary b { color: var(--fg); }
-  .trace { background: var(--surface); border-radius: 12px; padding: 16px; margin-bottom: 24px; text-align: center; }
-  .trace svg { max-width: 100%; height: auto; }
-  .stop {
-    display: flex; gap: 12px; margin-bottom: 20px;
-    border-bottom: 1px solid #222; padding-bottom: 16px;
-  }
-  .stop-num {
-    width: 32px; height: 32px; border-radius: 50%;
-    background: var(--accent); color: #0a0a0a;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 0.9rem; flex-shrink: 0;
-  }
-  .stop-body { flex: 1; }
-  .stop-meta { margin-bottom: 8px; }
-  .status { font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
-  .status.reached { background: #2a4a2a; color: #8c8; }
-  .status.approached { background: #4a3a2a; color: #fc8; }
-  .status.missed { background: #4a2a2a; color: #c88; }
-  .card-text { font-size: 1.1rem; line-height: 1.6; }
-  footer { margin-top: 32px; color: var(--fg-dim); font-size: 0.8rem; text-align: center; }
-  @media print {
-    body { background: white; color: black; max-width: none; }
-    .trace { background: white; border: 1px solid #ccc; }
-    .stop { border-bottom: 1px solid #ddd; }
-    .stop-num { background: #333; color: white; }
-    .status.reached { background: #d4e8d4; color: #264; }
-    .status.approached { background: #f0e4d4; color: #642; }
-    .status.missed { background: #f0d4d4; color: #622; }
-    .seed { color: #448; }
-  }
+${BASE_CSS}
+@media print {
+${PRINT_CSS}
+}
 </style>
 ${skinCss ? `<style id="skin">\n${skinCss}\n</style>` : ''}
 </head>
 <body>
-  <h1>Aimless</h1>
+  <h1><img class="app-icon" src="${ICON_DATA_URI}" alt="">Aimless</h1>
   <div class="seed">${walk.seed}</div>
   <div class="date">${date}</div>
   <div class="summary">

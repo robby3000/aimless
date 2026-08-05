@@ -406,45 +406,21 @@
     .done-summary b { color: var(--fg); }
 
     /* --- Detail screen --- */
+    /* The Walk result view carries NO decoration of its own: the base styles
+       and the active skin are injected from lib/skins.js (scoped to
+       #detail-content), exactly as the HTML export embeds them, so a skin
+       applies fully here rather than fighting hard-coded dark card styles. */
     #screen-detail { gap: 16px; }
-    #detail-content { display: flex; flex-direction: column; gap: 16px; }
-    .detail-header h2 { font-size: 1.3rem; margin-bottom: 4px; }
-    .detail-header .seed { font-family: 'SF Mono', Menlo, monospace; font-size: 0.85rem; color: var(--accent); }
-    .detail-header .date { color: var(--fg-dim); font-size: 0.85rem; }
-    .detail-summary { font-size: 0.9rem; color: var(--fg-dim); }
-    .detail-summary b { color: var(--fg); }
-    .detail-trace {
-      background: var(--surface); border: 1px solid var(--surface-2);
-      border-radius: var(--radius); padding: 16px; text-align: center;
-    }
-    .detail-trace svg { max-width: 100%; height: auto; }
-    .detail-stop {
-      background: var(--surface); border: 1px solid var(--surface-2);
-      border-radius: var(--radius); padding: 16px; margin-bottom: 12px;
-    }
-    .detail-stop .stop-head {
-      display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
-      font-size: 0.8rem; color: var(--fg-dim);
-    }
-    .detail-stop .stop-num {
-      width: 24px; height: 24px; border-radius: 50%;
-      background: var(--accent); color: #0a0a0a;
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 700; font-size: 0.75rem;
-    }
-    .detail-stop .stop-status { text-transform: uppercase; letter-spacing: 0.05em; }
-    .detail-stop .status.reached { color: #8c8; }
-    .detail-stop .status.approached { color: #fc8; }
-    .detail-stop .status.missed { color: #c88; }
-    .detail-stop .card-text { font-size: 1.05rem; line-height: 1.6; }
-    .detail-stop img { max-width: 100%; border-radius: 8px; margin-top: 8px; }
+    #detail-content img { max-width: 100%; }
 
     @media print {
       body { background: white; color: black; }
       header, nav, .walk-actions, #screen-go, #screen-walk, #screen-archive, #screen-info { display: none !important; }
       #screen-detail { display: flex !important; }
-      .detail-trace { background: white; border: 1px solid #ccc; }
-      .detail-stop { background: white; border: 1px solid #ddd; }
+      #detail-content, #detail-content .trace {
+        background: white !important; color: black !important; border-color: #ccc !important;
+      }
+      #detail-content * { color: black !important; }
     }
   </style>
 </head>
@@ -630,8 +606,13 @@
     // --- Walk Result skins ---
     const elSkin = document.getElementById('detail-skin');
     elSkin.innerHTML = SKINS.map((s) => `<option value="${s.id}">${s.name}</option>`).join('');
-    // Skin CSS is injected scoped to the detail view so it cannot leak into
-    // the rest of the app; the export embeds the same fragment unscoped.
+    // The shared base result styles and the active skin are injected scoped
+    // to the detail view so they cannot leak into the rest of the app; the
+    // export embeds the same fragments unscoped. Base first, skin after it,
+    // so the skin wins every rule they both set.
+    const baseStyle = document.createElement('style');
+    baseStyle.textContent = scopeCSS(BASE_CSS, '#detail-content');
+    document.head.appendChild(baseStyle);
     const skinStyle = document.createElement('style');
     document.head.appendChild(skinStyle);
     let currentSkin = 'default';
@@ -1503,38 +1484,38 @@
       const photoMap = new Map();
       for (const p of photos) photoMap.set(p.stopSeq, p);
 
+      // Same markup vocabulary as the HTML export, so the shared base styles
+      // and skins behave identically here and in the exported file.
       const stopHtml = walk.stops.map((s, i) => {
         const photo = photoMap.get(s.seq);
         const photoHtml = photo
           ? `<img src="${URL.createObjectURL(photo.blob)}" alt="photo">`
           : '';
         const status = s.approached
-          ? '<span class="stop-status status approached">close as I can get</span>'
+          ? '<span class="status approached">close as I can get</span>'
           : s.reachedAt
-            ? '<span class="stop-status status reached">reached</span>'
-            : '<span class="stop-status status missed">not reached</span>';
-        return `<div class="detail-stop stop">
-          <div class="stop-head">
-            <div class="stop-num">${i + 1}</div>
-            ${status}
+            ? '<span class="status reached">reached</span>'
+            : '<span class="status missed">not reached</span>';
+        return `<div class="stop">
+          <div class="stop-num">${i + 1}</div>
+          <div class="stop-body">
+            <div class="stop-meta">${status}</div>
+            <div class="card-text">${s.cardText || ''}</div>
+            ${photoHtml}
           </div>
-          <div class="card-text">${s.cardText || ''}</div>
-          ${photoHtml}
         </div>`;
       }).join('');
 
       document.getElementById('detail-content').innerHTML = `
-        <div class="detail-header">
-          <h2>Aimless</h2>
-          <div class="seed">${walk.seed}</div>
-          <div class="date">${date}</div>
-        </div>
-        <div class="detail-summary summary">
+        <h1>Aimless</h1>
+        <div class="seed">${walk.seed}</div>
+        <div class="date">${date}</div>
+        <div class="summary">
           <b>${reached}</b> of ${walk.stops.length} stops reached.
           ${unreachable.approached > 0 ? `<b>${unreachable.approached}</b> marked "close as I can get" (${Math.round(unreachable.rate * 100)}%).` : ''}
           ${walk.gaveUp ? '<br>Walk ended early.' : ''}
         </div>
-        <div class="detail-trace trace">${svg}</div>
+        <div class="trace">${svg}</div>
         ${stopHtml}
       `;
 

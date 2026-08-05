@@ -8,8 +8,77 @@
 // Skins style decoration only: colours, typography, borders, backgrounds.
 // Never layout, so the same fragment works against both markups.
 
+/**
+ * Base walk-result styles. The HTML export embeds this verbatim; the in-app
+ * Walk result view injects it scoped to #detail-content. Because the default
+ * decoration comes from the same injectable fragment mechanism as the skins
+ * (and the app's own stylesheet carries no result decoration), a skin can
+ * override any of it - this is what makes skins apply fully in-app, not
+ * just in exports.
+ */
+export const BASE_CSS = `
+:root { --bg: #0a0a0a; --surface: #161616; --fg: #e8e8e8; --fg-dim: #888; --accent: #7ab8ff; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  line-height: 1.6; padding: 24px; max-width: 640px; margin: 0 auto;
+}
+h1 { font-size: 1.4rem; margin-bottom: 4px; }
+.seed { font-family: monospace; color: var(--accent); font-size: 0.9rem; }
+.date { color: var(--fg-dim); font-size: 0.9rem; margin-bottom: 16px; }
+.summary { color: var(--fg-dim); font-size: 0.9rem; margin-bottom: 24px; }
+.summary b { color: var(--fg); }
+.trace { background: var(--surface); border-radius: 12px; padding: 16px; margin-bottom: 24px; text-align: center; }
+.trace svg { max-width: 100%; height: auto; }
+.stop {
+  display: flex; gap: 12px; margin-bottom: 20px;
+  border-bottom: 1px solid #222; padding-bottom: 16px;
+}
+.stop-num {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: var(--accent); color: #0a0a0a;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 0.9rem; flex-shrink: 0;
+}
+.stop-body { flex: 1; }
+.stop-meta { margin-bottom: 8px; }
+.status { font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+.status.reached { background: #2a4a2a; color: #8c8; }
+.status.approached { background: #4a3a2a; color: #fc8; }
+.status.missed { background: #4a2a2a; color: #c88; }
+.card-text { font-size: 1.1rem; line-height: 1.6; }
+footer { margin-top: 32px; color: var(--fg-dim); font-size: 0.8rem; text-align: center; }
+.app-icon { width: 44px; height: 44px; border-radius: 10px; vertical-align: -6px; margin-right: 6px; }
+/* Skins restyle photos via the bare img selector; the app icon must keep
+   its own look, so pin it back with a more specific rule. */
+img.app-icon { border: none; outline: none; box-shadow: none; transform: none; filter: none; padding: 0; background: none; }
+`;
+
+/** Print overrides for the HTML export (white paper, light badges). */
+export const PRINT_CSS = `
+body { background: white; color: black; max-width: none; }
+.trace { background: white; border: 1px solid #ccc; }
+.stop { border-bottom: 1px solid #ddd; }
+.stop-num { background: #333; color: white; }
+.status.reached { background: #d4e8d4; color: #264; }
+.status.approached { background: #f0e4d4; color: #642; }
+.status.missed { background: #f0d4d4; color: #622; }
+.seed { color: #448; }
+`;
+
 export const SKINS = [
-  { id: 'default', name: 'Default', css: '' },
+  {
+    id: 'default',
+    name: 'Default',
+    css: '',
+    card: {
+      bg: '#161616',
+      fg: '#e8e8e8',
+      accent: '#7ab8ff',
+      font: "600 52px -apple-system, BlinkMacSystemFont, system-ui, sans-serif",
+    },
+  },
 
   {
     id: 'verdant',
@@ -38,6 +107,12 @@ h1, h2 { color: #3c531f; }
 img { outline: 4px solid #eef2df; outline-offset: 2px; }
 footer { color: #8a906e; }
 `,
+    card: {
+      bg: '#f4f1e4',
+      fg: '#2d3a1f',
+      accent: '#5a7a2e',
+      font: "italic 600 52px Georgia, 'Times New Roman', serif",
+    },
   },
 
   {
@@ -78,6 +153,12 @@ h1, h2 {
 img { border: 2px solid #ff2bd6; box-shadow: 0 0 16px #ff2bd677; border-radius: 0; }
 footer { color: #554a80; }
 `,
+    card: {
+      bg: '#0d0221',
+      fg: '#00f5ff',
+      accent: '#ff2bd6',
+      font: "700 52px 'Courier New', ui-monospace, monospace",
+    },
   },
 
   {
@@ -124,6 +205,12 @@ footer { font-style: italic; color: #93826a; }
 footer::before { content: "~ "; }
 footer::after { content: " ~"; }
 `,
+    card: {
+      bg: '#efe6d0',
+      fg: '#3b2f23',
+      accent: '#8a7355',
+      font: "600 52px Georgia, 'Times New Roman', serif",
+    },
   },
 
   {
@@ -163,6 +250,12 @@ footer { color: #1e7a1e; }
 footer::before { content: "*** "; }
 footer::after { content: " ***"; }
 `,
+    card: {
+      bg: '#000000',
+      fg: '#33ff33',
+      accent: '#33ff33',
+      font: "700 52px 'Courier New', ui-monospace, monospace",
+    },
   },
 
   {
@@ -210,6 +303,12 @@ footer { color: #cc44cc; font-weight: 700; }
 footer::before { content: "\\2665 "; color: #ff0066; }
 footer::after { content: " \\2665"; color: #ff0066; }
 `,
+    card: {
+      bg: '#ffb3e6',
+      fg: '#661166',
+      accent: '#ff0066',
+      font: "700 52px 'Comic Sans MS', 'Chalkboard SE', 'Comic Neue', cursive",
+    },
   },
 ];
 
@@ -221,14 +320,15 @@ export function getSkin(id) {
 /**
  * Prefix every selector in a CSS fragment with a scope, so a skin written
  * for the standalone export can be injected into the app without leaking.
- * `body` maps onto the scope itself. No @-rule support - skins stay simple.
+ * `body` and `:root` map onto the scope itself (the latter so custom
+ * properties stay defined). No @-rule support - skins stay simple.
  */
 export function scopeCSS(css, scope) {
   return css.replace(/(^|})([^{}]+){/g, (match, brace, selectors) => {
     const scoped = selectors.split(',').map((raw) => {
       const s = raw.trim();
       if (!s) return s;
-      if (s === 'body') return scope;
+      if (s === 'body' || s === ':root') return scope;
       if (s.startsWith('body ')) return `${scope} ${s.slice(5)}`;
       return `${scope} ${s}`;
     }).join(', ');
