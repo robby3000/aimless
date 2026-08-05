@@ -48,6 +48,7 @@
       flex-direction: column;
       padding-top: var(--safe-top);
       padding-bottom: var(--safe-bottom);
+      transition: background-color 0.4s;
     }
 
     /* --- Screens --- */
@@ -301,6 +302,8 @@
       opacity: 0;
       pointer-events: none;
     }
+    /* Focused walk: pure black so OLED pixels are fully off (battery). */
+    body.walk-focused { background: #000; }
     #compass-view { cursor: pointer; }
 
     /* --- Info screen --- */
