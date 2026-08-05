@@ -485,10 +485,6 @@
       </label>
     </div>
     <div id="go-status" class="status-msg"></div>
-    <div id="resume-row" class="walk-actions" style="width:100%; max-width:320px;" hidden>
-      <button id="btn-resume" class="btn-primary btn-full">Resume walk in progress</button>
-      <button id="btn-discard-walk" class="btn-danger btn-full">Discard it</button>
-    </div>
   </section>
 
   <!-- Walk screen -->
@@ -849,13 +845,6 @@
       } catch (err) {
         console.warn('Active walk save failed:', err);
       }
-    }
-
-    async function loadActiveWalk() {
-      const db = await dbPromise;
-      if (!db) return null;
-      const row = await get(db, 'prefs', 'activeWalk');
-      return row?.value ?? null;
     }
 
     async function clearActiveWalk() {
@@ -1595,63 +1584,15 @@
         clearTimeout(focusTimer);
         releaseWakeLock();
       }
-    });
-
-    // --- Resume an interrupted walk ---
-    const resumeRow = document.getElementById('resume-row');
-
-    document.getElementById('btn-resume').addEventListener('click', async () => {
-      const saved = await loadActiveWalk();
-      if (!saved) { resumeRow.hidden = true; return; }
-      primeAudio();
-      try {
-        const voice = await loadVoice(saved.voiceSlug);
-        const plan = saved.plan;
-        const tracker = createTracker(plan.stops);
-        walk = {
-          plan, voice, tracker, est: estimate(plan),
-          trace: saved.trace || [],
-          photos: saved.photos || {},
-          watchId: null,
-          startTime: saved.startTime,
-          timerInterval: null,
-          recentBuffer: [],
-        };
-        await requestWakeLock();
-        await requestOrientationPermission();
-        walk.watchId = startWatch((pos) => onFix(pos), (err) => {
-          walkStatus.textContent = `GPS: ${err.message}`;
-        });
-        startWalkTimer();
-        walkSeed.textContent = plan.seed;
-        updateStopCounter();
-        compassDist.textContent = '---';
-        compassBearing.textContent = '---°';
-        lastBearing = null;
-        lastDistance = null;
-        hideCard();
-        walkStatus.textContent = '';
-        navButtons.walk.disabled = false;
-        resumeRow.hidden = true;
-        showScreen('walk');
-        resetFocusTimer();
-      } catch (err) {
-        goStatus.textContent = err.message || 'Failed to resume.';
+      if (homeSession) {
+        stopWatch(homeSession.watchId);
+        clearTimeout(focusTimer);
+        releaseWakeLock();
       }
-    });
-
-    document.getElementById('btn-discard-walk').addEventListener('click', async () => {
-      await clearActiveWalk();
-      resumeRow.hidden = true;
     });
 
     // --- Initial load ---
     renderArchive();
-    // Offer to resume if a walk was in progress (and unfinished) when the
-    // app last went away.
-    loadActiveWalk().then((saved) => {
-      if (saved && nextStopIndex(saved.plan.stops) >= 0) resumeRow.hidden = false;
-    });
   </script>
 </body>
 </html>
