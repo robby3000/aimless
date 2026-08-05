@@ -580,9 +580,9 @@
     import { drawWalk, pushRecent, recentKeys } from './lib/deck.js';
     import { openDB, getPrefs, setPrefs, put, get, all, byIndex, del } from './lib/store.js';
     import { createTracker, reachStop, unreachableRate } from './lib/proximity.js';
-    import { haversine, bearing, simplify, formatDistance, compassPoint, bounds, headingFromAlpha } from './lib/geo.js';
+    import { haversine, bearing, simplify, pathLength, formatDistance, compassPoint, bounds, headingFromAlpha, nextRotation } from './lib/geo.js';
     import { buildHTMLExport, downloadFile, blobToDataURL } from './lib/export.js';
-    import { SKINS, getSkin, scopeCSS } from './lib/skins.js';
+    import { SKINS, getSkin, scopeCSS, BASE_CSS } from './lib/skins.js';
 
     // --- Screen navigation ---
     const screens = {
@@ -871,6 +871,12 @@
       return typeof window.orientation === 'number' ? window.orientation : 0;
     }
 
+    // Cumulative arrow rotation. The arrow is rotated with a CSS transition,
+    // so feeding it a raw 0-360 angle makes it spin a full turn backwards
+    // whenever the target crosses straight-up (359 -> 0). Accumulating the
+    // shortest-path delta instead keeps it sweeping smoothly through north.
+    let arrowRotation = 0;
+
     // Render the compass readout (arrow, distance, bearing label) from the
     // given bearing/distance plus the current heading. Pure DOM write; safe
     // to call from either onFix or handleOrientation.
@@ -879,7 +885,8 @@
       compassDist.textContent = formatDistance(distance);
       compassBearing.textContent = `${Math.round(bearing)}\u00b0 ${compassPoint(bearing)}`;
       const relative = (bearing - heading + 360) % 360;
-      compassArrow.style.transform = `rotate(${relative}deg)`;
+      arrowRotation = nextRotation(arrowRotation, relative);
+      compassArrow.style.transform = `rotate(${arrowRotation}deg)`;
     }
 
     async function requestOrientationPermission() {
@@ -1066,12 +1073,12 @@
         compassBearing.textContent = '---\u00b0';
         lastBearing = null;
         lastDistance = null;
+        arrowRotation = 0;
         hideCard();
         walkStatus.textContent = '';   // no stale status from the last walk
         navButtons.walk.disabled = false;
         showScreen('walk');
         goStatus.textContent = '';
-        resumeRow.hidden = true;
         resetFocusTimer();
         saveActiveWalk();
       } catch (err) {

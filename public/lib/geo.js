@@ -43,6 +43,17 @@ export function angleDelta(a, b) {
   return ((((b - a) % 360) + 540) % 360) - 180;
 }
 
+/**
+ * Advance a cumulative rotation toward a target angle by the shortest path.
+ * A CSS rotation fed raw 0-360 bearings spins a full turn backwards whenever
+ * the target crosses straight-up (359 -> 0); accumulating the delta instead
+ * keeps the arrow sweeping smoothly through the wrap.
+ */
+export function nextRotation(current, target) {
+  const c = (((current % 360) + 360) % 360);
+  return current + angleDelta(c, target);
+}
+
 /** Perpendicular distance from p to segment ab, in metres (planar approx - fine at these scales). */
 function perpDistance(p, a, b) {
   const mPerDegLat = 111320;

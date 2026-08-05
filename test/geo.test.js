@@ -5,6 +5,7 @@ import {
   bearing,
   destination,
   angleDelta,
+  nextRotation,
   simplify,
   pathLength,
   bounds,
@@ -63,6 +64,24 @@ test('angleDelta wraps correctly', () => {
   assert.equal(angleDelta(350, 10), 20);
   assert.equal(angleDelta(10, 350), -20);
   assert.ok(Math.abs(angleDelta(0, 180)) === 180);  // 180 or -180, both valid
+});
+
+test('nextRotation sweeps through the 0/360 wrap without a full spin', () => {
+  // The arrow bug: feeding rotate() a raw 0-360 angle animates 359 -> 0 as
+  // a near-full backwards spin whenever the target crosses straight-up.
+  let r = 350;
+  r = nextRotation(r, 10);
+  assert.equal(r, 370);             // forward through north, not -340
+  r = nextRotation(r, 350);
+  assert.equal(r, 350);             // and back again
+  r = nextRotation(r, 0);
+  assert.equal(r, 360);
+  // Repeated calls keep the displayed angle equivalent to the target.
+  for (const target of [5, 355, 5, 355, 90, 270, 5]) {
+    r = nextRotation(r, target);
+    const displayed = ((r % 360) + 360) % 360;
+    assert.ok(Math.abs(angleDelta(displayed, target)) < 1e-9, `target ${target}, got ${r}`);
+  }
 });
 
 test('simplify preserves endpoints', () => {
