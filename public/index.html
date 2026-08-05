@@ -108,6 +108,13 @@
       color: var(--danger);
     }
 
+    /* Share: same primary treatment as Export, a slightly deeper blue. */
+    .btn-share {
+      background: #5f9df0;
+      border-color: #5f9df0;
+    }
+    .btn-share:active { background: #4a7fc4; }
+
     .btn-full { width: 100%; }
 
     /* --- Go screen --- */
@@ -538,7 +545,7 @@
         <select id="detail-skin"></select>
       </label>
       <button id="btn-detail-export-html" class="btn-primary btn-full">Export as HTML</button>
-      <button id="btn-detail-share" class="btn-full">Share</button>
+      <button id="btn-detail-share" class="btn-primary btn-share btn-full">Share</button>
     </div>
   </section>
 
