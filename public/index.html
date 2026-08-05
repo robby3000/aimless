@@ -1255,6 +1255,10 @@
       const trace = simplify(walk.trace.map((p) => ({ lat: p.lat, lng: p.lng })), 8)
         .map((p) => ({ lat: p.lat, lng: p.lng }));
 
+      // Distance actually walked: length of the recorded GPS trace, NOT the
+      // planned route estimate - giving up 10m in must say 10m.
+      const distanceM = pathLength(trace);
+
       // Build the walk record.
       const id = `walk-${Date.now()}`;
       const reached = walk.plan.stops.filter((s) => s.reachedAt).length;
@@ -1266,6 +1270,7 @@
         voice: walk.voice.slug,
         budgetMin: walk.plan.budgetMin,
         origin: walk.plan.origin,
+        distanceM,
         stops: walk.plan.stops.map((s) => ({
           seq: s.seq,
           lat: s.lat,
@@ -1304,7 +1309,7 @@
       document.getElementById('done-summary').innerHTML = `
         <b>${reached}</b> of ${walk.plan.stops.length} stops reached.
         ${unreachable.approached > 0 ? `<b>${unreachable.approached}</b> marked "close as I can get" (${Math.round(unreachable.rate * 100)}%).` : ''}
-        <br>Walked ~${formatDistance(walk.est.walkedM)} in ${formatElapsed(Date.now() - walk.startTime)}.
+        <br>Walked ~${formatDistance(distanceM)} in ${formatElapsed(Date.now() - walk.startTime)}.
         <br>Seed: <span class="seed">${walk.plan.seed}</span>
       `;
 
