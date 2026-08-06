@@ -17,8 +17,8 @@ const SW = join(PUBLIC, 'sw.js');
 
 // sw.js is excluded: it is the file we are about to rewrite, so including it
 // would make the hash depend on itself and never settle.
-// .DS_Store is excluded: macOS metadata that exists locally but not in CI,
-// so including it makes the stamp pass on macOS and fail on Linux.
+// .DS_Store is excluded at any depth: macOS metadata that exists locally but
+// not in CI, so including it makes the stamp pass on macOS and fail on Linux.
 const EXCLUDE = new Set(['sw.js', '.DS_Store']);
 
 /** Every file under public/, as paths relative to public/, sorted. */
@@ -27,7 +27,7 @@ function walk(dir) {
   for (const entry of readdirSync(dir)) {
     const abs = join(dir, entry);
     if (statSync(abs).isDirectory()) out.push(...walk(abs));
-    else if (!EXCLUDE.has(relative(PUBLIC, abs))) out.push(abs);
+    else if (!EXCLUDE.has(entry) && !EXCLUDE.has(relative(PUBLIC, abs))) out.push(abs);
   }
   return out.sort();
 }
