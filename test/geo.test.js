@@ -12,6 +12,7 @@ import {
   formatDistance,
   compassPoint,
   headingFromAlpha,
+  createTraceGate,
 } from '../public/lib/geo.js';
 
 const GLA = { lat: 55.8642, lng: -4.2518 };   // Glasgow
@@ -188,4 +189,67 @@ test('arrow points at the target bearing regardless of heading', () => {
     const world = (heading + relative) % 360;          // where it really points
     assert.equal(Math.round(world), target, `heading ${h}`);
   }
+});
+
+// A fix distM metres along bearingDeg from origin, at time t (ms).
+function fixAt(origin, bearingDeg, distM, t, accuracy = 10) {
+  return { ...destination(origin, bearingDeg, distM), t, accuracy };
+}
+
+test('trace gate rejects a mid-walk spike and keeps the walk that follows', () => {
+  const gate = createTraceGate();
+  // 60s of honest walking east at 1.4 m/s.
+  for (let i = 0; i <= 60; i++) {
+    assert.ok(gate.accept(fixAt(GLA, 90, 1.4 * i, i * 1000)), `fix ${i}`);
+  }
+  // A 300m spike one second later: implies ~300 m/s, must be dropped.
+  assert.equal(gate.accept(fixAt(GLA, 0, 300, 61000)), false);
+  // The next honest fix (back on the path) is still accepted.
+  assert.ok(gate.accept(fixAt(GLA, 90, 1.4 * 61, 62000)));
+});
+
+test('trace gate keeps stationary jitter at several fixes per second', () => {
+  // The naive speed-gate failure mode: 2 fixes/second bouncing ±10m reads as
+  // ~72 km/h, but the accuracy allowance (15m + 15m) must absorb it.
+  const gate = createTraceGate();
+  for (let i = 0; i <= 40; i++) {
+    const brg = i % 2 === 0 ? 0 : 180;
+    assert.ok(gate.accept(fixAt(GLA, brg, 10, i * 500, 15)), `fix ${i}`);
+  }
+});
+
+test('trace gate accepts a fast walk near the speed limit', () => {
+  const gate = createTraceGate();
+  for (let i = 0; i <= 30; i++) {
+    assert.ok(gate.accept(fixAt(GLA, 90, 5.5 * i, i * 1000, 5)), `fix ${i}`);
+  }
+});
+
+test('trace gate drops fixes with hopeless accuracy without starting a streak', () => {
+  const gate = createTraceGate();
+  assert.ok(gate.accept(fixAt(GLA, 0, 0, 0)));
+  assert.equal(gate.accept(fixAt(GLA, 90, 1, 1000, 65)), false);
+  // A normal fix right after is accepted immediately - no re-anchor delay.
+  assert.ok(gate.accept(fixAt(GLA, 90, 2, 2000)));
+});
+
+test('trace gate re-anchors when a "spike" persists for 10s', () => {
+  // GPS settled 200m away from a bad first fix: the jump is real.
+  const gate = createTraceGate();
+  assert.ok(gate.accept(fixAt(GLA, 0, 0, 0)));
+  const accepted = [];
+  for (let i = 1; i <= 12; i++) {
+    accepted.push(gate.accept(fixAt(GLA, 90, 200 + 1.4 * i, i * 1000)));
+  }
+  // Rejected for the first 10s of the cluster...
+  assert.deepEqual(accepted.slice(0, 10), Array(10).fill(false));
+  // ...then re-anchored, and the cluster's own movement flows through.
+  assert.deepEqual(accepted.slice(10), [true, true]);
+});
+
+test('trace gate rejects an out-of-order timestamp jump', () => {
+  const gate = createTraceGate();
+  assert.ok(gate.accept(fixAt(GLA, 0, 0, 5000)));
+  // Older than the anchor and 100m away: dt clamps to 0, no speed allowance.
+  assert.equal(gate.accept(fixAt(GLA, 90, 100, 4000)), false);
 });

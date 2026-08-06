@@ -94,6 +94,53 @@ export function pathLength(points) {
   return t;
 }
 
+export const MAX_TRACE_SPEED_MPS = 6;    // ~21.6 km/h; a brisk walk is ~2 m/s
+export const MAX_TRACE_ACCURACY_M = 50;  // matches the arrival gate in proximity.js
+export const REANCHOR_MS = 10000;        // a reject streak this long is real movement
+
+/**
+ * Stateful gate deciding which GPS fixes belong in the recorded trace.
+ * A fix is rejected when it implies movement faster than maxSpeedMps after
+ * allowing for both endpoints' accuracy radii - the accuracy terms are what
+ * keep honest jitter (which can read as 100+ km/h at 1Hz) from being dropped.
+ * Fixes with accuracy worse than maxAccuracyM are dropped outright and do not
+ * count toward the streak. If a reject streak runs past reanchorMs the "spike"
+ * is real (GPS settled late, tunnel exit) and the gate re-anchors onto it.
+ */
+export function createTraceGate(opts = {}) {
+  const maxSpeed = opts.maxSpeedMps ?? MAX_TRACE_SPEED_MPS;
+  const maxAccuracy = opts.maxAccuracyM ?? MAX_TRACE_ACCURACY_M;
+  const reanchorMs = opts.reanchorMs ?? REANCHOR_MS;
+  let last = null;
+  let streakStart = null;
+
+  return {
+    /** @param fix {{lat, lng, t, accuracy?}} @returns {boolean} record this fix? */
+    accept(fix) {
+      const acc = typeof fix.accuracy === 'number' ? fix.accuracy : 0;
+      if (acc > maxAccuracy) return false;
+      if (!last) {
+        last = fix;
+        return true;
+      }
+      const lastAcc = typeof last.accuracy === 'number' ? last.accuracy : 0;
+      const dt = Math.max((fix.t - last.t) / 1000, 0);
+      if (haversine(last, fix) <= maxSpeed * dt + acc + lastAcc) {
+        last = fix;
+        streakStart = null;
+        return true;
+      }
+      if (streakStart == null) streakStart = fix.t;
+      if (fix.t - streakStart >= reanchorMs) {
+        last = fix;
+        streakStart = null;
+        return true;
+      }
+      return false;
+    },
+  };
+}
+
 /** Bounding box of a set of points. */
 export function bounds(points) {
   const lats = points.map((p) => p.lat);

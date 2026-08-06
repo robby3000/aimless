@@ -565,7 +565,7 @@
     import { drawWalk, pushRecent, recentKeys } from './lib/deck.js';
     import { openDB, getPrefs, setPrefs, put, get, all, byIndex, del } from './lib/store.js';
     import { createTracker, reachStop, unreachableRate } from './lib/proximity.js';
-    import { haversine, bearing, simplify, pathLength, formatDistance, compassPoint, bounds, headingFromAlpha, nextRotation } from './lib/geo.js';
+    import { haversine, bearing, simplify, pathLength, formatDistance, compassPoint, bounds, headingFromAlpha, nextRotation, createTraceGate } from './lib/geo.js';
     import { buildHTMLExport, downloadFile, blobToDataURL } from './lib/export.js';
     import { SKINS, getSkin, scopeCSS, BASE_CSS } from './lib/skins.js';
 
@@ -1033,8 +1033,10 @@
 
         // Create tracker and start the walk.
         const tracker = createTracker(plan.stops);
+        const traceGate = createTraceGate();
+        traceGate.accept({ lat: origin.lat, lng: origin.lng, t: Date.now(), accuracy: pos.coords.accuracy });
         walk = {
-          plan, voice, tracker, est,
+          plan, voice, tracker, est, traceGate,
           trace: [{ lat: origin.lat, lng: origin.lng, t: Date.now() }],
           photos: {},
           watchId: null,
@@ -1087,8 +1089,10 @@
         timestamp: pos.timestamp,
       };
 
-      // Buffer trace point (every fix, simplified on save).
-      walk.trace.push({ lat: fix.lat, lng: fix.lng, t: fix.timestamp });
+      // Buffer trace point if the gate trusts it (spikes dropped, simplified on save).
+      if (walk.traceGate.accept({ lat: fix.lat, lng: fix.lng, t: fix.timestamp, accuracy: fix.accuracy })) {
+        walk.trace.push({ lat: fix.lat, lng: fix.lng, t: fix.timestamp });
+      }
 
       // Feed tracker.
       const r = walk.tracker.update(fix, Date.now());
