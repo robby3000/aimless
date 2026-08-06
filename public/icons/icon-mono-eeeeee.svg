@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <g fill="#EEEEEE">
+    <rect x="-21.1" y="-8.7" width="42.2" height="17.4" transform="translate(392.6 541.2) rotate(14.5)"/>
+    <rect x="-21.1" y="-8.7" width="42.2" height="17.4" transform="translate(416.4 605.8) rotate(-51.1)"/>
+    <rect x="-21.1" y="-8.7" width="42.2" height="17.4" transform="translate(519.9 477.2) rotate(-51.2)"/>
+    <rect x="-21.1" y="-8.7" width="42.2" height="17.4" transform="translate(571.8 412.7) rotate(-51.1)"/>
+    <rect x="-21.1" y="-8.7" width="42.2" height="17.4" transform="translate(655.4 441.2) rotate(67.4)"/>
+    <rect x="-21.1" y="-8.7" width="42.2" height="17.4" transform="translate(686.9 517.3) rotate(67.6)"/>
+    <rect x="-21.1" y="-8.7" width="42.2" height="17.4" transform="translate(553.2 581.4) rotate(13.8)"/>
+    <rect x="-21.1" y="-8.7" width="42.2" height="17.4" transform="translate(633.0 601.4) rotate(14.1)"/>
+    <polygon points="474.7,520.1 476.7,520.1 488,530.3 471.6,551.3 496.1,557.3 492,573.6 487.9,572.6 451.1,563.5 453.2,556.4 449.1,551.5"/>
+    <circle cx="296" cy="512" r="68"/>
+    <circle cx="620" cy="350" r="68"/>
+    <circle cx="728" cy="620" r="68"/>
+    <circle cx="350" cy="674" r="68"/>
+  </g>
+</svg>
