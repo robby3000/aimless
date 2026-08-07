@@ -342,6 +342,27 @@
       border-top-color: var(--accent-large);
     }
 
+    /* --- Storage warning banner --- */
+    .storage-banner {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 20px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--danger);
+      font-size: 0.85rem;
+    }
+    .storage-banner[hidden] { display: none; }
+    .storage-banner button {
+      background: none;
+      border: none;
+      color: var(--fg-dim);
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 0 4px;
+      flex-shrink: 0;
+    }
+
     /* --- Status / error --- */
     .status-msg {
       text-align: center;
@@ -438,6 +459,11 @@
   <header>
     <div class="logo">Aimless<span>.</span></div>
   </header>
+
+  <div id="storage-banner" class="storage-banner" hidden>
+    <span>Storage is not protected — the browser can clear your saved walks. Install Aimless to your home screen to keep them safe.</span>
+    <button id="storage-banner-dismiss" aria-label="Dismiss">×</button>
+  </div>
 
   <!-- Go screen -->
   <section id="screen-go" class="screen active">
@@ -608,10 +634,36 @@
       });
     }
 
+    // --- Storage persistence ---
+    // Ask the browser to mark this origin's storage as persistent so IndexedDB
+    // isn't evicted under storage pressure — the cause of whole-archive loss on
+    // Android. Installed PWAs are granted automatically; browser tabs rely on
+    // engagement heuristics and can be refused. Dexie itself is only an
+    // IndexedDB wrapper and confers no eviction protection.
+    const storagePersistedPromise = (async () => {
+      if (!navigator.storage || !navigator.storage.persist) return true;
+      try {
+        const already = navigator.storage.persisted ? await navigator.storage.persisted() : false;
+        const granted = already || await navigator.storage.persist();
+        console.info('Persistent storage:', granted);
+        return granted;
+      } catch { return true; } // unknown — don't cry wolf
+    })();
+
     // --- DB ---
     const dbPromise = openDB().catch((err) => {
       console.error('IndexedDB open failed:', err);
       return null;
+    });
+
+    // Warn only when storage is unprotected AND there is data to lose.
+    Promise.all([storagePersistedPromise, dbPromise]).then(async ([persisted, db]) => {
+      if (persisted || !db) return;
+      const walks = await all(db, 'walks');
+      if (walks.length) document.getElementById('storage-banner').hidden = false;
+    });
+    document.getElementById('storage-banner-dismiss').addEventListener('click', () => {
+      document.getElementById('storage-banner').hidden = true;
     });
 
     // --- Walk Result skins ---
