@@ -49,6 +49,7 @@ h1 { font-size: 1.4rem; margin-bottom: 4px; }
 .status.missed { background: #4a2a2a; color: #c88; }
 .card-text { font-size: 1.1rem; line-height: 1.6; }
 footer { margin-top: 32px; color: var(--fg-dim); font-size: 0.8rem; text-align: center; }
+footer a { color: inherit; }
 .app-icon { width: 44px; height: 44px; border-radius: 10px; vertical-align: -6px; margin-right: 6px; }
 /* Skins restyle photos via the bare img selector; the app icon must keep
    its own look, so pin it back with a more specific rule. */
