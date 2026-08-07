@@ -44,3 +44,11 @@ node_modules/
 
 .DS_Store
 *.log
+
+# Styling playground — local design experiments, not part of the app
+test/styling-tests.html
+test/css-guide.md
+test/styling-tests-safelight.html
+test/styling-tests-coralreef.html
+test/styling-tests-chartroom.html
+docs/ui-map.md
