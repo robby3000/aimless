@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
-  <meta name="theme-color" content="#0a0a0a">
+  <meta name="theme-color" content="#062a35">
   <meta name="description" content="Go nowhere, on purpose. A walking app with no map.">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/favicon-16.png" type="image/png" sizes="16x16">
@@ -17,14 +17,16 @@
   <title>Aimless</title>
   <style>
     :root {
-      --bg: #0a0a0a;
-      --surface: #161616;
-      --surface-2: #1e1e1e;
-      --fg: #e8e8e8;
-      --fg-dim: #888;
-      --accent: #7ab8ff;
-      --accent-dim: #3a6a9a;
-      --danger: #ff6b6b;
+      --bg: #062a35;
+      --surface: #0b3d4a;
+      --surface-2: #157a7a;
+      --fg: #e6f7f9;
+      --fg-dim: #b2e0e6;
+      --accent: #ff7f6b;
+      --accent-large: #20b2aa;
+      --accent-dim: #157a7a;
+      --accent-sand: #f5d5c0;
+      --danger: #d64545;
       --radius: 12px;
       --safe-top: env(safe-area-inset-top, 0px);
       --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -97,7 +99,7 @@
 
     .btn-primary {
       background: var(--accent);
-      color: #0a0a0a;
+      color: var(--bg);
       border-color: var(--accent);
       font-weight: 600;
     }
@@ -108,12 +110,13 @@
       color: var(--danger);
     }
 
-    /* Share walk / Send card: same primary treatment as Export, a slightly deeper blue. */
+    /* Share walk / Send card: light warm Sand fill, needs dark text on top. */
     .btn-share {
-      background: #5f9df0;
-      border-color: #5f9df0;
+      background: var(--accent-sand);
+      border-color: var(--accent-sand);
+      color: var(--bg);
     }
-    .btn-share:active { background: #4a7fc4; }
+    .btn-share:active { background: #e0bfa0; }
 
     .btn-full { width: 100%; }
 
@@ -140,7 +143,7 @@
       border-radius: 50%;
       font-size: 1.4rem;
       font-weight: 700;
-      border: 2px solid var(--accent);
+      border: 2px solid var(--accent-large);
       background: var(--surface);
       color: var(--accent);
       display: flex;
@@ -194,7 +197,7 @@
     .compass-arrow {
       font-size: 6rem;
       line-height: 1;
-      color: var(--accent);
+      color: var(--accent-large);
       transition: transform 0.2s ease-out;
       will-change: transform;
     }
@@ -336,7 +339,7 @@
     }
     nav button.active {
       color: var(--accent);
-      border-top-color: var(--accent);
+      border-top-color: var(--accent-large);
     }
 
     /* --- Status / error --- */
@@ -357,7 +360,7 @@
     #arrival-flash {
       position: fixed;
       inset: 0;
-      background: var(--accent);
+      background: var(--accent-large);
       opacity: 0;
       pointer-events: none;
       z-index: 100;
@@ -1296,7 +1299,9 @@
       // Show the done screen.
       const unreachable = unreachableRate(walk.plan.stops);
       document.getElementById('done-title').textContent = gaveUp ? 'Walk ended' : 'Walk complete';
-      document.getElementById('done-trace').innerHTML = traceSVG(walk.plan, trace);
+      document.getElementById('done-trace').innerHTML = traceSVG(walk.plan, trace, {
+        planStroke: '#e6f7f9', traceStroke: '#20b2aa', originFill: '#20b2aa', stopFill: '#e6f7f9',
+      });
       document.getElementById('done-summary').innerHTML = `
         <b>${reached}</b> of ${walk.plan.stops.length} stops reached.
         ${unreachable.approached > 0 ? `<b>${unreachable.approached}</b> marked "close as I can get" (${Math.round(unreachable.rate * 100)}%).` : ''}
@@ -1312,7 +1317,10 @@
     }
 
     // --- Trace SVG (abstract drawing) ---
-    function traceSVG(plan, trace) {
+    // colors is configurable so the Done screen can use the Coral Reef palette
+    // without touching the detail view or the HTML export.
+    function traceSVG(plan, trace, colors = {}) {
+      const { planStroke = '#333', traceStroke = '#7ab8ff', originFill = '#7ab8ff', stopFill = '#e8e8e8' } = colors;
       const pts = [plan.origin, ...plan.stops];
       const all = [...trace, ...pts];
       const b = bounds(all);
@@ -1343,7 +1351,7 @@
         const { x, y } = project(p);
         const isOrigin = i === 0;
         const r = isOrigin ? 5 : 4;
-        return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="${isOrigin ? '#7ab8ff' : '#e8e8e8'}" opacity="${isOrigin ? 1 : 0.7}"/>`;
+        return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r}" fill="${isOrigin ? originFill : stopFill}" opacity="${isOrigin ? 1 : 0.7}"/>`;
       }).join('');
 
       // Lines between stops (the plan).
@@ -1353,8 +1361,8 @@
       }).join(' ');
 
       return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">
-        <path d="${planPath}" fill="none" stroke="#333" stroke-width="1" stroke-dasharray="3,3"/>
-        <path d="${tracePath}" fill="none" stroke="#7ab8ff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+        <path d="${planPath}" fill="none" stroke="${planStroke}" stroke-width="1" stroke-dasharray="3,3"/>
+        <path d="${tracePath}" fill="none" stroke="${traceStroke}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
         ${stopMarkers}
       </svg>`;
     }
