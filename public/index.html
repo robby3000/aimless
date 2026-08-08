@@ -1008,13 +1008,25 @@
       return 'Compass unavailable: motion sensor access was denied by the browser.';
     }
 
+    // A geolocation PERMISSION_DENIED (code 1) after the user tapped Allow
+    // usually means iOS-level settings are overriding the site prompt.
+    function geoHelpMessage(err) {
+      if (!err || err.code !== 1) return err?.message || 'Failed to start.';
+      if (isIOS(navigator.userAgent, navigator.maxTouchPoints > 0)) {
+        return runningStandalone
+          ? 'Location access was denied. Check Settings → Privacy & Security → Location Services (and the entry for this app); if it looks allowed, remove Aimless from your home screen and re-add it.'
+          : 'Location access was denied. Check Settings → Privacy & Security → Location Services → Safari Websites, and the page menu (aA) → Website Settings → Location for this site.';
+      }
+      return 'Location access was denied. Allow location for this site in your browser settings and try again.';
+    }
+
     // Handle the permission promise returned by requestSensorPermissions():
     // attach listeners on grant, explain the situation on denial. The denial
     // is sticky (sensorDenied) because the walk-screen setup resets the
     // status line — the watchdog below re-surfaces the explanation.
     let sensorDenied = false;
     function settleSensorPermission(permissionPromise) {
-      permissionPromise.then((perm) => {
+      return permissionPromise.then((perm) => {
         if (perm === 'granted') {
           sensorDenied = false;
           attachOrientationListeners();
@@ -1141,6 +1153,12 @@
       goStatus.textContent = 'Getting your location...';
       btnGo.disabled = true;
       try {
+        // iOS shows one permission prompt at a time; requesting location
+        // while the motion prompt is still up can get the geolocation
+        // request auto-denied ("User denied geolocation") even when the user
+        // allows both. Wait for the motion answer first — unlike motion,
+        // geolocation prompts don't need a live user gesture.
+        await settleSensorPermission(sensorPermission);
         const pos = await getPosition();
         const origin = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         const seed = randomSeed();
@@ -1216,7 +1234,7 @@
         saveActiveWalk();
         startCompassWatchdog();
       } catch (err) {
-        goStatus.textContent = err.message || 'Failed to start.';
+        goStatus.textContent = geoHelpMessage(err);
       } finally {
         btnGo.disabled = false;
       }
@@ -1525,7 +1543,9 @@
       primeAudio();
       homeSession = { origin: lastDoneRecord.origin, watchId: null };
       await requestWakeLock();
-      settleSensorPermission(sensorPermission);
+      // Settle before starting the GPS watch — same one-prompt-at-a-time
+      // reason as the Go handler.
+      await settleSensorPermission(sensorPermission);
       homeSession.watchId = startWatch((pos) => onHomeFix(pos), (err) => {
         walkStatus.textContent = `GPS: ${err.message}`;
       });
