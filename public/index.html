@@ -465,6 +465,11 @@
     <button id="storage-banner-dismiss" aria-label="Dismiss">×</button>
   </div>
 
+  <div id="inapp-banner" class="storage-banner" hidden>
+    <span>You're inside an app's built-in browser — the compass and GPS often don't work here. Open Aimless in Safari (Share → Open in Safari) for the full walk.</span>
+    <button id="inapp-banner-dismiss" aria-label="Dismiss">×</button>
+  </div>
+
   <!-- Go screen -->
   <section id="screen-go" class="screen active">
     <div class="title">Go nowhere.<br>Somewhere.</div>
@@ -597,6 +602,7 @@
     import { haversine, bearing, simplify, pathLength, formatDistance, compassPoint, bounds, headingFromAlpha, nextRotation, createTraceGate } from './lib/geo.js';
     import { buildHTMLExport, downloadFile, blobToDataURL } from './lib/export.js';
     import { SKINS, getSkin, scopeCSS, BASE_CSS } from './lib/skins.js';
+    import { isIOS, isInAppBrowser, isStandalone } from './lib/platform.js';
 
     // --- Screen navigation ---
     const screens = {
@@ -664,6 +670,20 @@
     });
     document.getElementById('storage-banner-dismiss').addEventListener('click', () => {
       document.getElementById('storage-banner').hidden = true;
+    });
+
+    // In-app browsers (Instagram, X, Slack, ...) often lack or silently no-op
+    // the motion-permission API. Warn once, on load. An installed home-screen
+    // PWA can have a Safari-token-less UA too, so never warn there.
+    const runningStandalone = isStandalone(
+      navigator.standalone,
+      window.matchMedia('(display-mode: standalone)').matches,
+    );
+    if (isInAppBrowser(navigator.userAgent) && !runningStandalone) {
+      document.getElementById('inapp-banner').hidden = false;
+    }
+    document.getElementById('inapp-banner-dismiss').addEventListener('click', () => {
+      document.getElementById('inapp-banner').hidden = true;
     });
 
     // --- Walk Result skins ---
@@ -933,28 +953,31 @@
       compassArrow.style.transform = `rotate(${arrowRotation}deg)`;
     }
 
-    async function requestOrientationPermission() {
-      // iOS 13+ requires an explicit permission request on a user gesture.
-      if (typeof DeviceOrientationEvent !== 'undefined' &&
-          typeof DeviceOrientationEvent.requestPermission === 'function') {
-        try {
-          const perm = await DeviceOrientationEvent.requestPermission();
-          if (perm !== 'granted') return false;
-        } catch {
-          return false;
-        }
+    // iOS 13+ requires DeviceOrientationEvent.requestPermission() to be
+    // called synchronously inside a user-gesture handler. Any await before it
+    // (GPS fix, fetch, IndexedDB) lets the gesture expire and the prompt
+    // silently never fires — no error, no events, dead arrow. So this is the
+    // FIRST call in the Go tap handler; it returns a promise to await later.
+    function requestSensorPermissions() {
+      const orient = window.DeviceOrientationEvent;
+      if (typeof orient === 'undefined' || typeof orient.requestPermission !== 'function') {
+        // No gating on this platform (Android, desktop) — or no API at all
+        // (some in-app browsers). Either way there is nothing to request.
+        return Promise.resolve('granted');
       }
-      // Android: some browsers (Brave) gate sensors behind the Permissions API.
-      // Requesting is harmless where unsupported; the query just returns 'denied'.
-      for (const name of ['accelerometer', 'gyroscope', 'magnetometer']) {
-        try {
-          const p = await navigator.permissions.query({ name });
-          // If the permission can be requested, request it. (No standard API to
-          // request sensor permissions — they're granted on user gesture, which
-          // the Go tap satisfies. This query just checks state.)
-        } catch { /* permission name not supported — ignore */ }
+      // The app only listens to deviceorientation, but motion is requested in
+      // the same gesture as cheap insurance for anything that pairs them.
+      if (typeof window.DeviceMotionEvent !== 'undefined' &&
+          typeof window.DeviceMotionEvent.requestPermission === 'function') {
+        window.DeviceMotionEvent.requestPermission().catch(() => {});
       }
+      return orient.requestPermission().catch(() => 'denied');
+    }
 
+    let orientationListenersAttached = false;
+    function attachOrientationListeners() {
+      if (orientationListenersAttached) return;
+      orientationListenersAttached = true;
       // Android Chrome/Brave: deviceorientationabsolute gives true compass
       // heading. deviceorientation alone gives relative orientation (absolute=false)
       // on most Android devices, which is useless for a compass.
@@ -969,7 +992,62 @@
         e.preventDefault();
         walkStatus.textContent = 'Compass needs calibration — figure-8 your phone.';
       });
-      return true;
+    }
+
+    // iOS will not re-prompt after a denial, and there is no JS-level reset —
+    // so a denial has to be explained, not just swallowed.
+    function sensorHelpMessage() {
+      if (isInAppBrowser(navigator.userAgent)) {
+        return 'Compass unavailable in this in-app browser. Open Aimless in Safari and try again.';
+      }
+      if (isIOS(navigator.userAgent, navigator.maxTouchPoints > 0)) {
+        return runningStandalone
+          ? 'Compass unavailable: motion access was denied and iOS will not ask again. Remove Aimless from your home screen, re-add it from Safari, and allow motion access.'
+          : 'Compass unavailable: motion access was denied and iOS will not ask again. Clear this site under Settings → Safari → Advanced → Website Data, reload, and allow motion access.';
+      }
+      return 'Compass unavailable: motion sensor access was denied by the browser.';
+    }
+
+    // Handle the permission promise returned by requestSensorPermissions():
+    // attach listeners on grant, explain the situation on denial. The denial
+    // is sticky (sensorDenied) because the walk-screen setup resets the
+    // status line — the watchdog below re-surfaces the explanation.
+    let sensorDenied = false;
+    function settleSensorPermission(permissionPromise) {
+      permissionPromise.then((perm) => {
+        if (perm === 'granted') {
+          sensorDenied = false;
+          attachOrientationListeners();
+          return;
+        }
+        sensorDenied = true;
+        if (walk || homeSession) walkStatus.textContent = sensorHelpMessage();
+      });
+    }
+
+    // If no usable orientation event arrives shortly after the walk screen
+    // shows, say so — covers in-app browsers and standalone-PWA sessions
+    // where the permission never carried over.
+    let compassWatchdog = null;
+    let compassWarned = false;
+    // A compass is only expected on phones/tablets — desktop browsers define
+    // DeviceOrientationEvent but never fire it, so don't warn there.
+    const compassExpected =
+      isIOS(navigator.userAgent, navigator.maxTouchPoints > 0) || /Android/.test(navigator.userAgent);
+    function startCompassWatchdog() {
+      clearTimeout(compassWatchdog);
+      compassWarned = false;
+      if (!compassExpected) return;
+      compassWatchdog = setTimeout(() => {
+        if ((walk || homeSession) && orientationSource === 'none') {
+          compassWarned = true;
+          walkStatus.textContent = sensorDenied
+            ? sensorHelpMessage()
+            : isInAppBrowser(navigator.userAgent)
+              ? 'No compass data. In-app browsers often block motion sensors — open Aimless in Safari.'
+              : 'No compass data received. Check that motion access is allowed for this site.';
+        }
+      }, 3000);
     }
 
     function handleOrientationAbsolute(event) {
@@ -979,6 +1057,7 @@
       if (typeof event.alpha === 'number') {
         heading = headingFromAlpha(event.alpha, screenAngle());
         orientationSource = 'abs';
+        if (compassWarned) { walkStatus.textContent = ''; compassWarned = false; }
         if ((walk || homeSession) && lastBearing != null) renderCompass(lastBearing, lastDistance);
       }
     }
@@ -1001,6 +1080,7 @@
       } else {
         return;   // no useful data
       }
+      if (compassWarned) { walkStatus.textContent = ''; compassWarned = false; }
       // Re-render the arrow immediately so it tracks phone rotation
       // between GPS fixes (real-compass behaviour). Only when a walk (or
       // homeward session) is active and we already have a bearing from onFix.
@@ -1052,6 +1132,11 @@
 
     // --- Go button ---
     btnGo.addEventListener('click', async () => {
+      // FIRST, synchronously: iOS only honors the motion-permission prompt
+      // while the tap's user activation is still live. Every await below
+      // (GPS fix, voice fetch, IndexedDB) would expire it, and the prompt
+      // would silently never appear.
+      const sensorPermission = requestSensorPermissions();
       primeAudio();
       goStatus.textContent = 'Getting your location...';
       btnGo.disabled = true;
@@ -1100,9 +1185,10 @@
           recentBuffer,
         };
 
-        // Request wake lock and orientation permission.
+        // Request wake lock; wire up the orientation permission outcome
+        // (the request itself fired at the top of this handler, in-gesture).
         await requestWakeLock();
-        await requestOrientationPermission();
+        settleSensorPermission(sensorPermission);
 
         // Start GPS watch.
         walk.watchId = startWatch((pos) => onFix(pos), (err) => {
@@ -1120,6 +1206,7 @@
         lastBearing = null;
         lastDistance = null;
         arrowRotation = 0;
+        orientationSource = 'none';
         hideCard();
         walkStatus.textContent = '';   // no stale status from the last walk
         navButtons.walk.disabled = false;
@@ -1127,6 +1214,7 @@
         goStatus.textContent = '';
         resetFocusTimer();
         saveActiveWalk();
+        startCompassWatchdog();
       } catch (err) {
         goStatus.textContent = err.message || 'Failed to start.';
       } finally {
@@ -1432,10 +1520,12 @@
 
     document.getElementById('btn-done-home').addEventListener('click', async () => {
       if (!lastDoneRecord?.origin) return;
+      // In-gesture, before any await — see the Go handler.
+      const sensorPermission = requestSensorPermissions();
       primeAudio();
       homeSession = { origin: lastDoneRecord.origin, watchId: null };
       await requestWakeLock();
-      await requestOrientationPermission();
+      settleSensorPermission(sensorPermission);
       homeSession.watchId = startWatch((pos) => onHomeFix(pos), (err) => {
         walkStatus.textContent = `GPS: ${err.message}`;
       });
@@ -1448,6 +1538,7 @@
       lastBearing = null;
       lastDistance = null;
       arrowRotation = 0;
+      orientationSource = 'none';
       hideCard();
       walkStatus.textContent = '';
       // Only the "I'm home" button is relevant in this mode.
@@ -1458,6 +1549,7 @@
       navButtons.walk.disabled = false;
       showScreen('walk');
       resetFocusTimer();
+      startCompassWatchdog();
     });
 
     function onHomeFix(pos) {
