@@ -1446,7 +1446,10 @@
             id: `${id}-photo-${seq}`,
             walkId: id,
             stopSeq: parseInt(seq, 10),
-            blob,
+            // Store a data URL, not a Blob: WebKit corrupts IndexedDB blobs
+            // after a restart (WebKitBlobResource error 1), especially when
+            // read back through an index. Strings survive structured clone.
+            dataUrl: await blobToDataURL(blob),
             taken: Date.now(),
           });
         }
@@ -1672,8 +1675,10 @@
       // and skins behave identically here and in the exported file.
       const stopHtml = walk.stops.map((s, i) => {
         const photo = photoMap.get(s.seq);
+        // Prefer the stored data URL; the blob branch only exists for walks
+        // saved before the switch (and on iOS those blobs may be corrupt).
         const photoHtml = photo
-          ? `<img src="${URL.createObjectURL(photo.blob)}" alt="photo">`
+          ? `<img src="${photo.dataUrl || URL.createObjectURL(photo.blob)}" alt="photo">`
           : '';
         const status = s.approached
           ? '<span class="status approached">close as I can get</span>'
@@ -1725,16 +1730,16 @@
     // in the active skin's palette. The caption goes in the share text.
     const CARD_SIZE = 1080;
 
-    function loadImageFromBlob(blob) {
+    function loadImage(src) {
       return new Promise((resolve, reject) => {
         const img = new Image();
         img.onload = () => resolve(img);
         img.onerror = reject;
-        img.src = URL.createObjectURL(blob);
+        img.src = src;
       });
     }
 
-    async function buildShareCard(walk, photoBlob) {
+    async function buildShareCard(walk, photo) {   // photo: { dataUrl?, blob? } | null
       const { card } = getSkin(currentSkin);
       const canvas = document.createElement('canvas');
       canvas.width = CARD_SIZE;
@@ -1744,14 +1749,19 @@
       ctx.fillStyle = card.bg;
       ctx.fillRect(0, 0, CARD_SIZE, CARD_SIZE);
 
-      if (photoBlob) {
-        // Cover-fit the photo to fill the square.
-        const img = await loadImageFromBlob(photoBlob);
-        const scale = Math.max(CARD_SIZE / img.width, CARD_SIZE / img.height);
-        const dw = img.width * scale;
-        const dh = img.height * scale;
-        ctx.drawImage(img, (CARD_SIZE - dw) / 2, (CARD_SIZE - dh) / 2, dw, dh);
-        URL.revokeObjectURL(img.src);
+      if (photo) {
+        // Cover-fit the photo to fill the square. A legacy IndexedDB blob
+        // may be unreadable on iOS (WebKit corrupts them after restart) -
+        // then the card is drawn without a photo rather than failing.
+        const src = photo.dataUrl || URL.createObjectURL(photo.blob);
+        try {
+          const img = await loadImage(src);
+          const scale = Math.max(CARD_SIZE / img.width, CARD_SIZE / img.height);
+          const dw = img.width * scale;
+          const dh = img.height * scale;
+          ctx.drawImage(img, (CARD_SIZE - dw) / 2, (CARD_SIZE - dh) / 2, dw, dh);
+        } catch { /* photo unreadable - card goes out bare */ }
+        if (!photo.dataUrl) URL.revokeObjectURL(src);
       }
 
       // Project walk geometry into the square (same mapping as traceSVG).
@@ -1834,7 +1844,7 @@
       const db = await dbPromise;
       const photos = db ? await byIndex(db, 'photos', 'walkId', currentDetailWalk.id) : [];
       photos.sort((a, b) => a.stopSeq - b.stopSeq);
-      const cardBlob = await buildShareCard(currentDetailWalk, photos[0]?.blob ?? null);
+      const cardBlob = await buildShareCard(currentDetailWalk, photos[0] ?? null);
       const filename = `aimless-${currentDetailWalk.seed}-card.png`;
       const cardFile = new File([cardBlob], filename, { type: 'image/png' });
 

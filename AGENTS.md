@@ -51,7 +51,7 @@ public/
     crow.json  threshold.json  lattice.json
 test/
   geo.test.js  rng.test.js  walk.test.js  deck.test.js  proximity.test.js  skins.test.js
-  platform.test.js
+  platform.test.js  export.test.js
 scripts/
   make-icons.mjs      # npm run icons
   stamp-sw.mjs        # npm run stamp -- rewrites the sw.js cache name

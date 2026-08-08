@@ -29,7 +29,7 @@ export function blobToDataURL(blob) {
 /**
  * Build a self-contained HTML document for a walk.
  * @param {object} walk  The walk record from IndexedDB.
- * @param {Array} photos Array of { stopSeq, blob } for this walk.
+ * @param {Array} photos Array of { stopSeq, dataUrl?, blob? } for this walk.
  * @param {string} svgTrace  Pre-rendered SVG string of the trace.
  * @param {string} [skinCss]  Optional skin CSS fragment (lib/skins.js),
  *   embedded after the base styles. CSS only - no scripts, ever.
@@ -40,9 +40,15 @@ export async function buildHTMLExport(walk, photos, svgTrace, skinCss = '') {
 
   const photoDataUrls = new Map();
   for (const [seq, p] of photoMap) {
-    if (p.blob) {
-      const url = await blobToDataURL(p.blob);
-      photoDataUrls.set(seq, url);
+    if (p.dataUrl) {
+      photoDataUrls.set(seq, p.dataUrl);
+    } else if (p.blob) {
+      try {
+        photoDataUrls.set(seq, await blobToDataURL(p.blob));
+      } catch {
+        // Legacy IndexedDB blob unreadable (WebKit corrupts stored blobs
+        // after a restart) - export the walk without this photo.
+      }
     }
   }
 
