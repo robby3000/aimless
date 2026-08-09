@@ -51,4 +51,6 @@ test/css-guide.md
 test/styling-tests-safelight.html
 test/styling-tests-coralreef.html
 test/styling-tests-chartroom.html
+test/scroll-snap-picker.html
+test/scroll-snap-picker-v2.html
 docs/ui-map.md
