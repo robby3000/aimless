@@ -323,6 +323,10 @@
     .info-content h2 { font-size: 1.05rem; margin-top: 16px; color: var(--accent); }
     .info-content h2:first-child { margin-top: 0; }
     .info-content p { color: var(--fg-dim); font-size: 0.95rem; }
+    .info-content details { border-bottom: 1px solid var(--surface); padding: 6px 0; }
+    .info-content summary { cursor: pointer; font-size: 0.95rem; font-weight: 600; padding: 4px 0; }
+    .info-content details p { margin: 6px 0; }
+    .info-content details ul { color: var(--fg-dim); font-size: 0.95rem; padding-left: 20px; margin: 6px 0; }
 
     /* --- Bottom nav --- */
     nav {
@@ -569,6 +573,57 @@
       <p>Placeholder: the Walk Result screen, designs, export and share; the archive; deleting walks.</p>
       <h2>Offline and privacy</h2>
       <p>Placeholder: works fully offline; everything stays on the device.</p>
+      <h2>FAQ</h2>
+      <details>
+        <summary>Which browser should I use?</summary>
+        <p><strong>Android: Chrome.</strong> This matters more than you'd think: Chrome installs Aimless as a real app — its own icon with no browser badge, its own window, a place in the app drawer, and protected storage. Most other Android browsers only pin a shortcut, and some restrict the sensors or storage Aimless needs.</p>
+        <p><strong>iPhone: Safari.</strong> iOS only lets Safari install apps to the home screen, so open Aimless there first.</p>
+      </details>
+      <details>
+        <summary>How do I install Aimless?</summary>
+        <p><strong>Chrome on Android:</strong> open aimless.earth, tap the &#8942; menu, then "Add to Home screen" or "Install app".</p>
+        <p><strong>Safari on iPhone:</strong> open aimless.earth, tap Share, then "Add to Home Screen".</p>
+        <p>After that, always open Aimless from its home-screen icon.</p>
+      </details>
+      <details>
+        <summary>Which settings should I check?</summary>
+        <p>Location (and motion, on iPhone) are asked for on first open — both are essential. If you denied one by mistake:</p>
+        <ul>
+          <li><strong>Chrome on Android:</strong> tap the icon left of the address bar, then Permissions, and allow Location (and Motion sensors if listed).</li>
+          <li><strong>Safari on iPhone:</strong> iOS won't ask twice. Remove Aimless from your home screen, re-add it from Safari, and allow access. Also check Settings &rarr; Privacy &amp; Security &rarr; Location Services.</li>
+          <li><strong>Brave on Android:</strong> two gotchas. Brave blocks motion sensors by default, so the compass arrow never moves — allow them under brave://settings/content/sensors. And "Clear browsing data on exit" (Settings &rarr; Privacy) wipes your saved walks every time Brave closes — turn it off, or use Chrome.</li>
+        </ul>
+      </details>
+      <details>
+        <summary>How can I export and save my walks?</summary>
+        <p>Open a walk from the Archive and tap "Export as HTML" — you get a single self-contained file that opens anywhere, no app needed. "Share walk" sends the same file to another app.</p>
+        <p>Important: walks live only in your browser's storage, and browsers can clear it under storage pressure or via privacy settings. Always export and back up any walk you want to keep.</p>
+      </details>
+      <details>
+        <summary>Can I remix my exported walk with my favourite AI chatbot?</summary>
+        <p>Yes! The export is a plain, self-contained HTML file — perfect raw material. Upload it to your chatbot of choice and try prompts like:</p>
+        <ul>
+          <li>"Extract the photos from this file and give them back to me as PNGs."</li>
+          <li>"Rewrite the five cards as a short poem about this walk."</li>
+          <li>"Turn the walked shape into a poster, with the date and distance as a caption."</li>
+          <li>"Restyle the page: change the colours to [your palette] and the font to [your font]."</li>
+          <li>"Write a one-paragraph story from these five cards."</li>
+        </ul>
+        <p>Treat the file as a souvenir you can keep remixing — the original never changes.</p>
+      </details>
+      <details>
+        <summary>How can I save a photo from a walk as a standalone image?</summary>
+        <p>One easy way: upload the exported walk HTML file to an AI chatbot and ask it to export the photos as PNG files.</p>
+      </details>
+      <details>
+        <summary>What is the Voice all about?</summary>
+        <p>The voice you pick on the Go screen — The Crow, The Threshold, The Lattice — sets the character of the cards you receive when you reach a waypoint. Each voice offers directives in its own style. You can consider these directives and ponder them, or ignore them.</p>
+        <p>Tip: it can be a good idea to ponder the voice directives, because they can sometimes manifest a kind of magic synchronicity that only becomes apparent after you pause and consider — give it a go!</p>
+      </details>
+      <details>
+        <summary>Why is there no map?</summary>
+        <p>The absence is the design. Aimless is about being where you are, not navigating somewhere — you follow an arrow, not a route, and the shape of your walk is only revealed afterwards.</p>
+      </details>
     </div>
   </section>
 
