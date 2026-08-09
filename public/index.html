@@ -719,11 +719,10 @@
       return null;
     });
 
-    // Warn only when storage is unprotected AND there is data to lose.
-    Promise.all([storagePersistedPromise, dbPromise]).then(async ([persisted, db]) => {
-      if (persisted || !db) return;
-      const walks = await all(db, 'walks');
-      if (walks.length) document.getElementById('storage-banner').hidden = false;
+    // Warn whenever storage is unprotected — even with an empty archive, so
+    // the situation is known before there is data to lose.
+    storagePersistedPromise.then((persisted) => {
+      if (!persisted) document.getElementById('storage-banner').hidden = false;
     });
     document.getElementById('storage-banner-dismiss').addEventListener('click', () => {
       document.getElementById('storage-banner').hidden = true;
