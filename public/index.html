@@ -154,28 +154,99 @@
     }
     #btn-go:active { background: var(--accent-dim); color: var(--fg); }
 
-    .settings-row {
-      display: flex;
-      gap: 12px;
+    /* --- Walk parameter picker (scroll-snap wheels) --- */
+    .settings-block {
+      --item-h: 30px;
+      --visible: 3;
       width: 100%;
-      max-width: 320px;
+      max-width: 340px;
     }
-    .settings-row label {
-      flex: 1;
+    .labels-row {
       display: flex;
-      flex-direction: column;
-      gap: 4px;
-      font-size: 0.85rem;
+      margin-bottom: 14px;
+    }
+    .wheel-label {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
       color: var(--fg-dim);
     }
-    .settings-row select {
+    .col-narrow { flex: 0 0 62px; }
+    .col-wide { flex: 1; min-width: 0; }
+
+    /* Single rounded panel holding all three wheels */
+    .settings-panel {
+      position: relative;
+      display: flex;
       background: var(--surface);
-      color: var(--fg);
-      border: 1px solid var(--surface-2);
-      border-radius: 8px;
-      padding: 8px;
+      border: 1px solid rgba(230, 247, 249, 0.09);
+      border-radius: var(--radius);
+      overflow: hidden;
+      /* Faint teal tint on the selected row */
+      background-image: linear-gradient(
+        to bottom,
+        transparent calc(50% - var(--item-h) / 2),
+        rgba(32, 178, 170, 0.06) calc(50% - var(--item-h) / 2),
+        rgba(32, 178, 170, 0.06) calc(50% + var(--item-h) / 2),
+        transparent calc(50% + var(--item-h) / 2)
+      );
+    }
+    /* Thin hairlines above and below the selected row */
+    .settings-panel::before,
+    .settings-panel::after {
+      content: '';
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      height: 1px;
+      background: rgba(230, 247, 249, 0.14);
+      pointer-events: none;
+    }
+    .settings-panel::before { top: calc(50% - var(--item-h) / 2); }
+    .settings-panel::after { top: calc(50% + var(--item-h) / 2); }
+
+    /* Faint boundary between controls */
+    .wheel-col + .wheel-col { border-left: 1px solid rgba(230, 247, 249, 0.06); }
+
+    .wheel {
+      height: calc(var(--item-h) * var(--visible));
+      overflow-y: scroll;
+      scroll-snap-type: y mandatory;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      -webkit-mask-image: linear-gradient(to bottom, transparent, black 30%, black 70%, transparent);
+      mask-image: linear-gradient(to bottom, transparent, black 30%, black 70%, transparent);
+      -webkit-overflow-scrolling: touch;
+    }
+    .wheel::-webkit-scrollbar { display: none; }
+    .wheel::before,
+    .wheel::after {
+      content: '';
+      display: block;
+      height: calc(var(--item-h) * (var(--visible) - 1) / 2);
+    }
+    .wheel-item {
+      height: var(--item-h);
+      scroll-snap-align: center;
+      scroll-snap-stop: always;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--fg-dim);
       font-size: 0.95rem;
-      font-family: inherit;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      opacity: 0.3;
+      transition: opacity 0.15s ease, color 0.15s ease;
+    }
+    .wheel-item.selected { color: var(--fg); opacity: 1; }
+    @media (prefers-reduced-motion: reduce) {
+      .wheel-item { transition: none; }
     }
 
     /* --- Walk screen --- */
@@ -481,31 +552,38 @@
     <div class="title">Go nowhere.<br>Somewhere.</div>
     <div class="subtitle">Follow the arrow. See where you end up.<br>Come back with a story.</div>
     <button id="btn-go">Go</button>
-    <div class="settings-row">
-      <label>
-        Stops
-        <select id="setting-stops">
-          <option value="3">3</option>
-          <option value="5" selected>5</option>
-          <option value="7">7</option>
-        </select>
-      </label>
-      <label>
-        Minutes
-        <select id="setting-budget">
-          <option value="30">30</option>
-          <option value="45" selected>45</option>
-          <option value="60">60</option>
-        </select>
-      </label>
-      <label>
-        Voice
-        <select id="setting-voice">
-          <option value="crow">The Crow</option>
-          <option value="threshold">The Threshold</option>
-          <option value="lattice">The Lattice</option>
-        </select>
-      </label>
+    <div class="settings-block">
+      <div class="labels-row">
+        <span class="wheel-label col-narrow">Stops</span>
+        <span class="wheel-label col-narrow">Minutes</span>
+        <span class="wheel-label col-wide">Voice</span>
+      </div>
+      <div class="settings-panel">
+        <div class="wheel-col col-narrow">
+          <div class="wheel" id="wheel-stops">
+            <div class="wheel-item" data-value="3">3</div>
+            <div class="wheel-item" data-value="5">5</div>
+            <div class="wheel-item" data-value="7">7</div>
+          </div>
+        </div>
+        <div class="wheel-col col-narrow">
+          <div class="wheel" id="wheel-minutes">
+            <div class="wheel-item" data-value="30">30</div>
+            <div class="wheel-item" data-value="45">45</div>
+            <div class="wheel-item" data-value="60">60</div>
+          </div>
+        </div>
+        <div class="wheel-col col-wide">
+          <div class="wheel" id="wheel-voice">
+            <div class="wheel-item" data-value="crow">The Crow</div>
+            <div class="wheel-item" data-value="threshold">The Threshold</div>
+            <div class="wheel-item" data-value="lattice">The Lattice</div>
+          </div>
+        </div>
+      </div>
+      <input type="hidden" id="setting-stops" value="5">
+      <input type="hidden" id="setting-budget" value="45">
+      <input type="hidden" id="setting-voice" value="crow">
     </div>
     <div id="go-status" class="status-msg"></div>
   </section>
@@ -772,13 +850,59 @@
     const elVoice = document.getElementById('setting-voice');
     const DEFAULT_PREFS = { stops: 5, budgetMin: 45, voice: 'crow', skin: 'default' };
 
+    // Scroll-snap wheel: keeps `input` (a hidden input carrying the setting's
+    // value) in sync with the centred item, and saves prefs on user scrolls.
+    function makeWheel(el, input) {
+      const items = [...el.querySelectorAll('.wheel-item')];
+      const itemH = items[0].getBoundingClientRect().height;
+      let current = -1;
+      let raf = null;
+
+      function select(index, fire) {
+        index = Math.max(0, Math.min(items.length - 1, index));
+        if (index === current) return;
+        current = index;
+        items.forEach((it, i) => it.classList.toggle('selected', i === index));
+        input.value = items[index].dataset.value;
+        if (fire) savePrefs();
+      }
+
+      el.addEventListener('scroll', () => {
+        if (raf) return;
+        raf = requestAnimationFrame(() => {
+          raf = null;
+          select(Math.round(el.scrollTop / itemH), true);
+        });
+      }, { passive: true });
+
+      items.forEach((it, i) => it.addEventListener('click', () => {
+        const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        el.scrollTo({ top: i * itemH, behavior: reduce ? 'auto' : 'smooth' });
+      }));
+
+      return {
+        setValue(value) {
+          const i = Math.max(0, items.findIndex((it) => it.dataset.value === value));
+          el.scrollTop = i * itemH;
+          select(i, false);
+        },
+      };
+    }
+
+    const wheelStops = makeWheel(document.getElementById('wheel-stops'), elStops);
+    const wheelBudget = makeWheel(document.getElementById('wheel-minutes'), elBudget);
+    const wheelVoice = makeWheel(document.getElementById('wheel-voice'), elVoice);
+    wheelStops.setValue(elStops.value);
+    wheelBudget.setValue(elBudget.value);
+    wheelVoice.setValue(elVoice.value);
+
     async function loadPrefs() {
       const db = await dbPromise;
       if (!db) return DEFAULT_PREFS;
       const prefs = await getPrefs(db, DEFAULT_PREFS);
-      elStops.value = String(prefs.stops ?? DEFAULT_PREFS.stops);
-      elBudget.value = String(prefs.budgetMin ?? DEFAULT_PREFS.budgetMin);
-      elVoice.value = prefs.voice ?? DEFAULT_PREFS.voice;
+      wheelStops.setValue(String(prefs.stops ?? DEFAULT_PREFS.stops));
+      wheelBudget.setValue(String(prefs.budgetMin ?? DEFAULT_PREFS.budgetMin));
+      wheelVoice.setValue(prefs.voice ?? DEFAULT_PREFS.voice);
       currentSkin = prefs.skin ?? DEFAULT_PREFS.skin;
       elSkin.value = currentSkin;
       applySkin();
@@ -796,7 +920,6 @@
       });
     }
 
-    [elStops, elBudget, elVoice].forEach((el) => el.addEventListener('change', savePrefs));
     loadPrefs();
 
     // --- Voice loading ---
