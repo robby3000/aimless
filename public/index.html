@@ -770,8 +770,8 @@
     import { drawWalk, pushRecent, recentKeys } from './lib/deck.js';
     import { openDB, getPrefs, setPrefs, put, get, all, byIndex, del } from './lib/store.js';
     import { createTracker, reachStop, unreachableRate } from './lib/proximity.js';
-    import { haversine, bearing, simplify, pathLength, formatDistance, compassPoint, bounds, headingFromAlpha, nextRotation, createTraceGate } from './lib/geo.js';
-    import { buildHTMLExport, downloadFile, blobToDataURL } from './lib/export.js';
+    import { haversine, bearing, simplify, pathLength, formatDistance, formatKm, compassPoint, bounds, headingFromAlpha, nextRotation, createTraceGate } from './lib/geo.js';
+    import { buildHTMLExport, downloadFile, blobToDataURL, voiceName, formatWalkDate } from './lib/export.js';
     import { SKINS, getSkin, scopeCSS, BASE_CSS } from './lib/skins.js';
     import { isIOS, isInAppBrowser, isStandalone } from './lib/platform.js';
     import { buildHexIndex, innerCard } from './lib/inner.js';
@@ -879,6 +879,9 @@
       currentSkin = elSkin.value;
       applySkin();
       savePrefs();
+      // The trace SVG's colours come from the skin too (they are attributes,
+      // not CSS), so the detail view must be re-rendered on a skin change.
+      if (currentDetailWalk) showWalkDetail(currentDetailWalk.id);
     });
 
     // --- Settings ---
@@ -1916,13 +1919,16 @@
       const photos = await byIndex(db, 'photos', 'walkId', walkId);
 
       // Build the detail content.
-      const date = walk.started ? new Date(walk.started).toLocaleString() : '?';
+      const date = walk.started ? formatWalkDate(walk.started) : '?';
+      const distance = walk.distanceM != null ? `, ${formatKm(walk.distanceM)}` : '';
+      const voice = voiceName(walk.voice);
       const unreachable = unreachableRate(walk.stops);
       const reached = walk.stops.filter((s) => s.reachedAt).length;
 
-      // Build trace SVG.
+      // Build trace SVG in the active skin's palette (its dots and strokes
+      // are attributes, so they cannot be skinned with CSS).
       const trace = walk.trace || [];
-      const svg = traceSVG({ origin: walk.origin, stops: walk.stops }, trace);
+      const svg = traceSVG({ origin: walk.origin, stops: walk.stops }, trace, getSkin(currentSkin).trace);
 
       // Build stop cards with photos.
       const photoMap = new Map();
@@ -1942,17 +1948,22 @@
           : s.reachedAt
             ? '<span class="status reached">reached</span>'
             : '<span class="status missed">not reached</span>';
-        // Inner stops carry the hexagram resolved from their coordinates.
+        // Inner stops carry the hexagram resolved from their coordinates:
+        // the glyph beside its title, then the haiku with one element per
+        // line so the breaks are structural rather than white-space dependent.
         const hex = s.hexagram;
         const hexHtml = hex
-          ? `<div class="card-hex"><span class="glyph">${hex.glyph}</span><span class="hex-meta"><span class="hex-num">Hexagram ${hex.number}</span><span class="hex-title">${hex.title}</span></span></div>`
+          ? `<div class="card-hex"><span class="glyph">${hex.glyph}</span><span class="hex-title">${hex.title}</span></div>`
           : '';
+        const cardHtml = hex
+          ? `<div class="card-text card-haiku">${(s.cardText || '').split('\n').map((l) => `<span class="haiku-line">${l}</span>`).join('')}</div>`
+          : `<div class="card-text">${s.cardText || ''}</div>`;
         return `<div class="stop">
           <div class="stop-num">${i + 1}</div>
           <div class="stop-body">
             <div class="stop-meta">${status}</div>
             ${hexHtml}
-            <div class="card-text${hex ? ' card-haiku' : ''}">${s.cardText || ''}</div>
+            ${cardHtml}
             ${photoHtml}
           </div>
         </div>`;
@@ -1961,11 +1972,11 @@
       document.getElementById('detail-content').innerHTML = `
         <h1>Aimless</h1>
         <div class="seed">${walk.seed}</div>
-        <div class="date">${date}</div>
+        ${voice ? `<div class="walk-voice">Voice of ${voice}</div>` : ''}
+        <div class="date">${date}${distance}</div>
         <div class="summary">
           <b>${reached}</b> of ${walk.stops.length} stops reached.
-          ${unreachable.approached > 0 ? `<b>${unreachable.approached}</b> marked "close as I can get" (${Math.round(unreachable.rate * 100)}%).` : ''}
-          ${walk.gaveUp ? '<br>Walk ended early.' : ''}
+          ${unreachable.approached > 0 ? `<b>${unreachable.approached}</b> marked "close as I can get".` : ''}
         </div>
         <div class="trace">${svg}</div>
         ${stopHtml}
@@ -1982,8 +1993,9 @@
       const db = await dbPromise;
       const photos = await byIndex(db, 'photos', 'walkId', currentDetailWalk.id);
       const trace = currentDetailWalk.trace || [];
-      const svg = traceSVG({ origin: currentDetailWalk.origin, stops: currentDetailWalk.stops }, trace);
-      return buildHTMLExport(currentDetailWalk, photos, svg, getSkin(currentSkin).css);
+      const skin = getSkin(currentSkin);
+      const svg = traceSVG({ origin: currentDetailWalk.origin, stops: currentDetailWalk.stops }, trace, skin.trace);
+      return buildHTMLExport(currentDetailWalk, photos, svg, skin.css, skin.icon);
     }
 
     // --- Share card ---
