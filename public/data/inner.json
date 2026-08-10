@@ -1,0 +1,450 @@
+[
+  {
+    "number": 1,
+    "hex_font": "䷀",
+    "binary": "111111",
+    "title": "The Making",
+    "haiku": "Sky pours without end,\nhold the line, let it unfold\ndawn keeps its own word."
+  },
+  {
+    "number": 2,
+    "hex_font": "䷁",
+    "binary": "000000",
+    "title": "The Receiving Earth",
+    "haiku": "Earth yields, wide and dark,\nfollow the mare, don't lead her\nstillness finds the friend."
+  },
+  {
+    "number": 3,
+    "hex_font": "䷂",
+    "binary": "010001",
+    "title": "The First Awakening",
+    "haiku": "Roots strain through hard ground,\ndon't force the seed, call for help\nthe plant knows its hour."
+  },
+  {
+    "number": 4,
+    "hex_font": "䷃",
+    "binary": "100010",
+    "title": "The Dark Mind",
+    "haiku": "The unlearned come first,\none clear word is enough here\nask again, hear none."
+  },
+  {
+    "number": 5,
+    "hex_font": "䷄",
+    "binary": "010111",
+    "title": "The Waiting",
+    "haiku": "Wait, sincere and still,\nlight gathers behind the clouds\nthen ford the wide stream."
+  },
+  {
+    "number": 6,
+    "hex_font": "䷅",
+    "binary": "111010",
+    "title": "The Clash",
+    "haiku": "Truth meets a closed door,\nstop halfway, don't force it through\nseek the steady one."
+  },
+  {
+    "number": 7,
+    "hex_font": "䷆",
+    "binary": "000010",
+    "title": "The Multitude",
+    "haiku": "Ranks need a firm hand,\nand the patience of a march\norder becomes strength."
+  },
+  {
+    "number": 8,
+    "hex_font": "䷇",
+    "binary": "010000",
+    "title": "The Union",
+    "haiku": "Bonds ask to be proven,\nask again if the ground holds\nthe late come to grief."
+  },
+  {
+    "number": 9,
+    "hex_font": "䷈",
+    "binary": "110111",
+    "title": "The Small Hoard",
+    "haiku": "Small force holds back much,\nclouds thicken, no rain falls yet\nthe west stays parched, still."
+  },
+  {
+    "number": 10,
+    "hex_font": "䷉",
+    "binary": "111011",
+    "title": "The Stepping",
+    "haiku": "You step on the tiger,\nit does not turn to bite you\nwalk on, unafraid."
+  },
+  {
+    "number": 11,
+    "hex_font": "䷊",
+    "binary": "000111",
+    "title": "The Great Calm",
+    "haiku": "What was small departs,\nwhat is great is drawing near\nthe balance holds firm."
+  },
+  {
+    "number": 12,
+    "hex_font": "䷋",
+    "binary": "111000",
+    "title": "The Sealed Silence",
+    "haiku": "Bad company blocks,\nthe greater leaves, the lesser stays\nhold nothing, wait still."
+  },
+  {
+    "number": 13,
+    "hex_font": "䷌",
+    "binary": "111101",
+    "title": "Kinship Under Open Sky",
+    "haiku": "Gather in open ground,\ncross the water together now\nsteady hearts prevail."
+  },
+  {
+    "number": 14,
+    "hex_font": "䷍",
+    "binary": "101111",
+    "title": "The Great Possession",
+    "haiku": "What you hold runs deep,\nmore than measure ever could\nit comes without strain."
+  },
+  {
+    "number": 15,
+    "hex_font": "䷎",
+    "binary": "000100",
+    "title": "The Humble",
+    "haiku": "The low ground gathers\nwhat the high peaks let fall off\nthe humble finish."
+  },
+  {
+    "number": 16,
+    "hex_font": "䷏",
+    "binary": "001000",
+    "title": "The Fervor",
+    "haiku": "Joy moves the army,\nname someone to hold the line\nand let the march begin."
+  },
+  {
+    "number": 17,
+    "hex_font": "䷐",
+    "binary": "011001",
+    "title": "The Following",
+    "haiku": "Bend like the willow,\nfollow where the current pulls\nno blame in bending."
+  },
+  {
+    "number": 18,
+    "hex_font": "䷑",
+    "binary": "100110",
+    "title": "The Mending",
+    "haiku": "Rot asks to be named,\nthree days before, three days after\nmend it in its time."
+  },
+  {
+    "number": 19,
+    "hex_font": "䷒",
+    "binary": "000011",
+    "title": "The Drawing Near",
+    "haiku": "Draw close while you can,\nthe season turns, the eighth month comes\nwith its own weather."
+  },
+  {
+    "number": 20,
+    "hex_font": "䷓",
+    "binary": "110000",
+    "title": "The Gaze",
+    "haiku": "Washed clean, not yet fed,\nstill the people watch and wait\ntrusting what they see."
+  },
+  {
+    "number": 21,
+    "hex_font": "䷔",
+    "binary": "101001",
+    "title": "The Biting Through",
+    "haiku": "Cut through what resists,\nlet the true account be heard\njustice clears the path."
+  },
+  {
+    "number": 22,
+    "hex_font": "䷕",
+    "binary": "100101",
+    "title": "The Grace",
+    "haiku": "Small things wear their best,\na good coat for a short walk\nbeauty in the near."
+  },
+  {
+    "number": 23,
+    "hex_font": "䷖",
+    "binary": "100000",
+    "title": "The Shedding",
+    "haiku": "The structure gives way,\nthere is nowhere left to go now\nstay, and hold your ground."
+  },
+  {
+    "number": 24,
+    "hex_font": "䷗",
+    "binary": "000001",
+    "title": "The Return",
+    "haiku": "Out and back again,\nno error in the turning\nthe seventh day comes home."
+  },
+  {
+    "number": 25,
+    "hex_font": "䷘",
+    "binary": "111001",
+    "title": "The Unforced",
+    "haiku": "Move without pretense,\nbut false steps still bring their weight\ndon't force what won't grow."
+  },
+  {
+    "number": 26,
+    "hex_font": "䷙",
+    "binary": "100111",
+    "title": "The Great Holding",
+    "haiku": "Great strength holds itself,\neat away from your own table\nthen cross the wide stream."
+  },
+  {
+    "number": 27,
+    "hex_font": "䷚",
+    "binary": "100001",
+    "title": "The Nourishing Mouth",
+    "haiku": "Watch what feeds the mouth,\nand what the mouth is feeding\ntend your own hunger too."
+  },
+  {
+    "number": 28,
+    "hex_font": "䷛",
+    "binary": "011110",
+    "title": "The Great Excess",
+    "haiku": "The beam bends too far,\nthis hour asks a rare courage\nwalk on, it will hold."
+  },
+  {
+    "number": 29,
+    "hex_font": "䷜",
+    "binary": "010010",
+    "title": "The Deep Abyss",
+    "haiku": "Deep water, deep water,\na sincere heart still finds bottom\nwhat you do, it holds."
+  },
+  {
+    "number": 30,
+    "hex_font": "䷝",
+    "binary": "101101",
+    "title": "The Radiance",
+    "haiku": "Cling to what gives light,\ntend it the way you'd tend\na cow, slow and sure."
+  },
+  {
+    "number": 31,
+    "hex_font": "䷞",
+    "binary": "011100",
+    "title": "The Resonance",
+    "haiku": "Something moves unspoken\nbetween two before they touch\nsay yes to the pull."
+  },
+  {
+    "number": 32,
+    "hex_font": "䷟",
+    "binary": "001110",
+    "title": "The Enduring",
+    "haiku": "What lasts stays in motion,\nno blame in the steady turning\nkeep walking somewhere."
+  },
+  {
+    "number": 33,
+    "hex_font": "䷠",
+    "binary": "111100",
+    "title": "The Retreat",
+    "haiku": "Step back while you can,\nin small things, this is the strength\ndon't push, just withdraw."
+  },
+  {
+    "number": 34,
+    "hex_font": "䷡",
+    "binary": "001111",
+    "title": "The Great Strength",
+    "haiku": "Great strength held too loose\nbecomes a ram caught in hedge\nhold it, don't display."
+  },
+  {
+    "number": 35,
+    "hex_font": "䷢",
+    "binary": "101000",
+    "title": "The Advance",
+    "haiku": "Horses in numbers,\nthrice granted the royal ear\nhonor comes today."
+  },
+  {
+    "number": 36,
+    "hex_font": "䷣",
+    "binary": "000101",
+    "title": "The Darkening of Light",
+    "haiku": "The light goes under,\nstay true when you cannot see\nthe dark does not last."
+  },
+  {
+    "number": 37,
+    "hex_font": "䷤",
+    "binary": "110101",
+    "title": "The Household",
+    "haiku": "The hearth holds the house,\nher steadiness sets its measure\nall things find their place."
+  },
+  {
+    "number": 38,
+    "hex_font": "䷥",
+    "binary": "101011",
+    "title": "The Divergence",
+    "haiku": "Two ways face away,\nsmall matters still turn out well\napart, then aligned."
+  },
+  {
+    "number": 39,
+    "hex_font": "䷦",
+    "binary": "010100",
+    "title": "The Obstruction",
+    "haiku": "The path west opens,\nthe path northeast stays closed off\nfind the steady one."
+  },
+  {
+    "number": 40,
+    "hex_font": "䷧",
+    "binary": "001010",
+    "title": "The Release",
+    "haiku": "The knot comes undone,\ngo home if the road is finished\nhurry if it's not."
+  },
+  {
+    "number": 41,
+    "hex_font": "䷨",
+    "binary": "100011",
+    "title": "The Diminishing",
+    "haiku": "Give with a true heart,\ntwo small bowls are enough here\nless becomes a gift."
+  },
+  {
+    "number": 42,
+    "hex_font": "䷩",
+    "binary": "110001",
+    "title": "The Increase",
+    "haiku": "More comes to your hands,\ntake up the task in front of you\nand cross the deep stream."
+  },
+  {
+    "number": 43,
+    "hex_font": "䷪",
+    "binary": "011111",
+    "title": "The Resolve",
+    "haiku": "Name the danger loud,\nat the court, in the open air\nbut lay down the sword."
+  },
+  {
+    "number": 44,
+    "hex_font": "䷫",
+    "binary": "111110",
+    "title": "The Encounter",
+    "haiku": "She's strong on the road,\nbut not the one to bring home\nwalk on, let her pass."
+  },
+  {
+    "number": 45,
+    "hex_font": "䷬",
+    "binary": "011000",
+    "title": "The Gathering",
+    "haiku": "They gather at the shrine,\nbring what is worth the offering\nthe great one will come."
+  },
+  {
+    "number": 46,
+    "hex_font": "䷭",
+    "binary": "000110",
+    "title": "The Rising",
+    "haiku": "Climb without your fear,\ntoward whoever stands above\ngo south, it will hold."
+  },
+  {
+    "number": 47,
+    "hex_font": "䷮",
+    "binary": "011010",
+    "title": "The Exhaustion",
+    "haiku": "Pressed from every side,\nthe steady one still finds fortune\nthough no one will hear."
+  },
+  {
+    "number": 48,
+    "hex_font": "䷯",
+    "binary": "010110",
+    "title": "The Well",
+    "haiku": "The town may be rebuilt,\nbut the well beneath stays the same\ndon't let the rope run short."
+  },
+  {
+    "number": 49,
+    "hex_font": "䷰",
+    "binary": "011101",
+    "title": "The Molting",
+    "haiku": "On your own true day,\nthey will believe what you say\nregret falls away."
+  },
+  {
+    "number": 50,
+    "hex_font": "䷱",
+    "binary": "101110",
+    "title": "The Renewed Vessel",
+    "haiku": "The vessel holds fire\nand turns raw things into feast\nit brings its own luck."
+  },
+  {
+    "number": 51,
+    "hex_font": "䷲",
+    "binary": "001001",
+    "title": "The Awakening Thunder",
+    "haiku": "Thunder splits the sky,\nlaughter follows the alarm\nthe cup stays steady."
+  },
+  {
+    "number": 52,
+    "hex_font": "䷳",
+    "binary": "100100",
+    "title": "The Stillness",
+    "haiku": "Hold the back quite still,\nuntil the body falls away\nstep past your own house."
+  },
+  {
+    "number": 53,
+    "hex_font": "䷴",
+    "binary": "110100",
+    "title": "The Gradual Advance",
+    "haiku": "Slow as a bride's walk,\nstep by step toward the promise\npatience finds its shape."
+  },
+  {
+    "number": 54,
+    "hex_font": "䷵",
+    "binary": "001011",
+    "title": "The Given-Away Sister",
+    "haiku": "Given, not choosing,\nto act here brings only harm\nlet the moment pass."
+  },
+  {
+    "number": 55,
+    "hex_font": "䷶",
+    "binary": "001101",
+    "title": "The Abundance",
+    "haiku": "The king's house is full,\ngrieve nothing, be unclouded\nlike sun at high noon."
+  },
+  {
+    "number": 56,
+    "hex_font": "䷷",
+    "binary": "101100",
+    "title": "The Wanderer",
+    "haiku": "A stranger passing,\nstay small, keep your manners close\nand grace will find you."
+  },
+  {
+    "number": 57,
+    "hex_font": "䷸",
+    "binary": "110110",
+    "title": "The Gentle Yielding",
+    "haiku": "Wind moves the small things,\ngo where you are called to go\nand meet who you seek."
+  },
+  {
+    "number": 58,
+    "hex_font": "䷹",
+    "binary": "011011",
+    "title": "The Gladness",
+    "haiku": "Delight, held with care,\npatience keeps the gladness whole\njoy that doesn't spend."
+  },
+  {
+    "number": 59,
+    "hex_font": "䷺",
+    "binary": "110010",
+    "title": "The Dissolving",
+    "haiku": "What was tight lets go,\nthe king still walks to his shrine\ncross the water now."
+  },
+  {
+    "number": 60,
+    "hex_font": "䷻",
+    "binary": "010011",
+    "title": "The Measure",
+    "haiku": "A measure keeps shape,\nbut grip it too hard, it breaks\nhold the line, not tight."
+  },
+  {
+    "number": 61,
+    "hex_font": "䷼",
+    "binary": "110011",
+    "title": "The Inner Truth",
+    "haiku": "Truth reaches the pig,\nand the fish beneath the ice\ncross the water sure."
+  },
+  {
+    "number": 62,
+    "hex_font": "䷽",
+    "binary": "001100",
+    "title": "The Small Excess",
+    "haiku": "The bird flies too high,\nits message is: stay closer\nsmall wins, not the sky."
+  },
+  {
+    "number": 63,
+    "hex_font": "䷾",
+    "binary": "010101",
+    "title": "After Completion",
+    "haiku": "It's finished, mostly,\ngood fortune found at the start\nbut watch how it ends."
+  },
+  {
+    "number": 64,
+    "hex_font": "䷿",
+    "binary": "101010",
+    "title": "Before Completion",
+    "haiku": "The fox nears the bank,\nits tail dips wet in the stream\nnot finished, not lost."
+  }
+]

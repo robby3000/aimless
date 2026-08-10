@@ -47,11 +47,13 @@ public/
   lib/
     geo.js  rng.js  walk.js  deck.js  store.js  dexie.mjs  proximity.js  export.js  skins.js
     platform.js         # UA detection: isIOS, isInAppBrowser, isStandalone
+    inner.js            # The Inner voice: I Ching hexagram from coordinates (docs/iching/)
   data/
     crow.json  threshold.json  lattice.json
+    inner.json          # 64 hexagrams: number, hex_font, binary, title, haiku
 test/
   geo.test.js  rng.test.js  walk.test.js  deck.test.js  proximity.test.js  skins.test.js
-  platform.test.js  export.test.js
+  platform.test.js  export.test.js  inner.test.js
 scripts/
   make-icons.mjs      # npm run icons
   stamp-sw.mjs        # npm run stamp -- rewrites the sw.js cache name
