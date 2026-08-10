@@ -10,6 +10,7 @@ import {
   pathLength,
   bounds,
   formatDistance,
+  formatKm,
   compassPoint,
   headingFromAlpha,
   createTraceGate,
@@ -145,6 +146,13 @@ test('formatDistance formats metres and kilometres', () => {
   assert.equal(formatDistance(500), '500 m');
   assert.equal(formatDistance(1500), '1.50 km');
   assert.equal(formatDistance(15000), '15.0 km');
+});
+
+test('formatKm always uses kilometres with one decimal', () => {
+  assert.equal(formatKm(3200), '3.2 km');
+  assert.equal(formatKm(1234), '1.2 km');
+  assert.equal(formatKm(880), '0.9 km');
+  assert.equal(formatKm(0), '0.0 km');
 });
 
 test('compassPoint returns correct cardinal', () => {

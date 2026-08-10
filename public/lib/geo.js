@@ -159,6 +159,11 @@ export function formatDistance(m) {
   return `${(m / 1000).toFixed(m < 10000 ? 2 : 1)} km`;
 }
 
+/** Distance in kilometres with one decimal, e.g. "3.2 km". */
+export function formatKm(m) {
+  return `${(m / 1000).toFixed(1)} km`;
+}
+
 /** Compass point for a bearing. */
 export function compassPoint(deg) {
   const pts = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
