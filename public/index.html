@@ -308,6 +308,31 @@
       letter-spacing: 0.05em;
     }
 
+    /* The Inner voice: the hexagram its coordinates carried. */
+    .card-display .hex {
+      text-align: center;
+      margin-bottom: 14px;
+    }
+    .card-display .hex .glyph {
+      display: block;
+      font-size: 3.6rem;
+      line-height: 1.15;
+      color: var(--accent-large);
+      text-shadow: 0 0 22px rgba(32, 178, 170, 0.4);
+    }
+    .card-display .hex .hex-title {
+      display: block;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--fg-dim);
+      margin-top: 8px;
+    }
+    #card-text.haiku {
+      text-align: center;
+      white-space: pre-line;
+    }
+
     .walk-actions {
       display: flex;
       flex-direction: column;
@@ -578,6 +603,7 @@
             <div class="wheel-item" data-value="crow">The Crow</div>
             <div class="wheel-item" data-value="threshold">The Threshold</div>
             <div class="wheel-item" data-value="lattice">The Lattice</div>
+            <div class="wheel-item" data-value="inner">The Inner</div>
           </div>
         </div>
       </div>
@@ -602,6 +628,10 @@
     <div id="stop-counter" class="stop-counter">Stop <b>1</b> of 5</div>
     <div id="card-display" class="card-display">
       <div id="card-voice" class="voice"></div>
+      <div id="card-hex" class="hex" hidden>
+        <span id="card-hex-glyph" class="glyph"></span>
+        <span id="card-hex-title" class="hex-title"></span>
+      </div>
       <div id="card-text"></div>
     </div>
     <div id="photo-row" class="photo-row">
@@ -699,6 +729,12 @@
         <p>Tip: it can be a good idea to ponder the voice directives, because they can sometimes manifest a kind of magic synchronicity that only becomes apparent after you pause and consider — give it a go!</p>
       </details>
       <details>
+        <summary>What is The Inner voice?</summary>
+        <p>The Inner is unlike the other voices. Instead of directives, each waypoint of your walk is assigned one of the 64 hexagrams of the I Ching — the Book of Changes, an ancient Chinese philosophical classic and divinatory oracle — together with a haiku distilled from it.</p>
+        <p>The waypoints of a walk are chosen randomly, but each waypoint's hexagram is not: a formula converts the numerals contained in the spot's coordinates into one of the 64 hexagrams, so the same place always carries the same sign. The oracle is embedded in the ground itself — you walk to it; it does not come to you.</p>
+        <p>You can therefore use Aimless as an oracle: hold a situation or question in mind as you set out, and let the walk answer. Divination pairs naturally with walking — the hexagrams you receive belong to the places your feet carried you.</p>
+      </details>
+      <details>
         <summary>Why is there no map?</summary>
         <p>The absence is the design. Aimless is about being where you are, not navigating somewhere — you follow an arrow, not a route, and the shape of your walk is only revealed afterwards.</p>
       </details>
@@ -738,6 +774,7 @@
     import { buildHTMLExport, downloadFile, blobToDataURL } from './lib/export.js';
     import { SKINS, getSkin, scopeCSS, BASE_CSS } from './lib/skins.js';
     import { isIOS, isInAppBrowser, isStandalone } from './lib/platform.js';
+    import { buildHexIndex, innerCard } from './lib/inner.js';
 
     // --- Screen navigation ---
     const screens = {
@@ -925,7 +962,19 @@
     // --- Voice loading ---
     async function loadVoice(slug) {
       const res = await fetch(`./data/${slug}.json`);
-      return res.json();
+      const data = await res.json();
+      // The Inner ships as a bare hexagram array, not a deck voice; wrap it
+      // in the voice shape the walk flow expects (slug/name/epithet) plus
+      // the binary -> hexagram index the cards are drawn against.
+      if (slug === 'inner') {
+        return {
+          slug: 'inner',
+          name: 'The Inner',
+          epithet: 'the oracle underfoot',
+          hexIndex: buildHexIndex(data),
+        };
+      }
+      return data;
     }
 
     // --- DOM refs ---
@@ -937,6 +986,9 @@
     const stopCounter = document.getElementById('stop-counter');
     const cardDisplay = document.getElementById('card-display');
     const cardVoice = document.getElementById('card-voice');
+    const cardHex = document.getElementById('card-hex');
+    const cardHexGlyph = document.getElementById('card-hex-glyph');
+    const cardHexTitle = document.getElementById('card-hex-title');
     const cardText = document.getElementById('card-text');
     const btnApproach = document.getElementById('btn-approach');
     const btnContinue = document.getElementById('btn-continue');
@@ -1349,24 +1401,33 @@
         const est = estimate(plan);
         const voice = await loadVoice(voiceSlug);
 
-        // Load recent pairs for cross-walk dedup.
+        // The Inner has no deck: each stop's card is the hexagram its
+        // coordinates determine, so there is no seeded draw and no
+        // cross-walk dedup buffer to maintain.
         const db = await dbPromise;
+        let cards;
         let recentBuffer = [];
-        if (db) {
-          const prefs = await getPrefs(db);
-          recentBuffer = prefs.recentPairs || [];
+        if (voice.slug === 'inner') {
+          cards = plan.stops.map((s) => innerCard(s, voice.hexIndex));
+        } else {
+          // Load recent pairs for cross-walk dedup.
+          if (db) {
+            const prefs = await getPrefs(db);
+            recentBuffer = prefs.recentPairs || [];
+          }
+          const recent = recentKeys(recentBuffer);
+          const drawn = drawWalk({ seed, voice, stops, recent });
+          cards = drawn.cards;
+
+          // Save updated recent buffer.
+          if (db) {
+            const newBuffer = pushRecent(recentBuffer, drawn.used);
+            await setPrefs(db, { recentPairs: newBuffer });
+          }
         }
-        const recent = recentKeys(recentBuffer);
-        const { cards, used } = drawWalk({ seed, voice, stops, recent });
 
         // Attach cards to stops.
         plan.stops = plan.stops.map((s, i) => ({ ...s, card: cards[i] }));
-
-        // Save updated recent buffer.
-        if (db) {
-          const newBuffer = pushRecent(recentBuffer, used);
-          await setPrefs(db, { recentPairs: newBuffer });
-        }
 
         // Create tracker and start the walk.
         const tracker = createTracker(plan.stops);
@@ -1483,12 +1544,23 @@
 
     function showCard(card, voice) {
       cardVoice.textContent = `${voice.name} — ${voice.epithet}`;
+      // Inner cards carry the hexagram the waypoint's coordinates resolved
+      // to: glyph above, number and title beneath, then the haiku.
+      const hex = card.hexagram || null;
+      cardHex.hidden = !hex;
+      if (hex) {
+        cardHexGlyph.textContent = hex.glyph;
+        cardHexTitle.textContent = `${hex.number} · ${hex.title}`;
+      }
       cardText.textContent = card.text;
+      cardText.classList.toggle('haiku', !!hex);
       cardDisplay.classList.add('visible');
     }
 
     function hideCard() {
       cardDisplay.classList.remove('visible');
+      cardHex.hidden = true;
+      cardText.classList.remove('haiku');
       photoRow.classList.remove('visible');
       photoThumb.classList.remove('visible');
       photoThumb.src = '';
@@ -1609,6 +1681,7 @@
           approached: s.approached,
           cardText: s.card?.text,
           cardVoice: s.card?.voice,
+          hexagram: s.card?.hexagram,   // The Inner only; absent on deck voices
         })),
         trace,
         gaveUp,
@@ -1864,11 +1937,17 @@
           : s.reachedAt
             ? '<span class="status reached">reached</span>'
             : '<span class="status missed">not reached</span>';
+        // Inner stops carry the hexagram resolved from their coordinates.
+        const hex = s.hexagram;
+        const hexHtml = hex
+          ? `<div class="card-hex"><span class="glyph">${hex.glyph}</span><span class="hex-meta"><span class="hex-num">Hexagram ${hex.number}</span><span class="hex-title">${hex.title}</span></span></div>`
+          : '';
         return `<div class="stop">
           <div class="stop-num">${i + 1}</div>
           <div class="stop-body">
             <div class="stop-meta">${status}</div>
-            <div class="card-text">${s.cardText || ''}</div>
+            ${hexHtml}
+            <div class="card-text${hex ? ' card-haiku' : ''}">${s.cardText || ''}</div>
             ${photoHtml}
           </div>
         </div>`;
