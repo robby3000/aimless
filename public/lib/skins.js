@@ -1,13 +1,20 @@
 // Walk Result skins. Each skin is a CSS fragment written against the shared
-// walk-result markup vocabulary (body, h1/h2, .seed, .date, .summary, .trace,
-// .stop, .stop-num, .status, .card-text, img, footer; The Inner voice adds an
-// optional .card-hex > .glyph + .hex-meta (.hex-num, .hex-title) block before
-// .card-text, which gains .card-haiku). The same fragment skins the in-app
-// detail view (scoped to #detail-content via scopeCSS) and the self-contained
-// HTML export (embedded as-is). CSS only - exports must never contain scripts.
+// walk-result markup vocabulary (body, h1/h2, .seed, .walk-voice, .date,
+// .summary, .trace, .stop, .stop-num, .status, .card-text, img, footer; The
+// Inner voice adds an optional .card-hex > .glyph + .hex-title block before
+// .card-text, which gains .card-haiku containing one .haiku-line per line).
+// The same fragment skins the in-app detail view (scoped to #detail-content
+// via scopeCSS) and the self-contained HTML export (embedded as-is). CSS
+// only - exports must never contain scripts.
 //
 // Skins style decoration only: colours, typography, borders, backgrounds.
 // Never layout, so the same fragment works against both markups.
+//
+// Two things a skin cannot style with CSS are carried as data instead:
+//   card  - palette + font for the share-card canvas
+//   trace - colours for the trace SVG (its fills/strokes are attributes)
+//   icon  - which transparent logo variant ('light' | 'dark' | 'sky') the
+//           HTML export embeds, chosen for contrast against the skin's bg
 
 /**
  * Base walk-result styles. The HTML export embeds this verbatim; the in-app
@@ -26,7 +33,9 @@ body {
   line-height: 1.6; padding: 24px; max-width: 640px; margin: 0 auto;
 }
 h1 { font-size: 1.4rem; margin-bottom: 4px; }
+h1 a { color: inherit; text-decoration: none; }
 .seed { font-family: monospace; color: var(--accent); font-size: 0.9rem; }
+.walk-voice { font-size: 0.9rem; color: inherit; opacity: 0.85; margin-top: 2px; }
 .date { color: var(--fg-dim); font-size: 0.9rem; margin-bottom: 16px; }
 .summary { color: var(--fg-dim); font-size: 0.9rem; margin-bottom: 24px; }
 .summary b { color: var(--fg); }
@@ -47,19 +56,21 @@ h1 { font-size: 1.4rem; margin-bottom: 4px; }
 .status { font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
 .status.reached { background: #2a4a2a; color: #8c8; }
 .status.approached { background: #4a3a2a; color: #fc8; }
-.status.missed { background: #4a2a2a; color: #c88; }
+.status.missed { background: #4a2a2a; color: #e0a3a3; }
 .card-text { font-size: 1.1rem; line-height: 1.6; }
-/* The Inner voice: the hexagram glyph beside its number and title, above the
-   haiku. No colour is set so every skin's palette flows through. */
-.card-hex { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
-.card-hex .glyph { font-size: 2.2rem; line-height: 1; }
-.card-hex .hex-meta { display: flex; flex-direction: column; gap: 2px; }
-.card-hex .hex-num { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.65; }
-.card-hex .hex-title { font-size: 1.05rem; font-weight: 600; }
-.card-haiku { white-space: pre-line; }
+/* The Inner voice: a large hexagram glyph beside its title, then the haiku
+   below a faint rule. No colour is set so every skin's palette flows through. */
+.card-hex { display: flex; align-items: center; gap: 14px; }
+.card-hex .glyph { font-size: 3rem; line-height: 1; flex-shrink: 0; }
+.card-hex .hex-title { font-size: 1.15rem; font-weight: 700; line-height: 1.3; }
+.card-haiku {
+  margin-top: 12px; padding-top: 12px;
+  border-top: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+}
+.haiku-line { display: block; overflow-wrap: break-word; }
 footer { margin-top: 32px; color: var(--fg-dim); font-size: 0.8rem; text-align: center; }
 footer a { color: inherit; }
-.app-icon { width: 44px; height: 44px; border-radius: 10px; vertical-align: -6px; margin-right: 6px; }
+.app-icon { width: 44px; height: 44px; vertical-align: -8px; margin-right: 6px; }
 /* Skins restyle photos via the bare img selector; the app icon must keep
    its own look, so pin it back with a more specific rule. */
 img.app-icon { border: none; outline: none; box-shadow: none; transform: none; filter: none; padding: 0; background: none; }
@@ -82,6 +93,8 @@ export const SKINS = [
     id: 'default',
     name: 'Default',
     css: '',
+    icon: 'sky',
+    trace: { planStroke: '#555555', traceStroke: '#7ab8ff', originFill: '#7ab8ff', stopFill: '#e8e8e8' },
     card: {
       bg: '#161616',
       fg: '#e8e8e8',
@@ -117,6 +130,8 @@ h1, h2 { color: #3c531f; }
 img { outline: 4px solid #eef2df; outline-offset: 2px; }
 footer { color: #8a906e; }
 `,
+    icon: 'dark',
+    trace: { planStroke: '#97a67b', traceStroke: '#5a7a2e', originFill: '#5a7a2e', stopFill: '#2d3a1f' },
     card: {
       bg: '#f4f1e4',
       fg: '#2d3a1f',
@@ -163,6 +178,8 @@ h1, h2 {
 img { border: 2px solid #ff2bd6; box-shadow: 0 0 16px #ff2bd677; border-radius: 0; }
 footer { color: #554a80; }
 `,
+    icon: 'sky',
+    trace: { planStroke: '#5a4a8f', traceStroke: '#00f5ff', originFill: '#00f5ff', stopFill: '#e0d7ff' },
     card: {
       bg: '#0d0221',
       fg: '#00f5ff',
@@ -205,9 +222,11 @@ h1, h2 {
   font-family: Georgia, serif;
 }
 .status { font-style: italic; text-transform: none; letter-spacing: 0; background: transparent; padding: 0; }
-.status.reached { color: #4a5d2a; }
-.status.approached { color: #8a5a1e; }
-.status.missed { color: #8a2e1e; }
+/* The base skin's .status.* backgrounds win on specificity, so each variant
+   must re-declare transparent here. */
+.status.reached { background: transparent; color: #4a5d2a; }
+.status.approached { background: transparent; color: #7a4a12; }
+.status.missed { background: transparent; color: #8a2e1e; }
 .card-text { font-size: 1.05rem; color: #46392a; }
 .card-text::first-letter { font-size: 1.6em; font-weight: 700; color: #6b5233; }
 img { border: 1px solid #8a7355; padding: 6px; background: #f7f0dd; }
@@ -215,6 +234,8 @@ footer { font-style: italic; color: #93826a; }
 footer::before { content: "~ "; }
 footer::after { content: " ~"; }
 `,
+    icon: 'dark',
+    trace: { planStroke: '#b3a284', traceStroke: '#6b5233', originFill: '#6b5233', stopFill: '#3b2f23' },
     card: {
       bg: '#efe6d0',
       fg: '#3b2f23',
@@ -253,13 +274,15 @@ h1::before, h2::before { content: "C:\\> "; color: #2aa02a; }
 .status { border-radius: 0; font-family: 'Courier New', monospace; }
 .status.reached { background: #0f3d0f; color: #33ff33; }
 .status.approached { background: #3d3d0f; color: #ffff33; }
-.status.missed { background: #3d0f0f; color: #ff3333; }
+.status.missed { background: #3d0f0f; color: #ff5555; }
 .card-text { color: #33ff33; }
 img { border: 2px solid #33ff33; border-radius: 0; filter: contrast(1.1); }
 footer { color: #1e7a1e; }
 footer::before { content: "*** "; }
 footer::after { content: " ***"; }
 `,
+    icon: 'light',
+    trace: { planStroke: '#1e7a1e', traceStroke: '#33ff33', originFill: '#33ff33', stopFill: '#aaffaa' },
     card: {
       bg: '#000000',
       fg: '#33ff33',
@@ -300,8 +323,8 @@ h1, h2 {
   transform: rotate(-8deg);
 }
 .status.reached { background: #ccff66; color: #336600; border-radius: 12px; }
-.status.approached { background: #ffcc66; color: #994400; border-radius: 12px; }
-.status.missed { background: #ff99aa; color: #990033; border-radius: 12px; }
+.status.approached { background: #ffcc66; color: #7a3300; border-radius: 12px; }
+.status.missed { background: #ff99aa; color: #7a0028; border-radius: 12px; }
 .card-text { color: #771177; }
 img {
   border: 5px solid #ffcc00;
@@ -313,6 +336,8 @@ footer { color: #cc44cc; font-weight: 700; }
 footer::before { content: "\\2665 "; color: #ff0066; }
 footer::after { content: " \\2665"; color: #ff0066; }
 `,
+    icon: 'dark',
+    trace: { planStroke: '#ff99dd', traceStroke: '#cc0066', originFill: '#cc0066', stopFill: '#661166' },
     card: {
       bg: '#ffb3e6',
       fg: '#661166',

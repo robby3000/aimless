@@ -76,6 +76,18 @@ test('every skin has a share-card palette', () => {
   }
 });
 
+test('every skin has a trace palette and an export logo variant', () => {
+  // The trace SVG's dots and strokes are attributes (not CSS), and the
+  // export logo is baked in at export time, so both are data on the skin.
+  for (const s of SKINS) {
+    assert.ok(s.trace, `${s.id} is missing a trace palette`);
+    for (const key of ['planStroke', 'traceStroke', 'originFill', 'stopFill']) {
+      assert.ok(/^#[0-9a-f]{6}$/i.test(s.trace[key] || ''), `${s.id}.trace.${key} must be a hex colour`);
+    }
+    assert.ok(['light', 'dark', 'sky'].includes(s.icon), `${s.id}.icon must be light, dark or sky`);
+  }
+});
+
 test('every skin survives scoping (produces output, no dangling braces)', () => {
   for (const s of SKINS) {
     const out = scopeCSS(s.css, '#detail-content');
