@@ -1600,12 +1600,17 @@
     });
 
     // --- Photo capture ---
+    // Photos are stored (as data URLs) downscaled to this size on the long
+    // edge. 1200px keeps the 1080px square share card nearly 1:1 sharp; the
+    // cost is ~2-2.5x the base64 storage of the old 800px size.
+    const PHOTO_MAX_DIM = 1200;
+
     btnPhoto.addEventListener('click', () => photoInput.click());
 
     photoInput.addEventListener('change', async () => {
       const file = photoInput.files[0];
       if (!file) return;
-      const blob = await downscaleImage(file, 800);
+      const blob = await downscaleImage(file, PHOTO_MAX_DIM);
       walk.photos[walk.plan.stops.filter((s) => s.reachedAt).length - 1] = blob;
       photoThumb.src = URL.createObjectURL(blob);
       photoThumb.classList.add('visible');
