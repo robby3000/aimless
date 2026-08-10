@@ -1,9 +1,10 @@
 // Walk Result skins. Each skin is a CSS fragment written against the shared
 // walk-result markup vocabulary (body, h1/h2, .seed, .date, .summary, .trace,
-// .stop, .stop-num, .status, .card-text, img, footer). The same fragment
-// skins the in-app detail view (scoped to #detail-content via scopeCSS) and
-// the self-contained HTML export (embedded as-is). CSS only - exports must
-// never contain scripts.
+// .stop, .stop-num, .status, .card-text, img, footer; The Inner voice adds an
+// optional .card-hex > .glyph + .hex-meta (.hex-num, .hex-title) block before
+// .card-text, which gains .card-haiku). The same fragment skins the in-app
+// detail view (scoped to #detail-content via scopeCSS) and the self-contained
+// HTML export (embedded as-is). CSS only - exports must never contain scripts.
 //
 // Skins style decoration only: colours, typography, borders, backgrounds.
 // Never layout, so the same fragment works against both markups.
@@ -48,6 +49,14 @@ h1 { font-size: 1.4rem; margin-bottom: 4px; }
 .status.approached { background: #4a3a2a; color: #fc8; }
 .status.missed { background: #4a2a2a; color: #c88; }
 .card-text { font-size: 1.1rem; line-height: 1.6; }
+/* The Inner voice: the hexagram glyph beside its number and title, above the
+   haiku. No colour is set so every skin's palette flows through. */
+.card-hex { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
+.card-hex .glyph { font-size: 2.2rem; line-height: 1; }
+.card-hex .hex-meta { display: flex; flex-direction: column; gap: 2px; }
+.card-hex .hex-num { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; opacity: 0.65; }
+.card-hex .hex-title { font-size: 1.05rem; font-weight: 600; }
+.card-haiku { white-space: pre-line; }
 footer { margin-top: 32px; color: var(--fg-dim); font-size: 0.8rem; text-align: center; }
 footer a { color: inherit; }
 .app-icon { width: 44px; height: 44px; border-radius: 10px; vertical-align: -6px; margin-right: 6px; }

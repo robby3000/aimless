@@ -66,11 +66,17 @@ export async function buildHTMLExport(walk, photos, svgTrace, skinCss = '') {
       : s.reachedAt
         ? '<span class="status reached">reached</span>'
         : '<span class="status missed">not reached</span>';
+    // Inner stops carry the hexagram resolved from their coordinates.
+    const hex = s.hexagram;
+    const hexHtml = hex
+      ? `<div class="card-hex"><span class="glyph">${hex.glyph}</span><span class="hex-meta"><span class="hex-num">Hexagram ${hex.number}</span><span class="hex-title">${hex.title}</span></span></div>`
+      : '';
     return `<div class="stop">
       <div class="stop-num">${i + 1}</div>
       <div class="stop-body">
         <div class="stop-meta">${status}</div>
-        <div class="card-text">${s.cardText || ''}</div>
+        ${hexHtml}
+        <div class="card-text${hex ? ' card-haiku' : ''}">${s.cardText || ''}</div>
         ${photoHtml}
       </div>
     </div>`;
