@@ -118,6 +118,26 @@ test('haiku lines become one block element per line', async () => {
   assert.equal((html.match(/<span class="haiku-line">/g) || []).length, 3);
 });
 
+test('photos are wrapped in .photo-frame so overlay filters have a parent', async () => {
+  const html = await buildHTMLExport(WALK, [{ stopSeq: 0, dataUrl: 'data:image/jpeg;base64,QUJD' }], '<svg></svg>');
+  assert.ok(html.includes('<div class="photo-frame"><img src="data:image/jpeg;base64,QUJD"'));
+  assert.ok(html.includes('.photo-frame { position: relative;'));
+});
+
+test('a photo filter adds a body class and its CSS block', async () => {
+  const html = await buildHTMLExport(WALK, [], '<svg></svg>', '', 'sky', 'noire');
+  assert.ok(html.includes('<body class="filter-noire">'));
+  assert.ok(html.includes('body.filter-noire .photo-frame img { filter: grayscale(100%)'));
+  assert.ok(html.includes('body.filter-noire .photo-frame::after'));
+});
+
+test('Original adds no filter class or CSS', async () => {
+  const html = await buildHTMLExport(WALK, [], '<svg></svg>');
+  assert.ok(html.includes('<body>'));
+  assert.ok(!html.includes('filter-original'));
+  assert.ok(!html.includes('<style id="filter">'));
+});
+
 test('voiceName maps slugs and tolerates unknowns', () => {
   assert.equal(voiceName('inner'), 'The Inner');
   assert.equal(voiceName('mystery'), 'Mystery');

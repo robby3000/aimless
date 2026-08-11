@@ -2172,7 +2172,7 @@
       const trace = currentDetailWalk.trace || [];
       const skin = getSkin(currentSkin);
       const svg = traceSVG({ origin: currentDetailWalk.origin, stops: currentDetailWalk.stops }, trace, skin.trace);
-      return buildHTMLExport(currentDetailWalk, photos, svg, skin.css, skin.icon);
+      return buildHTMLExport(currentDetailWalk, photos, svg, skin.css, skin.icon, currentFilter);
     }
 
     // --- Share card ---
