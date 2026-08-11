@@ -116,14 +116,6 @@
       color: var(--danger);
     }
 
-    /* Share walk / Send card: light warm Sand fill, needs dark text on top. */
-    .btn-share {
-      background: var(--accent-sand);
-      border-color: var(--accent-sand);
-      color: var(--bg);
-    }
-    .btn-share:active { background: #e0bfa0; }
-
     .btn-full { width: 100%; }
 
     /* --- Go screen --- */
@@ -389,22 +381,96 @@
       flex-shrink: 0;
     }
 
-    /* --- Skin selector (detail screen) --- */
-    .skin-row {
+    /* --- Detail controls: Skin/Filter rails + action bar ---
+       Horizontal scroll-snap token lists and a segmented bar, all in rounded
+       surface panels with hairline borders — the Go screen wheel aesthetic
+       laid flat. Pinned at the bottom of the screen, above the nav. */
+    .detail-controls {
       display: flex;
       flex-direction: column;
-      gap: 4px;
-      font-size: 0.85rem;
-      color: var(--fg-dim);
+      gap: 8px;
+      flex-shrink: 0;
     }
-    .skin-row select {
+    .rail-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 46px;
       background: var(--surface);
+      border: 1px solid rgba(230, 247, 249, 0.09);
+      border-radius: var(--radius);
+      padding: 0 12px;
+    }
+    .rail-label {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--fg-dim);
+      flex-shrink: 0;
+    }
+    .rail {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+      mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+      -webkit-overflow-scrolling: touch;
+    }
+    .rail::-webkit-scrollbar { display: none; }
+    /* Edge spacers so the first and last tokens can snap to the centre. */
+    .rail::before, .rail::after { content: ''; flex: 0 0 40%; }
+    .rail-item {
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      scroll-snap-align: center;
+      scroll-snap-stop: always;
+      white-space: nowrap;
+      cursor: pointer;
+      color: var(--fg-dim);
+      font-size: 0.9rem;
+      font-weight: 500;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+      opacity: 0.3;
+      transition: opacity 0.15s ease, color 0.15s ease;
+    }
+    .rail-item.selected { color: var(--fg); opacity: 1; }
+    @media (prefers-reduced-motion: reduce) {
+      .rail-item { transition: none; }
+    }
+
+    .action-bar {
+      display: flex;
+      background: var(--surface);
+      border: 1px solid rgba(230, 247, 249, 0.09);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .action-bar button {
+      flex: 1;
+      min-width: 0;
+      min-height: 48px;
+      padding: 12px 4px;
+      background: transparent;
+      border: none;
+      border-radius: 0;
+      font-size: 0.88rem;
+      color: var(--fg-dim);
+      white-space: nowrap;
+    }
+    .action-bar button + button { border-left: 1px solid rgba(230, 247, 249, 0.09); }
+    .action-bar button:active { background: var(--surface-2); }
+    .action-bar .action-primary {
+      flex: 2;
       color: var(--fg);
-      border: 1px solid var(--surface-2);
-      border-radius: 8px;
-      padding: 8px;
-      font-size: 0.95rem;
-      font-family: inherit;
+      font-weight: 600;
     }
 
     /* --- Focused walk state: everything but the compass fades out and
@@ -555,7 +621,9 @@
        and the active skin are injected from lib/skins.js (scoped to
        #detail-content), exactly as the HTML export embeds them, so a skin
        applies fully here rather than fighting hard-coded dark card styles. */
-    #screen-detail { gap: 16px; }
+    #screen-detail { gap: 12px; overflow: hidden; }
+    /* The walk result scrolls; the control block under it stays put. */
+    #detail-content { flex: 1; min-height: 0; overflow-y: auto; }
     #detail-content img { max-width: 100%; }
 
     @media print {
@@ -759,14 +827,32 @@
   <!-- Walk detail screen -->
   <section id="screen-detail" class="screen">
     <div id="detail-content"></div>
-    <div class="walk-actions">
-      <label class="skin-row">
-        Design
-        <select id="detail-skin"></select>
-      </label>
-      <button id="btn-detail-export-html" class="btn-primary btn-full">Export as HTML</button>
-      <button id="btn-detail-share" class="btn-primary btn-share btn-full">Share walk</button>
-      <button id="btn-detail-card" class="btn-primary btn-share btn-full">Send card</button>
+    <div class="detail-controls">
+      <div class="rail-row">
+        <span class="rail-label">Skin</span>
+        <div class="rail" id="rail-skin"></div>
+      </div>
+      <div class="rail-row">
+        <span class="rail-label">Filter</span>
+        <div class="rail" id="rail-filter">
+          <div class="rail-item" data-value="pop">Pop</div>
+          <div class="rail-item" data-value="old-film">Old film</div>
+          <div class="rail-item" data-value="black-and-white">Black and white</div>
+          <div class="rail-item" data-value="original">Original</div>
+          <div class="rail-item" data-value="noire">Noire</div>
+          <div class="rail-item" data-value="sepia">Sepia</div>
+          <div class="rail-item" data-value="muted">Muted</div>
+          <div class="rail-item" data-value="cold">Cold</div>
+          <div class="rail-item" data-value="trippy-1">Trippy 1</div>
+          <div class="rail-item" data-value="trippy-2">Trippy 2</div>
+          <div class="rail-item" data-value="trippy-3">Trippy 3</div>
+        </div>
+      </div>
+      <div class="action-bar">
+        <button id="btn-detail-share" class="action-primary">&#8682; Share walk</button>
+        <button id="btn-detail-export-html">&lt;/&gt; HTML</button>
+        <button id="btn-detail-card">&#9993; Card</button>
+      </div>
     </div>
   </section>
 
@@ -873,8 +959,9 @@
     });
 
     // --- Walk Result skins ---
-    const elSkin = document.getElementById('detail-skin');
-    elSkin.innerHTML = SKINS.map((s) => `<option value="${s.id}">${s.name}</option>`).join('');
+    // The Skin rail's tokens are generated from SKINS (one per skin).
+    const railSkin = document.getElementById('rail-skin');
+    railSkin.innerHTML = SKINS.map((s) => `<div class="rail-item" data-value="${s.id}">${s.name}</div>`).join('');
     // The shared base result styles and the active skin are injected scoped
     // to the detail view so they cannot leak into the rest of the app; the
     // export embeds the same fragments unscoped. Base first, skin after it,
@@ -885,25 +972,79 @@
     const skinStyle = document.createElement('style');
     document.head.appendChild(skinStyle);
     let currentSkin = 'default';
+    let currentFilter = 'original';
 
     function applySkin() {
       skinStyle.textContent = scopeCSS(getSkin(currentSkin).css, '#detail-content');
     }
 
-    elSkin.addEventListener('change', () => {
-      currentSkin = elSkin.value;
+    // Horizontal scroll-snap rail: the centred token is the selected one.
+    // Tapping a token selects it instantly and scrolls it to the centre;
+    // swiping selects once the scroll settles. Same idea as makeWheel, flat.
+    function makeRail(el, onSelect) {
+      const items = [...el.querySelectorAll('.rail-item')];
+      let current = -1;
+      let settle = null;
+
+      function select(index, fire) {
+        index = Math.max(0, Math.min(items.length - 1, index));
+        if (index === current) return;
+        current = index;
+        items.forEach((it, i) => it.classList.toggle('selected', i === index));
+        if (fire) onSelect(items[index].dataset.value);
+      }
+
+      function centerOf(it) { return it.offsetLeft + it.offsetWidth / 2; }
+
+      el.addEventListener('scroll', () => {
+        clearTimeout(settle);
+        settle = setTimeout(() => {
+          const mid = el.scrollLeft + el.clientWidth / 2;
+          let best = 0, bestDist = Infinity;
+          items.forEach((it, i) => {
+            const d = Math.abs(centerOf(it) - mid);
+            if (d < bestDist) { bestDist = d; best = i; }
+          });
+          select(best, true);
+        }, 90);
+      }, { passive: true });
+
+      items.forEach((it, i) => it.addEventListener('click', () => {
+        select(i, true);
+        const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+        el.scrollTo({ left: centerOf(it) - el.clientWidth / 2, behavior: reduce ? 'auto' : 'smooth' });
+      }));
+
+      return {
+        setValue(value) {
+          const i = Math.max(0, items.findIndex((it) => it.dataset.value === value));
+          select(i, false);
+          // Only meaningful when the rail is laid out (its screen visible);
+          // showWalkDetail re-syncs whenever the detail screen opens.
+          if (el.clientWidth > 0) el.scrollLeft = centerOf(items[i]) - el.clientWidth / 2;
+        },
+      };
+    }
+
+    const skinRail = makeRail(railSkin, (value) => {
+      currentSkin = value;
       applySkin();
       savePrefs();
       // The trace SVG's colours come from the skin too (they are attributes,
       // not CSS), so the detail view must be re-rendered on a skin change.
       if (currentDetailWalk) showWalkDetail(currentDetailWalk.id);
     });
+    // Filters are a stub for now: the rail only tracks the selection.
+    const filterRail = makeRail(document.getElementById('rail-filter'), (value) => {
+      currentFilter = value;
+      savePrefs();
+    });
 
     // --- Settings ---
     const elStops = document.getElementById('setting-stops');
     const elBudget = document.getElementById('setting-budget');
     const elVoice = document.getElementById('setting-voice');
-    const DEFAULT_PREFS = { stops: 5, budgetMin: 45, voice: 'crow', skin: 'default' };
+    const DEFAULT_PREFS = { stops: 5, budgetMin: 45, voice: 'crow', skin: 'default', filter: 'original' };
 
     // Scroll-snap wheel: keeps `input` (a hidden input carrying the setting's
     // value) in sync with the centred item, and saves prefs on user scrolls.
@@ -959,7 +1100,9 @@
       wheelBudget.setValue(String(prefs.budgetMin ?? DEFAULT_PREFS.budgetMin));
       wheelVoice.setValue(prefs.voice ?? DEFAULT_PREFS.voice);
       currentSkin = prefs.skin ?? DEFAULT_PREFS.skin;
-      elSkin.value = currentSkin;
+      currentFilter = prefs.filter ?? DEFAULT_PREFS.filter;
+      skinRail.setValue(currentSkin);
+      filterRail.setValue(currentFilter);
       applySkin();
       return prefs;
     }
@@ -971,7 +1114,8 @@
         stops: parseInt(elStops.value, 10),
         budgetMin: parseInt(elBudget.value, 10),
         voice: elVoice.value,
-        skin: elSkin.value,
+        skin: currentSkin,
+        filter: currentFilter,
       });
     }
 
@@ -1997,9 +2141,11 @@
         ${stopHtml}
       `;
 
-      elSkin.value = currentSkin;
       applySkin();
       showScreen('detail');
+      // Sync the rails after the screen is visible so their geometry exists.
+      skinRail.setValue(currentSkin);
+      filterRail.setValue(currentFilter);
     }
 
     // Build the current walk's self-contained HTML export (shared by the
