@@ -51,11 +51,16 @@
       padding-top: var(--safe-top);
       padding-bottom: var(--safe-bottom);
       transition: background-color 0.4s;
+      /* The page itself never scrolls: the active screen scrolls internally,
+         so the header and the bottom nav stay pinned at all times. */
+      overflow: hidden;
     }
 
     /* --- Screens --- */
     .screen {
       flex: 1;
+      min-height: 0;
+      overflow-y: auto;
       display: none;
       flex-direction: column;
       padding: 20px;
@@ -72,6 +77,7 @@
       justify-content: space-between;
       padding: 12px 20px;
       border-bottom: 1px solid var(--surface);
+      flex-shrink: 0;
     }
     .logo {
       font-size: 1.1rem;
@@ -122,11 +128,15 @@
 
     /* --- Go screen --- */
     #screen-go {
-      justify-content: center;
       align-items: center;
       text-align: center;
       gap: 18px;
     }
+    /* Centre the content vertically via auto margins rather than
+       justify-content: with justify-content an overflowing screen clips its
+       top edge out of scroll reach; auto margins collapse to 0 instead. */
+    #screen-go > :first-child { margin-top: auto; }
+    #screen-go > :last-child { margin-bottom: auto; }
     #screen-go .title {
       font-size: 2.2rem;
       font-weight: 700;
@@ -428,6 +438,7 @@
     nav {
       display: flex;
       border-top: 1px solid var(--surface);
+      flex-shrink: 0;
     }
     nav button {
       flex: 1;
@@ -453,6 +464,7 @@
       background: var(--surface);
       border-bottom: 1px solid var(--danger);
       font-size: 0.85rem;
+      flex-shrink: 0;
     }
     .storage-banner[hidden] { display: none; }
     .storage-banner button {
@@ -547,9 +559,12 @@
     #detail-content img { max-width: 100%; }
 
     @media print {
+      html, body { height: auto; overflow: visible; }
       body { background: white; color: black; }
-      header, nav, .walk-actions, #screen-go, #screen-walk, #screen-archive, #screen-info { display: none !important; }
-      #screen-detail { display: flex !important; }
+      header, nav, .walk-actions, .detail-controls,
+      #screen-go, #screen-walk, #screen-archive, #screen-info { display: none !important; }
+      #screen-detail { display: flex !important; overflow: visible; }
+      #detail-content { overflow: visible; }
       #detail-content, #detail-content .trace {
         background: white !important; color: black !important; border-color: #ccc !important;
       }
