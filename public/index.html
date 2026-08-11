@@ -2211,7 +2211,36 @@
           const scale = Math.max(CARD_SIZE / img.width, CARD_SIZE / img.height);
           const dw = img.width * scale;
           const dh = img.height * scale;
+          // The active photo filter, mirrored from the Walk Detail preview.
+          // ctx.filter needs Safari 18+; on older Safari the photo draws
+          // unfiltered (the overlay below still applies).
+          const filter = getFilter(currentFilter);
+          if (filter.filter && 'filter' in ctx) ctx.filter = filter.filter;
           ctx.drawImage(img, (CARD_SIZE - dw) / 2, (CARD_SIZE - dh) / 2, dw, dh);
+          ctx.filter = 'none';
+          // Overlay presets (vignette, duotone): the ::after layer's canvas
+          // equivalent. Covers the whole card since the photo cover-fills it.
+          if (filter.overlay) {
+            const g = filter.overlay.gradient;
+            let grad;
+            if (g.kind === 'radial') {
+              // radial-gradient(circle, ...) sizes to the farthest corner.
+              grad = ctx.createRadialGradient(
+                CARD_SIZE / 2, CARD_SIZE / 2, 0,
+                CARD_SIZE / 2, CARD_SIZE / 2, Math.hypot(CARD_SIZE, CARD_SIZE) / 2
+              );
+            } else {
+              // Only 45deg exists today: CSS 45deg on a square runs from
+              // bottom-left to top-right.
+              grad = ctx.createLinearGradient(0, CARD_SIZE, CARD_SIZE, 0);
+            }
+            for (const [offset, color] of g.stops) grad.addColorStop(offset, color);
+            ctx.save();
+            ctx.globalCompositeOperation = filter.overlay.blend === 'normal' ? 'source-over' : filter.overlay.blend;
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, CARD_SIZE, CARD_SIZE);
+            ctx.restore();
+          }
         } catch { /* photo unreadable - card goes out bare */ }
         if (!photo.dataUrl) URL.revokeObjectURL(src);
       }
