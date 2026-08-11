@@ -421,8 +421,10 @@
       -webkit-overflow-scrolling: touch;
     }
     .rail::-webkit-scrollbar { display: none; }
-    /* Edge spacers so the first and last tokens can snap to the centre. */
-    .rail::before, .rail::after { content: ''; flex: 0 0 40%; }
+    /* Edge spacers so the first and last tokens can snap to the centre.
+       50% each: any token narrower than 20% of the rail (Kitsch, Trippy 3)
+       cannot centre with less. */
+    .rail::before, .rail::after { content: ''; flex: 0 0 50%; }
     .rail-item {
       min-height: 44px;
       display: flex;
@@ -467,11 +469,8 @@
     }
     .action-bar button + button { border-left: 1px solid rgba(230, 247, 249, 0.09); }
     .action-bar button:active { background: var(--surface-2); }
-    .action-bar .action-primary {
-      flex: 2;
-      color: var(--fg);
-      font-weight: 600;
-    }
+    .action-bar .action-primary { flex: 2; }
+    .action-bar .action-ico { font-size: 1.25em; }
 
     /* --- Focused walk state: everything but the compass fades out and
        becomes unresponsive, so pocket taps cannot end the walk --- */
@@ -849,9 +848,9 @@
         </div>
       </div>
       <div class="action-bar">
-        <button id="btn-detail-share" class="action-primary">&#8682; Share walk</button>
+        <button id="btn-detail-share" class="action-primary"><span class="action-ico">&#8682;</span> Share walk</button>
         <button id="btn-detail-export-html">&lt;/&gt; HTML</button>
-        <button id="btn-detail-card">&#9993; Card</button>
+        <button id="btn-detail-card"><span class="action-ico">&#9993;</span> Card</button>
       </div>
     </div>
   </section>
