@@ -32,6 +32,7 @@ const PRECACHE = [
   './lib/skins.js',
   './lib/platform.js',
   './lib/inner.js',
+  './lib/filters.js',
   './data/crow.json',
   './data/threshold.json',
   './data/lattice.json',
