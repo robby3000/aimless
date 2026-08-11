@@ -993,7 +993,15 @@
         if (fire) onSelect(items[index].dataset.value);
       }
 
-      function centerOf(it) { return it.offsetLeft + it.offsetWidth / 2; }
+      // Centre of an item in scroll-content coordinates. offsetLeft is wrong
+      // here: it is measured from the offsetParent (nothing between the rail
+      // and body is positioned), which mixes page and scroll coordinates and
+      // pushed the settled selection ~one token short — the end tokens could
+      // never be swiped into place. Live rects keep both frames consistent.
+      function centerOf(it) {
+        return it.getBoundingClientRect().left - el.getBoundingClientRect().left
+          + el.scrollLeft + it.offsetWidth / 2;
+      }
 
       el.addEventListener('scroll', () => {
         clearTimeout(settle);
