@@ -833,19 +833,7 @@
       </div>
       <div class="rail-row">
         <span class="rail-label">Filter</span>
-        <div class="rail" id="rail-filter">
-          <div class="rail-item" data-value="pop">Pop</div>
-          <div class="rail-item" data-value="old-film">Old film</div>
-          <div class="rail-item" data-value="black-and-white">Black and white</div>
-          <div class="rail-item" data-value="original">Original</div>
-          <div class="rail-item" data-value="noire">Noire</div>
-          <div class="rail-item" data-value="sepia">Sepia</div>
-          <div class="rail-item" data-value="muted">Muted</div>
-          <div class="rail-item" data-value="cold">Cold</div>
-          <div class="rail-item" data-value="trippy-1">Trippy 1</div>
-          <div class="rail-item" data-value="trippy-2">Trippy 2</div>
-          <div class="rail-item" data-value="trippy-3">Trippy 3</div>
-        </div>
+        <div class="rail" id="rail-filter"></div>
       </div>
       <div class="action-bar">
         <button id="btn-detail-share" class="action-primary"><span class="action-ico">&#8682;</span> Share walk</button>
@@ -875,6 +863,7 @@
     import { SKINS, getSkin, scopeCSS, BASE_CSS } from './lib/skins.js';
     import { isIOS, isInAppBrowser, isStandalone } from './lib/platform.js';
     import { buildHexIndex, innerCard } from './lib/inner.js';
+    import { FILTERS, getFilter, buildFilterCSS, PHOTO_FRAME_CSS } from './lib/filters.js';
 
     // --- Screen navigation ---
     const screens = {
@@ -958,9 +947,12 @@
     });
 
     // --- Walk Result skins ---
-    // The Skin rail's tokens are generated from SKINS (one per skin).
+    // The Skin and Filter rails' tokens are generated from SKINS and FILTERS,
+    // so a rail can never drift from its source table.
     const railSkin = document.getElementById('rail-skin');
     railSkin.innerHTML = SKINS.map((s) => `<div class="rail-item" data-value="${s.id}">${s.name}</div>`).join('');
+    const railFilter = document.getElementById('rail-filter');
+    railFilter.innerHTML = FILTERS.map((f) => `<div class="rail-item" data-value="${f.id}">${f.name}</div>`).join('');
     // The shared base result styles and the active skin are injected scoped
     // to the detail view so they cannot leak into the rest of the app; the
     // export embeds the same fragments unscoped. Base first, skin after it,
@@ -970,11 +962,27 @@
     document.head.appendChild(baseStyle);
     const skinStyle = document.createElement('style');
     document.head.appendChild(skinStyle);
+    // Photo frames need a positioned wrapper regardless of filter; the
+    // filter's own CSS is gated on a `filter-<id>` class on #detail-content.
+    const frameStyle = document.createElement('style');
+    frameStyle.textContent = scopeCSS(PHOTO_FRAME_CSS, '#detail-content');
+    document.head.appendChild(frameStyle);
+    const filterStyle = document.createElement('style');
+    document.head.appendChild(filterStyle);
+    const elDetailContent = document.getElementById('detail-content');
     let currentSkin = 'default';
     let currentFilter = 'original';
 
     function applySkin() {
       skinStyle.textContent = scopeCSS(getSkin(currentSkin).css, '#detail-content');
+    }
+
+    // A filter change is pure CSS: toggle the container class and swap the
+    // style text. No re-render (unlike skins, whose SVG colours are attrs).
+    function applyFilter() {
+      const f = getFilter(currentFilter);
+      elDetailContent.className = f.filter ? `filter-${f.id}` : '';
+      filterStyle.textContent = buildFilterCSS(f.id, '#detail-content');
     }
 
     // Horizontal scroll-snap rail: the centred token is the selected one.
@@ -1041,9 +1049,9 @@
       // not CSS), so the detail view must be re-rendered on a skin change.
       if (currentDetailWalk) showWalkDetail(currentDetailWalk.id);
     });
-    // Filters are a stub for now: the rail only tracks the selection.
-    const filterRail = makeRail(document.getElementById('rail-filter'), (value) => {
+    const filterRail = makeRail(railFilter, (value) => {
       currentFilter = value;
+      applyFilter();
       savePrefs();
     });
 
@@ -2107,7 +2115,7 @@
         // Prefer the stored data URL; the blob branch only exists for walks
         // saved before the switch (and on iOS those blobs may be corrupt).
         const photoHtml = photo
-          ? `<img src="${photo.dataUrl || URL.createObjectURL(photo.blob)}" alt="photo">`
+          ? `<div class="photo-frame"><img src="${photo.dataUrl || URL.createObjectURL(photo.blob)}" alt="photo"></div>`
           : '';
         const status = s.approached
           ? '<span class="status approached">close as I can get</span>'
@@ -2149,6 +2157,7 @@
       `;
 
       applySkin();
+      applyFilter();
       showScreen('detail');
       // Sync the rails after the screen is visible so their geometry exists.
       skinRail.setValue(currentSkin);
