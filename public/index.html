@@ -1509,6 +1509,28 @@
       }
     }
 
+    // Briefly wait for an absolute compass heading after listeners attach, so
+    // planWalk can lay the route out in front of the user. Resolves null —
+    // meaning an unconstrained route — on denial, desktop, timeout, or when
+    // only relative (non-north-referenced) orientation is available.
+    function captureStartHeading(timeoutMs = 1000) {
+      const absolute = () => ['abs', 'abs-true', 'webkit'].includes(orientationSource);
+      if (absolute()) return Promise.resolve(heading);
+      return new Promise((resolve) => {
+        const poll = setInterval(() => {
+          if (absolute()) {
+            clearInterval(poll);
+            clearTimeout(giveUp);
+            resolve(heading);
+          }
+        }, 50);
+        const giveUp = setTimeout(() => {
+          clearInterval(poll);
+          resolve(null);
+        }, timeoutMs);
+      });
+    }
+
     // --- Geolocation ---
     function getPosition(options = {}) {
       return new Promise((resolve, reject) => {
@@ -1574,7 +1596,9 @@
         const budgetMin = parseInt(elBudget.value, 10);
         const voiceSlug = elVoice.value;
 
-        const plan = planWalk({ origin, stops, budgetMin, seed });
+        // Lay the route out in front of the user when the compass cooperates.
+        const startHeading = await captureStartHeading();
+        const plan = planWalk({ origin, stops, budgetMin, seed, startHeading });
         const est = estimate(plan);
         const voice = await loadVoice(voiceSlug);
 

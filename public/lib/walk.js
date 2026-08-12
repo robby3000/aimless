@@ -1,7 +1,7 @@
 // Walk generation. A chain, not a scatter - see docs/blueprint.md section 5.
 // Pure: no DOM, no storage, no clock.
 
-import { destination, bearing, haversine } from './geo.js';
+import { destination, bearing, haversine, angleDelta } from './geo.js';
 import { makeRng } from './rng.js';
 
 export const PACE_M_PER_MIN = 75;   // 4.5 km/h
@@ -11,6 +11,9 @@ export const MIN_LEG = 150;
 export const MAX_LEG = 1200;
 export const MIN_TURN = 40;         // straighter than this is boring
 export const MAX_TURN = 150;        // sharper than this is a backtrack
+export const FIRST_LEG_ARC = 45;    // first stop within ±45° of startHeading
+export const STOP_ARC = 75;         // later stops within ±75° of startHeading (from origin)
+export const MAX_REDRAWS = 20;      // give up constraining after this many redraws
 
 /**
  * Straight-line leg length for a time budget, corrected for real streets.
@@ -39,32 +42,52 @@ export function legLength(stops, budgetMin) {
 /**
  * Plan a walk: a chain of stops, each a random bearing and distance from the
  * previous one, with the final leg biased back toward the origin.
+ *
+ * When startHeading (compass degrees at Go time) is given, the walk unfolds
+ * in front of the user: the first stop lands within ±FIRST_LEG_ARC of it and
+ * every later stop within ±STOP_ARC of it (bearing measured from the origin).
+ * Stops that fall outside are redrawn from the seeded RNG, so a seed plus a
+ * heading still reproduces the same walk. Without a heading the route is
+ * unconstrained, exactly as before.
  */
-export function planWalk({ origin, stops = 5, budgetMin = 45, seed }) {
+export function planWalk({ origin, stops = 5, budgetMin = 45, seed, startHeading = null }) {
   if (!origin || typeof origin.lat !== 'number' || typeof origin.lng !== 'number') {
     throw new Error('planWalk needs an origin {lat, lng}');
   }
   if (stops < 1) throw new Error('planWalk needs at least one stop');
 
+  const oriented = typeof startHeading === 'number' && Number.isFinite(startHeading);
+  const facing = oriented ? ((startHeading % 360) + 360) % 360 : null;
+
   const rng = makeRng(seed);
   const { legStraight, minLeg, maxLeg, clamped } = legLength(stops, budgetMin);
 
   let cur = origin;
-  let heading = rng.range(0, 360);
+  let heading = oriented ? facing : rng.range(0, 360);
   const out = [];
 
   for (let i = 0; i < stops; i++) {
-    let dist;
-    if (i === stops - 1 && stops > 1) {
-      // Last leg heads roughly home so you finish near where you started.
-      heading = (bearing(cur, origin) + rng.range(-40, 40) + 360) % 360;
-      dist = Math.min(maxLeg, Math.max(minLeg, haversine(cur, origin)));
-    } else {
-      const turn = rng.sign() * rng.range(MIN_TURN, MAX_TURN);
-      heading = (heading + turn + 360) % 360;
-      dist = rng.range(minLeg, maxLeg);
+    let next = null;
+    for (let attempt = 0; ; attempt++) {
+      let dist;
+      if (i === stops - 1 && stops > 1) {
+        // Last leg heads roughly home so you finish near where you started.
+        heading = (bearing(cur, origin) + rng.range(-40, 40) + 360) % 360;
+        dist = Math.min(maxLeg, Math.max(minLeg, haversine(cur, origin)));
+      } else if (oriented && i === 0) {
+        // First leg points roughly where the user is already facing.
+        heading = (facing + rng.range(-FIRST_LEG_ARC, FIRST_LEG_ARC) + 360) % 360;
+        dist = rng.range(minLeg, maxLeg);
+      } else {
+        const turn = rng.sign() * rng.range(MIN_TURN, MAX_TURN);
+        heading = (heading + turn + 360) % 360;
+        dist = rng.range(minLeg, maxLeg);
+      }
+      next = destination(cur, heading, dist);
+      if (!oriented || i === 0 || attempt >= MAX_REDRAWS) break;
+      if (Math.abs(angleDelta(facing, bearing(origin, next))) <= STOP_ARC) break;
     }
-    cur = destination(cur, heading, dist);
+    cur = next;
     out.push({ seq: i, lat: cur.lat, lng: cur.lng, reachedAt: null, approached: false });
   }
 
@@ -75,6 +98,7 @@ export function planWalk({ origin, stops = 5, budgetMin = 45, seed }) {
     budgetMin,
     legStraight,
     clamped,
+    startHeading: facing,
   };
 }
 
