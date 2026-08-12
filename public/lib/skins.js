@@ -8,7 +8,10 @@
 // only - exports must never contain scripts.
 //
 // Skins style decoration only: colours, typography, borders, backgrounds.
-// Never layout, so the same fragment works against both markups.
+// Never layout, so the same fragment works against both markups. A skin may
+// add purely decorative layers on its own pseudo-elements (Aquarium's fish
+// are a fixed full-viewport body::before) - pointer-events: none, always, so
+// the page underneath stays usable.
 //
 // Two things a skin cannot style with CSS are carried as data instead:
 //   card  - palette + font for the share-card canvas
@@ -87,6 +90,17 @@ body { background: white; color: black; max-width: none; }
 .status.missed { background: #f0d4d4; color: #622; }
 .seed { color: #448; }
 `;
+
+// Aquarium's fish: the guide's two silhouettes (docs/ignore/aquarium.html)
+// as data URIs, tinted per fish; flip bakes in a mirror so the fish swims
+// left. CSS custom properties can't interpolate into url(), so each
+// tint/direction combination is baked into its own URI.
+const fishUri = (viewBox, body, flip) => `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='${viewBox}'%3E${flip ? `%3Cg transform='translate(100 0) scale(-1 1)'%3E${body}%3C/g%3E` : body}%3C/svg%3E")`;
+const fishA = (tint, flip) => fishUri('0 0 100 60', `%3Cpath d='M4 30 L22 14 L22 46 Z' fill='${tint}' opacity='0.85'/%3E%3Cellipse cx='60' cy='30' rx='36' ry='21' fill='${tint}'/%3E%3Cpath d='M50 12 L62 2 L68 16 Z' fill='${tint}' opacity='0.8'/%3E%3Cpath d='M50 48 L60 58 L66 44 Z' fill='${tint}' opacity='0.65'/%3E%3Ccircle cx='86' cy='24' r='3.2' fill='%230B2A38'/%3E`, flip);
+const fishB = (tint, flip) => fishUri('0 0 100 80', `%3Cpath d='M6 40 L26 20 L26 60 Z' fill='${tint}' opacity='0.85'/%3E%3Cpath d='M30 40 C30 14 50 4 62 4 C72 4 82 20 88 40 C82 60 72 76 62 76 C50 76 30 66 30 40 Z' fill='${tint}'/%3E%3Ccircle cx='76' cy='30' r='3.4' fill='%230B2A38'/%3E`, flip);
+const CORAL = '%23F2946B';
+const GOLD = '%23E8C468';
+const SEAFOAM = '%2382D6C3';
 
 export const SKINS = [
   {
@@ -345,6 +359,179 @@ footer::after { content: " \\2665"; color: #ff0066; }
       font: "700 52px 'Comic Sans MS', 'Chalkboard SE', 'Comic Neue', cursive",
     },
   },
+
+  {
+    id: 'aquarium',
+    name: 'Aquarium',
+    // Deep-water teal palette from the design guide (docs/ignore/aquarium.html),
+    // with the warm safelight coral kept as the accent thread. The tank comes
+    // from two fixed full-viewport pseudo-layers - body::before carries light
+    // rays and the fish (layered backgrounds, one gentle drift), body::after
+    // is a tiling bubble field that rises - so the residents stay in the
+    // viewport while the walk result scrolls beneath them, in-app and in the
+    // export alike. All motion is gated on prefers-reduced-motion, and the
+    // layers hide in print (fixed elements repeat on every printed page).
+    css: `
+body {
+  background-color: #0B2A38;
+  background-image: linear-gradient(180deg, #0E3242 0%, #113E4E 55%, #0C2E3B 100%);
+  background-attachment: fixed;
+  color: #C9DEDA;
+  font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+}
+h1, h2 {
+  font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
+  color: #EEF6F2;
+}
+h1 { font-style: italic; text-shadow: 0 2px 24px rgba(130, 214, 195, 0.25); }
+a { color: #F2946B; }
+.seed {
+  font-family: 'IBM Plex Mono', ui-monospace, 'Courier New', monospace;
+  color: #F2946B;
+  letter-spacing: 0.08em;
+}
+.walk-voice { font-family: Georgia, serif; font-style: italic; color: #7FA3A0; }
+.date, .summary { color: #7FA3A0; }
+.summary b { color: #EEF6F2; }
+.trace {
+  background: linear-gradient(180deg, rgba(23, 67, 84, 0.55), rgba(12, 46, 59, 0.85));
+  border: 1px solid rgba(233, 244, 240, 0.28);
+  border-radius: 2px;
+  box-shadow: inset 0 0 48px rgba(130, 214, 195, 0.08);
+}
+.stop { border-bottom: 1px solid rgba(233, 244, 240, 0.14); }
+.stop-num {
+  background: radial-gradient(circle at 32% 28%, #EEF6F2 0%, rgba(238, 246, 242, 0.72) 45%, rgba(238, 246, 242, 0.32) 100%);
+  color: #0B2A38;
+  border: 1px solid rgba(238, 246, 242, 0.45);
+}
+.status.reached { background: rgba(47, 107, 82, 0.45); color: #A8E0C8; }
+.status.approached { background: rgba(201, 168, 118, 0.22); color: #E8C468; }
+.status.missed { background: rgba(232, 114, 76, 0.18); color: #F2946B; }
+.card-text { color: #C9DEDA; }
+.card-hex .glyph { color: #82D6C3; text-shadow: 0 0 14px rgba(130, 214, 195, 0.45); }
+.card-hex .hex-title { font-family: Georgia, serif; color: #EEF6F2; }
+img { border: 1px solid rgba(233, 244, 240, 0.28); border-radius: 2px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35); }
+footer {
+  font-family: 'IBM Plex Mono', ui-monospace, 'Courier New', monospace;
+  color: #7FA3A0;
+}
+
+/* The tank. A skin cannot add the guide's fish-lane divs, so each resident
+   is a fixed pseudo-element of the shared markup vocabulary instead:
+   body::before carries the light rays, nine fish ride the pseudos of
+   body/h1/.seed/.date/.summary, and bubble columns rise from
+   .trace/footer/.walk-voice. Every lane below copies the guide's table
+   exactly - top, left, duration, delay, bob, size, tint and direction -
+   and the keyframes are the guide's verbatim, so the motion matches the
+   guide fish for fish. All layers are click-through and fixed, so the
+   residents stay in the viewport while the walk result scrolls. */
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: -10% -10%;
+  pointer-events: none;
+  z-index: 60;
+  background: repeating-linear-gradient(100deg, rgba(238, 246, 242, 0.05) 0px, rgba(238, 246, 242, 0.05) 30px, transparent 30px, transparent 130px);
+  opacity: 0.6;
+}
+
+body::after, h1::before, h1::after, .seed::before, .seed::after, .date::before, .date::after, .summary::before, .summary::after {
+  content: "";
+  position: fixed;
+  pointer-events: none;
+  z-index: 60;
+  background-repeat: no-repeat;
+}
+/* Heights carry 9px of slack under the fish for the bob. */
+body::after { top: 6%; left: 12%; width: 52px; height: 40px; background-image: ${fishA(CORAL)}; background-size: 52px auto; }
+h1::before { top: 16%; left: 70%; width: 40px; height: 33px; background-image: ${fishA(GOLD, true)}; background-size: 40px auto; }
+h1::after { top: 28%; left: 35%; width: 64px; height: 60px; background-image: ${fishB(SEAFOAM)}; background-size: 64px auto; }
+.seed::before { top: 40%; left: 18%; width: 46px; height: 37px; background-image: ${fishA(CORAL, true)}; background-size: 46px auto; }
+.seed::after { top: 52%; left: 78%; width: 38px; height: 32px; background-image: ${fishA(GOLD)}; background-size: 38px auto; }
+.date::before { top: 63%; left: 45%; width: 58px; height: 55px; background-image: ${fishB(SEAFOAM, true)}; background-size: 58px auto; }
+.date::after { top: 74%; left: 24%; width: 48px; height: 38px; background-image: ${fishA(CORAL)}; background-size: 48px auto; }
+.summary::before { top: 85%; left: 60%; width: 42px; height: 34px; background-image: ${fishA(GOLD, true)}; background-size: 42px auto; }
+.summary::after { top: 93%; left: 10%; width: 36px; height: 31px; background-image: ${fishA(SEAFOAM)}; background-size: 36px auto; }
+
+/* Bubble columns. Each pseudo carries one bubble; box-shadow companions
+   ride along as vent-mates in neighbouring columns. footer and .walk-voice
+   are not in every render of the result markup - the columns on .trace
+   are always present, the rest are graceful enrichment. */
+.trace::before, .trace::after, footer::before, footer::after, .walk-voice::before, .walk-voice::after {
+  content: "";
+  position: fixed;
+  bottom: -24px;
+  border-radius: 50%;
+  background: rgba(238, 246, 242, 0.4);
+  border: 1px solid rgba(238, 246, 242, 0.18);
+  pointer-events: none;
+  z-index: 60;
+}
+.trace::before { left: 6%; width: 5px; height: 5px; box-shadow: 13vw -38px 0 -1px rgba(238, 246, 242, 0.22), 24vw 12px 0 0.5px rgba(238, 246, 242, 0.28); }
+.trace::after { left: 27%; width: 4px; height: 4px; box-shadow: 11vw -44px 0 1px rgba(238, 246, 242, 0.25), 21vw 8px 0 -1px rgba(238, 246, 242, 0.2); }
+footer::before { left: 59%; width: 8px; height: 8px; box-shadow: 10vw -34px 0 -2px rgba(238, 246, 242, 0.25), 19vw 16px 0 -1px rgba(238, 246, 242, 0.2); }
+footer::after { left: 88%; width: 5px; height: 5px; box-shadow: -7vw -40px 0 1px rgba(238, 246, 242, 0.22), -15vw 10px 0 -1px rgba(238, 246, 242, 0.25); }
+.walk-voice::before { left: 38%; width: 6px; height: 6px; box-shadow: 12vw -30px 0 -1.5px rgba(238, 246, 242, 0.22), 23vw 18px 0 0.5px rgba(238, 246, 242, 0.28); }
+.walk-voice::after { left: 79%; width: 6px; height: 6px; box-shadow: -8vw -46px 0 -1px rgba(238, 246, 242, 0.25), 14vw 6px 0 -2px rgba(238, 246, 242, 0.2); }
+
+/* The guide's four keyframes, verbatim. */
+@keyframes aqua-rays {
+  from { background-position-x: 0; }
+  to { background-position-x: 400px; }
+}
+@keyframes aqua-drift {
+  0% { transform: translateX(-16vw); }
+  50% { transform: translateX(16vw); }
+  100% { transform: translateX(-16vw); }
+}
+@keyframes aqua-bob {
+  0%, 100% { background-position-y: 0px; }
+  50% { background-position-y: 9px; }
+}
+@keyframes aqua-rise {
+  0% { transform: translateY(0) translateX(0); opacity: 0; }
+  12% { opacity: 0.55; }
+  88% { opacity: 0.3; }
+  100% { transform: translateY(-120vh) translateX(14px); opacity: 0; }
+}
+
+/* Motion off by default, enabled only when the user allows it - as in
+   the guide. Durations and delays are the guide's lane table. */
+@media (prefers-reduced-motion: no-preference) {
+  body::before { animation: aqua-rays 22s linear infinite; }
+  body::after { animation: aqua-drift 24s ease-in-out -2s infinite, aqua-bob 3.8s ease-in-out -1s infinite; }
+  h1::before { animation: aqua-drift 19s ease-in-out -9s infinite, aqua-bob 4.4s ease-in-out -2.6s infinite; }
+  h1::after { animation: aqua-drift 27s ease-in-out -5s infinite, aqua-bob 3.2s ease-in-out -0.4s infinite; }
+  .seed::before { animation: aqua-drift 21s ease-in-out -3s infinite, aqua-bob 4s ease-in-out -3.1s infinite; }
+  .seed::after { animation: aqua-drift 23s ease-in-out -11s infinite, aqua-bob 3.6s ease-in-out -1.8s infinite; }
+  .date::before { animation: aqua-drift 29s ease-in-out -6s infinite, aqua-bob 4.6s ease-in-out -2.2s infinite; }
+  .date::after { animation: aqua-drift 25s ease-in-out -14s infinite, aqua-bob 3.4s ease-in-out -4s infinite; }
+  .summary::before { animation: aqua-drift 20s ease-in-out -8s infinite, aqua-bob 4.2s ease-in-out -1.2s infinite; }
+  .summary::after { animation: aqua-drift 22s ease-in-out -16s infinite, aqua-bob 3.9s ease-in-out -2.8s infinite; }
+  .trace::before { animation: aqua-rise 9s linear -1s infinite; }
+  .trace::after { animation: aqua-rise 8s linear -3.5s infinite; }
+  footer::before { animation: aqua-rise 13s linear -5s infinite; }
+  footer::after { animation: aqua-rise 9s linear -7s infinite; }
+  .walk-voice::before { animation: aqua-rise 11s linear -8s infinite; }
+  .walk-voice::after { animation: aqua-rise 10.5s linear -4s infinite; }
+}
+
+/* Fixed layers would repeat on every printed page. */
+@media print {
+  body::before, body::after, h1::before, h1::after, .seed::before, .seed::after, .date::before, .date::after, .summary::before, .summary::after, .trace::before, .trace::after, footer::before, footer::after, .walk-voice::before, .walk-voice::after { display: none; }
+}
+`,
+    icon: 'light',
+    trace: { planStroke: '#2F6B52', traceStroke: '#F2946B', originFill: '#E8C468', stopFill: '#EEF6F2' },
+    card: {
+      bg: '#0B2A38',
+      fg: '#EEF6F2',
+      accent: '#F2946B',
+      font: "italic 600 52px 'Fraunces', Georgia, 'Times New Roman', serif",
+    },
+  },
 ];
 
 /** Find a skin by id, falling back to the default. */
@@ -356,17 +543,54 @@ export function getSkin(id) {
  * Prefix every selector in a CSS fragment with a scope, so a skin written
  * for the standalone export can be injected into the app without leaking.
  * `body` and `:root` map onto the scope itself (the latter so custom
- * properties stay defined). No @-rule support - skins stay simple.
+ * properties stay defined), as do body's pseudo-elements (`body::before`
+ * scopes to `#scope::before`, which keeps viewport-fixed overlays working
+ * in-app). @media/@supports blocks keep their prelude and have their inner
+ * rules scoped; other @-rules (e.g. @keyframes) pass through untouched.
+ * The parser is a brace matcher - keep braces out of comments.
  */
 export function scopeCSS(css, scope) {
-  return css.replace(/(^|})([^{}]+){/g, (match, brace, selectors) => {
-    const scoped = selectors.split(',').map((raw) => {
-      const s = raw.trim();
-      if (!s) return s;
-      if (s === 'body' || s === ':root') return scope;
-      if (s.startsWith('body ')) return `${scope} ${s.slice(5)}`;
-      return `${scope} ${s}`;
-    }).join(', ');
-    return `${brace} ${scoped} {`;
-  });
+  // Strip comments: they would otherwise ride along inside a selector
+  // prelude and defeat the exact-match mapping for body/:root selectors.
+  // (Strings containing comment delimiters are likewise unsupported.)
+  return scopeBlock(css.replace(/\/\*[\s\S]*?\*\//g, ''), scope);
+}
+
+function scopeBlock(css, scope) {
+  let out = '';
+  let i = 0;
+  while (i < css.length) {
+    const open = css.indexOf('{', i);
+    if (open === -1) return out + css.slice(i);
+    const prelude = css.slice(i, open).trim();
+    let depth = 1;
+    let j = open + 1;
+    while (j < css.length && depth > 0) {
+      if (css[j] === '{') depth++;
+      else if (css[j] === '}') depth--;
+      j++;
+    }
+    if (depth > 0 || !prelude) return out + css.slice(i);
+    const inner = css.slice(open + 1, j - 1);
+    if (/^@(media|supports)\b/.test(prelude)) {
+      out += `${prelude} { ${scopeBlock(inner, scope)} }`;
+    } else if (prelude.startsWith('@')) {
+      out += `${prelude} { ${inner} }`;
+    } else {
+      out += `${scopeSelectors(prelude, scope)} { ${inner} }`;
+    }
+    i = j;
+  }
+  return out;
+}
+
+function scopeSelectors(selectors, scope) {
+  return selectors.split(',').map((raw) => {
+    const s = raw.trim();
+    if (!s) return s;
+    if (s === 'body' || s === ':root') return scope;
+    if (s.startsWith('body ')) return `${scope} ${s.slice(5)}`;
+    if (s.startsWith('body:')) return `${scope}${s.slice(4)}`;
+    return `${scope} ${s}`;
+  }).join(', ');
 }
