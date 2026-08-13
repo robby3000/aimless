@@ -13,7 +13,7 @@ test('skins have unique ids and non-empty names', () => {
 
 test('the six named skins are present', () => {
   const names = SKINS.map((s) => s.name);
-  for (const name of ['Verdant', 'Neon', 'Old Skool', '1980s', 'Kitsch', 'Aquarium']) {
+  for (const name of ['Verdant', 'Neon', 'Old Skool', '1980s', 'Kitsch', 'Aquarium', 'Minimalist 1']) {
     assert.ok(names.includes(name), `missing skin ${name}`);
   }
 });

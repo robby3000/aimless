@@ -532,6 +532,89 @@ footer::after { left: 88%; width: 5px; height: 5px; box-shadow: -7vw -40px 0 1px
       font: "italic 600 52px 'Fraunces', Georgia, 'Times New Roman', serif",
     },
   },
+
+  {
+    id: 'minimalist1',
+    name: 'Minimalist 1',
+    // A light, restrained skin: no borders, no shadows, no patterns. The
+    // typography carries the whole design — serif headings for gravitas,
+    // system sans for legible body text, generous line-height for reading.
+    // A single soft terracotta accent threads through seed, stop numbers
+    // and the trace. Separation is by whitespace alone, not decoration.
+    css: `
+body {
+  background: #f7f8f9;
+  color: #2c2c2c;
+  font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  line-height: 1.7;
+}
+h1, h2 {
+  font-family: Georgia, 'Times New Roman', serif;
+  color: #1a1a1a;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+h1 { font-size: 1.5rem; }
+h2 { font-size: 1.2rem; }
+.seed {
+  font-family: ui-monospace, 'SF Mono', 'Courier New', monospace;
+  color: #b56b50;
+  letter-spacing: 0.05em;
+}
+.walk-voice {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  color: #7a7a7a;
+}
+.date {
+  color: #7a7a7a;
+  letter-spacing: 0.02em;
+  margin-bottom: 20px;
+}
+.summary { color: #7a7a7a; }
+.summary b { color: #2c2c2c; }
+.trace {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 8px 16px 24px;
+}
+.stop {
+  border: none;
+  padding-bottom: 28px;
+  margin-bottom: 28px;
+}
+.stop-num {
+  background: #b56b50;
+  color: #ffffff;
+  border-radius: 50%;
+  font-weight: 600;
+}
+.status {
+  background: transparent;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.7rem;
+  padding: 0;
+}
+.status.reached { color: #5a7a4a; }
+.status.approached { color: #b56b50; }
+.status.missed { color: #a05050; }
+.card-text { color: #2c2c2c; font-size: 1.1rem; line-height: 1.7; }
+.card-hex .glyph { color: #1a1a1a; font-family: Georgia, serif; }
+.card-hex .hex-title { font-family: Georgia, serif; font-weight: 700; color: #1a1a1a; }
+img { border: none; outline: none; box-shadow: none; border-radius: 8px; }
+footer { color: #9a9a9a; font-size: 0.8rem; }
+`,
+    icon: 'dark',
+    trace: { planStroke: '#c8c8c8', traceStroke: '#b56b50', originFill: '#b56b50', stopFill: '#2c2c2c' },
+    card: {
+      bg: '#f7f8f9',
+      fg: '#2c2c2c',
+      accent: '#b56b50',
+      font: "400 52px Georgia, 'Times New Roman', serif",
+    },
+  },
 ];
 
 /** Find a skin by id, falling back to the default. */
