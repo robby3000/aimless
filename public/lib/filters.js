@@ -33,7 +33,7 @@ export const FILTERS = [
   { id: 'muted', name: 'Muted', filter: 'saturate(55%) contrast(85%) brightness(105%)' },
   // Cold: sepia applied in hue-rotated space tints toward the complementary
   // (blue-teal) side when rotated back.
-  { id: 'cold', name: 'Cold', filter: 'hue-rotate(180deg) sepia(40%) hue-rotate(-170deg) saturate(80%) contrast(105%) brightness(98%)' },
+  { id: 'cold', name: 'Cold', filter: 'hue-rotate(180deg) sepia(45%) hue-rotate(-160deg) saturate(80%) contrast(105%) brightness(98%)' },
   { id: 'trippy-1', name: 'Trippy 1', filter: 'invert(100%) hue-rotate(180deg) saturate(200%) contrast(130%)' },
   { id: 'trippy-2', name: 'Trippy 2', filter: 'hue-rotate(290deg) saturate(350%) contrast(140%) brightness(110%)' },
   {
