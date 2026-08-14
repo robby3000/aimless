@@ -547,6 +547,7 @@ body {
   color: #2c2c2c;
   font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   line-height: 1.7;
+  counter-reset: stopnum;
 }
 h1, h2 {
   font-family: Georgia, 'Times New Roman', serif;
@@ -583,18 +584,17 @@ h2 { font-size: 1.2rem; }
   border: none;
   padding-bottom: 28px;
   margin-bottom: 28px;
+  display: block;
+  counter-increment: stopnum;
 }
-.stop-num {
-  background: none;
-  color: #3a3a3a;
-  border-radius: 0;
-  width: auto; height: auto;
-  font-weight: 400;
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 1.1rem;
-}
-.status { display: none; }
+.stop-num, .stop-meta { display: none; }
 .card-text { color: #2c2c2c; font-size: 1.1rem; line-height: 1.7; }
+.card-text::before {
+  content: counter(stopnum) ". ";
+  color: #b56b50;
+  font-weight: 700;
+  font-size: 1.4rem;
+}
 .card-hex .glyph { color: #3a3a3a; font-family: Georgia, serif; }
 .card-hex .hex-title { font-family: Georgia, serif; font-weight: 700; color: #3a3a3a; }
 img { border: none; outline: none; box-shadow: none; border-radius: 8px; }
