@@ -550,7 +550,7 @@ body {
 }
 h1, h2 {
   font-family: Georgia, 'Times New Roman', serif;
-  color: #1a1a1a;
+  color: #3a3a3a;
   font-weight: 400;
   letter-spacing: -0.01em;
 }
@@ -585,24 +585,18 @@ h2 { font-size: 1.2rem; }
   margin-bottom: 28px;
 }
 .stop-num {
-  background: #b56b50;
-  color: #ffffff;
-  border-radius: 50%;
-  font-weight: 600;
+  background: none;
+  color: #3a3a3a;
+  border-radius: 0;
+  width: auto; height: auto;
+  font-weight: 400;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 1.1rem;
 }
-.status {
-  background: transparent;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  font-size: 0.7rem;
-  padding: 0;
-}
-.status.reached { color: #5a7a4a; }
-.status.approached { color: #b56b50; }
-.status.missed { color: #a05050; }
+.status { display: none; }
 .card-text { color: #2c2c2c; font-size: 1.1rem; line-height: 1.7; }
-.card-hex .glyph { color: #1a1a1a; font-family: Georgia, serif; }
-.card-hex .hex-title { font-family: Georgia, serif; font-weight: 700; color: #1a1a1a; }
+.card-hex .glyph { color: #3a3a3a; font-family: Georgia, serif; }
+.card-hex .hex-title { font-family: Georgia, serif; font-weight: 700; color: #3a3a3a; }
 img { border: none; outline: none; box-shadow: none; border-radius: 8px; }
 footer { color: #9a9a9a; font-size: 0.8rem; }
 `,
