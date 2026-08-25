@@ -63,7 +63,8 @@ test('buildHTMLExport skips a photo whose legacy blob cannot be read', async () 
 
 test('buildHTMLExport works with no photos at all', async () => {
   const html = await buildHTMLExport(WALK, [], '<svg></svg>');
-  assert.ok(html.includes('2</b> of 2 stops reached'));
+  // 1 truly reached (stop 0), 1 approached (stop 1) — approached does not count.
+  assert.ok(html.includes('1</b> of 2 stops reached'));
 });
 
 test('header shows the voice, the spelled-out date and the distance', async () => {
@@ -84,10 +85,22 @@ test('a walk given up on does not say "Walk ended early"', async () => {
   assert.ok(!html.includes('Walk ended early'));
 });
 
-test('the "close as I can get" count is shown without a percentage', async () => {
+test('the summary does not include the "close as I can get" count', async () => {
   const html = await buildHTMLExport(WALK, [], '<svg></svg>');
-  assert.ok(html.includes('<b>1</b> marked "close as I can get".'));
+  assert.ok(!html.includes('close as I can get".'));
   assert.ok(!html.includes('%)'));
+});
+
+test('the footer has an Export KML data URI link', async () => {
+  const html = await buildHTMLExport(WALK, [], '<svg></svg>');
+  assert.ok(html.includes('Export KML</a>'));
+  assert.ok(html.includes('data:application/vnd.google-earth.kml+xml'));
+  assert.ok(html.includes('download="aimless-moss-fern-quartz.kml"'));
+});
+
+test('the footer no longer says "self-contained"', async () => {
+  const html = await buildHTMLExport(WALK, [], '<svg></svg>');
+  assert.ok(!html.includes('self-contained'));
 });
 
 test('the header logo and title link to aimless.earth', async () => {

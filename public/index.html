@@ -398,7 +398,7 @@
       min-height: 46px;
       background: var(--surface);
       border: 1px solid rgba(230, 247, 249, 0.09);
-      border-radius: var(--radius);
+      border-radius: 2px;
       padding: 0 12px;
     }
     .rail-label {
@@ -457,19 +457,20 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 8px;
+      gap: 6px;
       min-height: 48px;
       padding: 12px 16px;
-      background: var(--accent);
-      color: var(--bg);
-      border: 1px solid var(--accent);
+      background: var(--accent-dim);
+      color: var(--fg);
+      border: 1px solid var(--accent-dim);
       border-radius: var(--radius);
-      font-size: 0.95rem;
-      font-weight: 600;
+      font-size: 1.1rem;
+      font-weight: 700;
+      text-transform: lowercase;
       -webkit-tap-highlight-color: transparent;
     }
-    .btn-export:active { background: var(--accent-dim); }
-    .btn-export .chev { margin-left: 4px; opacity: 0.7; font-size: 0.85em; letter-spacing: -0.05em; }
+    .btn-export:active { background: var(--accent); }
+    .btn-export .chev { opacity: 0.6; font-weight: 400; letter-spacing: -0.08em; }
 
     /* Bottom export sheet. Overlays the nav bar so it reads as a modal
        action sheet, not another row in the controls column. */
@@ -906,7 +907,7 @@
         <span class="rail-label">Filter</span>
         <div class="rail" id="rail-filter"></div>
       </div>
-      <button id="btn-detail-export" class="btn-export"><span>Export</span><span class="chev">&raquo;</span></button>
+      <button id="btn-detail-export" class="btn-export"><span>export</span><span class="chev">&gt;&gt;&gt;</span></button>
     </div>
   </section>
 
@@ -1960,7 +1961,8 @@
 
       // Build the walk record.
       const id = `walk-${Date.now()}`;
-      const reached = walk.plan.stops.filter((s) => s.reachedAt).length;
+      const unreachable = unreachableRate(walk.plan.stops);
+      const reached = unreachable.reached;
       const record = {
         id,
         seed: walk.plan.seed,
@@ -1985,9 +1987,16 @@
       };
       lastDoneRecord = record;   // the done screen's "Take me home" reads this
 
+      // Only archive walks that have some substance: at least one photo or
+      // 200m walked. This filters out test runs where the user pressed Go
+      // then immediately gave up without moving.
+      const hasPhotos = Object.keys(walk.photos || {}).length > 0;
+      const hasDistance = distanceM >= 200;
+      const shouldArchive = hasPhotos || hasDistance;
+
       // Save to IndexedDB.
       const db = await dbPromise;
-      if (db) {
+      if (db && shouldArchive) {
         await put(db, 'walks', record);
         // Save photos.
         for (const [seq, blob] of Object.entries(walk.photos)) {
@@ -2002,19 +2011,17 @@
             taken: Date.now(),
           });
         }
-        // The walk is safely stored; drop the in-progress snapshot.
-        await clearActiveWalk();
       }
+      // Always clear the in-progress snapshot, whether archived or not.
+      if (db) await clearActiveWalk();
 
       // Show the done screen.
-      const unreachable = unreachableRate(walk.plan.stops);
       document.getElementById('done-title').textContent = gaveUp ? 'Walk ended' : 'Walk complete';
       document.getElementById('done-trace').innerHTML = traceSVG(walk.plan, trace, {
         planStroke: '#e6f7f9', traceStroke: '#20b2aa', originFill: '#20b2aa', stopFill: '#e6f7f9',
       });
       document.getElementById('done-summary').innerHTML = `
         <b>${reached}</b> of ${walk.plan.stops.length} stops reached.
-        ${unreachable.approached > 0 ? `<b>${unreachable.approached}</b> marked "close as I can get" (${Math.round(unreachable.rate * 100)}%).` : ''}
         <br>Walked ~${formatDistance(distanceM)} in ${formatElapsed(Date.now() - walk.startTime)}.
         <br>Seed: <span class="seed">${walk.plan.seed}</span>
       `;
@@ -2168,7 +2175,7 @@
         const item = document.createElement('div');
         item.className = 'walk-item';
         const date = w.started ? new Date(w.started).toLocaleDateString() : '?';
-        const reached = (w.stops || []).filter((s) => s.reachedAt).length;
+        const reached = (w.stops || []).filter((s) => s.reachedAt && !s.approached).length;
         const approached = (w.stops || []).filter((s) => s.approached).length;
         const approachStr = approached > 0 ? ` (${approached} fudged)` : '';
         item.innerHTML = `
@@ -2212,7 +2219,7 @@
       const distance = walk.distanceM != null ? `, ${formatKm(walk.distanceM)}` : '';
       const voice = voiceName(walk.voice);
       const unreachable = unreachableRate(walk.stops);
-      const reached = walk.stops.filter((s) => s.reachedAt).length;
+      const reached = unreachable.reached;
 
       // Build trace SVG in the active skin's palette (its dots and strokes
       // are attributes, so they cannot be skinned with CSS).
@@ -2265,7 +2272,6 @@
         <div class="date">${date}${distance}</div>
         <div class="summary">
           <b>${reached}</b> of ${walk.stops.length} stops reached.
-          ${unreachable.approached > 0 ? `<b>${unreachable.approached}</b> marked "close as I can get".` : ''}
         </div>
         <div class="trace">${svg}</div>
         ${stopHtml}
