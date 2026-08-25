@@ -448,29 +448,99 @@
       .rail-item { transition: none; }
     }
 
-    .action-bar {
+    /* Export trigger. A filled primary button, deliberately NOT a surface
+       panel: the Skin/Filter rows above are passive choosers (swipe + tap);
+       this is a single tap that opens the export sheet. The different
+       treatment (accent fill, no hairline border) signals the different
+       action so the two interaction modes are not visually conflated. */
+    .btn-export {
       display: flex;
-      background: var(--surface);
-      border: 1px solid rgba(230, 247, 249, 0.09);
-      border-radius: var(--radius);
-      overflow: hidden;
-    }
-    .action-bar button {
-      flex: 1;
-      min-width: 0;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
       min-height: 48px;
-      padding: 12px 4px;
+      padding: 12px 16px;
+      background: var(--accent);
+      color: var(--bg);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius);
+      font-size: 0.95rem;
+      font-weight: 600;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn-export:active { background: var(--accent-dim); }
+    .btn-export .chev { margin-left: 4px; opacity: 0.7; font-size: 0.85em; letter-spacing: -0.05em; }
+
+    /* Bottom export sheet. Overlays the nav bar so it reads as a modal
+       action sheet, not another row in the controls column. */
+    .sheet-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.5);
+      opacity: 0;
+      transition: opacity 0.18s ease;
+      z-index: 50;
+    }
+    .sheet-overlay.visible { opacity: 1; }
+    .sheet {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: var(--surface);
+      border-top: 1px solid rgba(230, 247, 249, 0.12);
+      border-radius: 16px 16px 0 0;
+      transform: translateY(100%);
+      transition: transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+      z-index: 51;
+      padding: 8px 0 16px;
+      max-height: 80vh;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .sheet.visible { transform: translateY(0); }
+    .sheet-handle {
+      width: 36px;
+      height: 4px;
+      background: var(--fg-dim);
+      opacity: 0.4;
+      border-radius: 2px;
+      margin: 4px auto 8px;
+    }
+    .sheet-heading {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--fg-dim);
+      padding: 4px 20px 8px;
+    }
+    .sheet-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      width: 100%;
+      padding: 14px 20px;
       background: transparent;
       border: none;
-      border-radius: 0;
-      font-size: 0.88rem;
-      color: var(--fg-dim);
-      white-space: nowrap;
+      color: var(--fg);
+      font-size: 0.95rem;
+      text-align: left;
+      -webkit-tap-highlight-color: transparent;
     }
-    .action-bar button + button { border-left: 1px solid rgba(230, 247, 249, 0.09); }
-    .action-bar button:active { background: var(--surface-2); }
-    .action-bar .action-primary { flex: 2; }
-    .action-bar .action-ico { font-size: 1.25em; }
+    .sheet-row:active { background: var(--surface-2); }
+    .sheet-row .row-ico {
+      flex-shrink: 0;
+      width: 24px;
+      text-align: center;
+      font-size: 1.15em;
+      color: var(--fg-dim);
+    }
+    .sheet-row .row-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .sheet-row .row-title { font-weight: 500; }
+    .sheet-row .row-sub { font-size: 0.78rem; color: var(--fg-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    @media (prefers-reduced-motion: reduce) {
+      .sheet-overlay, .sheet { transition: none; }
+    }
 
     /* --- Focused walk state: everything but the compass fades out and
        becomes unresponsive, so pocket taps cannot end the walk --- */
@@ -629,6 +699,7 @@
       html, body { height: auto; overflow: visible; }
       body { background: white; color: black; }
       header, nav, .walk-actions, .detail-controls,
+      .sheet-overlay, .sheet,
       #screen-go, #screen-walk, #screen-archive, #screen-info { display: none !important; }
       #screen-detail { display: flex !important; overflow: visible; }
       #detail-content { overflow: visible; }
@@ -835,13 +906,32 @@
         <span class="rail-label">Filter</span>
         <div class="rail" id="rail-filter"></div>
       </div>
-      <div class="action-bar">
-        <button id="btn-detail-share" class="action-primary"><span class="action-ico">&#8682;</span> Share walk</button>
-        <button id="btn-detail-export-html">&lt;/&gt; HTML</button>
-        <button id="btn-detail-card"><span class="action-ico">&#9993;</span> Card</button>
-      </div>
+      <button id="btn-detail-export" class="btn-export"><span>Export</span><span class="chev">&raquo;</span></button>
     </div>
   </section>
+
+  <!-- Export bottom sheet (used by Walk Detail) -->
+  <div id="export-sheet-overlay" class="sheet-overlay" hidden></div>
+  <div id="export-sheet" class="sheet" role="dialog" aria-label="Export" hidden>
+    <div class="sheet-handle"></div>
+    <div class="sheet-heading">Export</div>
+    <button class="sheet-row" data-export="share-html">
+      <span class="row-ico">&#8682;</span>
+      <span class="row-text"><span class="row-title">Share walk</span><span class="row-sub">Send the HTML via the share menu</span></span>
+    </button>
+    <button class="sheet-row" data-export="download-html">
+      <span class="row-ico">&lt;/&gt;</span>
+      <span class="row-text"><span class="row-title">HTML</span><span class="row-sub">Download the HTML</span></span>
+    </button>
+    <button class="sheet-row" data-export="card">
+      <span class="row-ico">&#9993;</span>
+      <span class="row-text"><span class="row-title">Card</span><span class="row-sub">Send a card via the share menu</span></span>
+    </button>
+    <button class="sheet-row" data-export="route">
+      <span class="row-ico">&#9874;</span>
+      <span class="row-text"><span class="row-title">Route</span><span class="row-sub">Export KML for mapping apps</span></span>
+    </button>
+  </div>
 
   <nav>
     <button id="nav-go" class="active">Go</button>
@@ -860,6 +950,7 @@
     import { createTracker, reachStop, unreachableRate } from './lib/proximity.js';
     import { haversine, bearing, simplify, pathLength, formatDistance, formatKm, compassPoint, bounds, headingFromAlpha, nextRotation, createTraceGate } from './lib/geo.js';
     import { buildHTMLExport, downloadFile, blobToDataURL, voiceName, formatWalkDate } from './lib/export.js';
+    import { buildKmlString } from './lib/kml.js';
     import { SKINS, getSkin, scopeCSS, BASE_CSS } from './lib/skins.js';
     import { isIOS, isInAppBrowser, isStandalone } from './lib/platform.js';
     import { buildHexIndex, innerCard } from './lib/inner.js';
@@ -2324,55 +2415,116 @@
       return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
     }
 
-    document.getElementById('btn-detail-share').addEventListener('click', async () => {
+    // --- Export bottom sheet (Walk Detail) ---
+    // A single Export button opens a modal sheet with the four export/share
+    // targets. The sheet is a sibling of the screens (not inside #screen-detail)
+    // so it overlays the nav bar too, reading as a modal action sheet rather
+    // than another row in the controls column.
+    const exportSheet = document.getElementById('export-sheet');
+    const exportOverlay = document.getElementById('export-sheet-overlay');
+    let exportSheetReturnFocus = null;
+
+    function openExportSheet() {
       if (!currentDetailWalk) return;
-      const html = await buildCurrentDetailHTML();
-      const filename = `aimless-${currentDetailWalk.seed}.html`;
-      const file = new File([html], filename, { type: 'text/html' });
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        try {
-          await navigator.share({ files: [file], title: `Aimless walk ${currentDetailWalk.seed}` });
-        } catch (err) {
-          if (err.name !== 'AbortError') console.warn('Share failed:', err);
+      exportSheetReturnFocus = document.activeElement;
+      exportOverlay.hidden = false;
+      exportSheet.hidden = false;
+      // Force reflow so the transition runs from the hidden state.
+      void exportOverlay.offsetWidth;
+      exportOverlay.classList.add('visible');
+      exportSheet.classList.add('visible');
+    }
+
+    function closeExportSheet() {
+      exportOverlay.classList.remove('visible');
+      exportSheet.classList.remove('visible');
+      // Wait for the transition before hiding, so it animates out.
+      setTimeout(() => {
+        exportOverlay.hidden = true;
+        exportSheet.hidden = true;
+        if (exportSheetReturnFocus) {
+          exportSheetReturnFocus.focus?.();
+          exportSheetReturnFocus = null;
         }
-      } else {
-        // No share sheet (or HTML files not shareable): fall back to download.
-        downloadFile(filename, html, 'text/html');
-      }
+      }, 220);
+    }
+
+    document.getElementById('btn-detail-export').addEventListener('click', openExportSheet);
+    exportOverlay.addEventListener('click', closeExportSheet);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && exportSheet.classList.contains('visible')) closeExportSheet();
     });
 
-    // Send card: single image + text, the best-supported share payload.
-    document.getElementById('btn-detail-card').addEventListener('click', async () => {
-      if (!currentDetailWalk) return;
+    // Sheet row dispatch. Each action body is the verbatim logic from the old
+    // per-button handlers; only the trigger changed.
+    exportSheet.addEventListener('click', async (e) => {
+      const row = e.target.closest('.sheet-row');
+      if (!row) return;
+      const action = row.dataset.export;
+      if (!action || !currentDetailWalk) return;
+      closeExportSheet();
 
-      // First photo of the walk (lowest stop sequence), if any.
-      const db = await dbPromise;
-      const photos = db ? await byIndex(db, 'photos', 'walkId', currentDetailWalk.id) : [];
-      photos.sort((a, b) => a.stopSeq - b.stopSeq);
-      const cardBlob = await buildShareCard(currentDetailWalk, photos[0] ?? null);
-      const filename = `aimless-${currentDetailWalk.seed}-card.png`;
-      const cardFile = new File([cardBlob], filename, { type: 'image/png' });
-
-      if (navigator.canShare && navigator.canShare({ files: [cardFile] })) {
-        try {
-          await navigator.share({
-            files: [cardFile],
-            text: 'Go nowhere. Somewhere.\n\nhttps://aimless.earth',
-            title: 'my aimless walk',
-          });
-        } catch (err) {
-          if (err.name !== 'AbortError') console.warn('Share failed:', err);
+      if (action === 'share-html') {
+        const html = await buildCurrentDetailHTML();
+        const filename = `aimless-${currentDetailWalk.seed}.html`;
+        const file = new File([html], filename, { type: 'text/html' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({ files: [file], title: `Aimless walk ${currentDetailWalk.seed}` });
+          } catch (err) {
+            if (err.name !== 'AbortError') {
+              console.warn('Share failed:', err);
+              downloadFile(filename, html, 'text/html');
+            }
+          }
+        } else {
+          downloadFile(filename, html, 'text/html');
         }
-      } else {
-        // No share sheet (or image files not shareable): fall back to download.
-        downloadFile(filename, cardBlob, 'image/png');
+      } else if (action === 'download-html') {
+        const html = await buildCurrentDetailHTML();
+        downloadFile(`aimless-${currentDetailWalk.seed}.html`, html, 'text/html');
+      } else if (action === 'card') {
+        // Send card: single image + text, the best-supported share payload.
+        const db = await dbPromise;
+        const photos = db ? await byIndex(db, 'photos', 'walkId', currentDetailWalk.id) : [];
+        photos.sort((a, b) => a.stopSeq - b.stopSeq);
+        const cardBlob = await buildShareCard(currentDetailWalk, photos[0] ?? null);
+        const filename = `aimless-${currentDetailWalk.seed}-card.png`;
+        const cardFile = new File([cardBlob], filename, { type: 'image/png' });
+        if (navigator.canShare && navigator.canShare({ files: [cardFile] })) {
+          try {
+            await navigator.share({
+              files: [cardFile],
+              text: 'Go nowhere. Somewhere.\n\nhttps://aimless.earth',
+              title: 'my aimless walk',
+            });
+          } catch (err) {
+            if (err.name !== 'AbortError') {
+              console.warn('Share failed:', err);
+              downloadFile(filename, cardBlob, 'image/png');
+            }
+          }
+        } else {
+          downloadFile(filename, cardBlob, 'image/png');
+        }
+      } else if (action === 'route') {
+        // KML route export: plan path + walked trace + stop placemarks.
+        const kml = buildKmlString(currentDetailWalk);
+        const filename = `aimless-${currentDetailWalk.seed}.kml`;
+        const file = new File([kml], filename, { type: 'application/vnd.google-earth.kml+xml' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({ files: [file], title: `Aimless route ${currentDetailWalk.seed}` });
+          } catch (err) {
+            if (err.name !== 'AbortError') {
+              console.warn('Share failed:', err);
+              downloadFile(filename, kml, 'application/vnd.google-earth.kml+xml');
+            }
+          }
+        } else {
+          downloadFile(filename, kml, 'application/vnd.google-earth.kml+xml');
+        }
       }
-    });
-
-    document.getElementById('btn-detail-export-html').addEventListener('click', async () => {
-      if (!currentDetailWalk) return;
-      const html = await buildCurrentDetailHTML();
-      downloadFile(`aimless-${currentDetailWalk.seed}.html`, html, 'text/html');
     });
 
     // --- Page unload: tear down watch and wake lock (device note 6) ---
