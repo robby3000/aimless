@@ -80,6 +80,12 @@ package.json          # no dependencies; "test": "node --test test/**/*.test.js"
 - **Seeded randomness only** (A7). Never call `Math.random()` in generation code.
 - **Do not build Phase 2 (AI cards) until five real walks are logged in `verdict.md`** (A12). This
   is the entire reason the repo exists.
+- **This repo is PUBLIC. No private/competition research or strategy docs get committed here.** Anything
+  like Phase-2 research, competitor teardowns, monetization/hosting analysis, or unpublished product
+  strategy belongs in the **private KnowledgeVault** (`/mnt/d/KnowledgeVault/…`), never in `docs/` or
+  anywhere under this repo. Generated research artifacts (e.g. `docs/phase2-research.md`) must be
+  relocated to the Vault and kept out of the working tree + any push. Respect the no-public-exposure
+  posture: the NUC/Tailscale is never an origin for anything Aimless publishes.
 - **Count the "close as I can get" presses** and surface the total. See `blueprint.md` §6 — that
   number decides whether the sibling `glyph-drift` project gets built.
 
