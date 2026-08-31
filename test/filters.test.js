@@ -184,11 +184,17 @@ test('grain and animation assets are emitted only when required', () => {
   FILTERS.push(filter);
   try {
     const css = buildFilterCSS('motion', 'body');
-    assert.equal((css.match(/data:image\/svg\+xml/g) || []).length, 1);
+    assert.equal((css.match(/data:image\/png;base64/g) || []).length, 1);
     assert.match(css, /@keyframes aimless-hue-cycle/);
     assert.match(css, /prefers-reduced-motion/);
     assert.match(css, /print/);
-    assert.equal(grainDataUri(), grainDataUri());
+    const grain = grainDataUri();
+    const png = Buffer.from(grain.split(',')[1], 'base64');
+    assert.equal(png.readUInt32BE(16), 64);
+    assert.equal(png.readUInt32BE(20), 64);
+    assert.equal(png[24], 8);
+    assert.equal(png[25], 0);
+    assert.equal(grain, grainDataUri());
   } finally {
     FILTERS.pop();
   }

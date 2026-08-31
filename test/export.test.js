@@ -160,6 +160,8 @@ test('Psych post 2 export preserves its ordered stack and shared grain', async (
   assert.ok([saturation, vignette, blur, posterize, grain, psychedelic].every((position) => position >= 0));
   assert.equal(html.split(dataUrl).length - 1, 1);
   assert.equal((html.match(/--aimless-grain:/g) || []).length, 1);
+  assert.match(html, /background-size:90px/);
+  assert.match(html, /data:image\/png;base64/);
   assert.match(html, /animation-duration:20s/);
   assert.match(html, /prefers-reduced-motion/);
 });

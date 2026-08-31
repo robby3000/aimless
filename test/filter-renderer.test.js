@@ -92,9 +92,9 @@ test('CSS filter fallback refuses effects requiring native canvas support', () =
 
 test('the ordered canvas pipeline executes every operation family', async () => {
   class FakeContext {
-    constructor() { this.filter = 'none'; this.globalAlpha = 1; this.globalCompositeOperation = 'source-over'; }
+    constructor() { this.filter = 'none'; this.globalAlpha = 1; this.globalCompositeOperation = 'source-over'; this.drawCalls = []; }
     clearRect() {}
-    drawImage() {}
+    drawImage(...args) { this.drawCalls.push(args); }
     fillRect() {}
     putImageData() {}
     getImageData() { return { data: new Uint8ClampedArray([80, 120, 200, 255]) }; }
@@ -122,11 +122,12 @@ test('the ordered canvas pipeline executes every operation family', async () => 
       { kind: 'css-filter', value: 'contrast(110%)' },
       { kind: 'pixel', effect: 'duotone', params: { shadow: '#000000', highlight: '#ffffff', contrast: 0 } },
       { kind: 'overlay', effect: 'gradient', params: { c1: '#ff0000', c2: '#0000ff', angle: 0, blend: 'soft-light', opacity: 40 } },
-      { kind: 'grain', params: { size: 1, opacity: 20, blend: 'overlay' } },
+      { kind: 'grain', params: { size: 1.4, opacity: 20, blend: 'overlay' } },
       { kind: 'bloom', params: { blur: 4, threshold: 140, contrast: 180, saturate: 100, opacity: 30, color: '#ffffff', tint: 0, blend: 'screen' } },
     ],
   };
-  const output = await renderPhotoToCanvas({ width: 1, height: 1 }, filter, 1, 1, createCanvas);
+  const output = await renderPhotoToCanvas({ width: 1, height: 1 }, filter, 1, 1, createCanvas, async () => ({ width: 64, height: 64 }));
   assert.ok(output instanceof FakeCanvas);
   assert.ok(canvases.length >= 4);
+  assert.ok(canvases.some((canvas) => canvas.context.drawCalls.some((call) => call.slice(-4).join(',') === '0,0,90,90')));
 });

@@ -1,4 +1,4 @@
-import { dramaSettings, getFilter, glitchSettings } from './filters.js';
+import { dramaSettings, getFilter, glitchSettings, grainDataUri } from './filters.js';
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const number = (value, fallback = 0) => value != null && String(value).trim() !== '' && Number.isFinite(Number(value)) ? Number(value) : fallback;
@@ -293,7 +293,7 @@ function applyOverlay(source, destination, operation, width, height) {
   ctx.globalCompositeOperation = 'source-over';
 }
 
-function applyGrain(source, destination, grainCanvas, operation, width, height) {
+function applyGrain(source, destination, grainCanvas, grainImage, operation, width, height) {
   const ctx = destination.getContext('2d');
   resetContext(ctx, width, height);
   ctx.drawImage(source, 0, 0, width, height);
@@ -302,14 +302,7 @@ function applyGrain(source, destination, grainCanvas, operation, width, height) 
   grainCanvas.width = dimension;
   grainCanvas.height = dimension;
   const grainCtx = grainCanvas.getContext('2d');
-  const random = seededRandom(0xA11E55);
-  for (let y = 0; y < 16; y++) {
-    for (let x = 0; x < 16; x++) {
-      const value = Math.round(random() * 255);
-      grainCtx.fillStyle = `rgb(${value},${value},${value})`;
-      grainCtx.fillRect(x * dimension / 16, y * dimension / 16, dimension / 16, dimension / 16);
-    }
-  }
+  grainCtx.drawImage(grainImage, 0, 0, dimension, dimension);
   ctx.globalAlpha = clamp(number(params.opacity, 25), 0, 100) / 100;
   ctx.globalCompositeOperation = blendMode(params.blend || 'overlay');
   ctx.fillStyle = ctx.createPattern(grainCanvas, 'repeat');
@@ -350,7 +343,18 @@ function defaultCanvas(width, height) {
   return canvas;
 }
 
-export async function renderPhotoToCanvas(image, filterOrId, width, height, createCanvas = defaultCanvas) {
+let grainImagePromise;
+function loadGrainImage() {
+  if (!grainImagePromise) grainImagePromise = new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = grainDataUri();
+  });
+  return grainImagePromise;
+}
+
+export async function renderPhotoToCanvas(image, filterOrId, width, height, createCanvas = defaultCanvas, loadGrain = loadGrainImage) {
   const filter = typeof filterOrId === 'string' ? getFilter(filterOrId) : filterOrId;
   if (!filter || !Array.isArray(filter.operations)) throw new Error('Invalid filter preset');
   let source = createCanvas(width, height);
@@ -381,7 +385,7 @@ export async function renderPhotoToCanvas(image, filterOrId, width, height, crea
       applyOverlay(source, destination, operation, width, height);
       index++;
     } else if (operation.kind === 'grain') {
-      applyGrain(source, destination, createCanvas(1, 1), operation, width, height);
+      applyGrain(source, destination, createCanvas(1, 1), await loadGrain(), operation, width, height);
       index++;
     } else if (operation.kind === 'bloom') {
       if (!scratch) scratch = createCanvas(width, height);
