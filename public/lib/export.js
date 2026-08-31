@@ -4,7 +4,7 @@
 import { unreachableRate } from './proximity.js';
 import { formatKm } from './geo.js';
 import { BASE_CSS, PRINT_CSS } from './skins.js';
-import { buildFilterCSS, getFilter, PHOTO_FRAME_CSS } from './filters.js';
+import { buildFilterCSS, buildFilterDefs, buildFilteredPhotoHTML, getFilter, PHOTO_FRAME_CSS } from './filters.js';
 import { buildKmlString } from './kml.js';
 
 /**
@@ -99,9 +99,7 @@ export async function buildHTMLExport(walk, photos, svgTrace, skinCss = '', icon
 
   const stopCards = walk.stops.map((s, i) => {
     const photoUrl = photoDataUrls.get(s.seq);
-    const photoHtml = photoUrl
-      ? `<div class="photo-frame"><img src="${photoUrl}" style="max-width:100%;border-radius:8px;"></div>`
-      : '';
+    const photoHtml = photoUrl ? buildFilteredPhotoHTML(photoUrl, filterId) : '';
     const status = s.approached
       ? '<span class="status approached">close as I can get</span>'
       : s.reachedAt
@@ -132,6 +130,7 @@ export async function buildHTMLExport(walk, photos, svgTrace, skinCss = '', icon
   // so the keepsake looks like the Walk Detail preview did.
   const filter = getFilter(filterId);
   const filterCss = buildFilterCSS(filter.id, 'body');
+  const filterDefs = buildFilterDefs(filter.id);
 
   // Embed the KML route as a data URI so the keepsake offers a route export
   // with no scripts — just an anchor with a download attribute. The KML is
@@ -155,7 +154,8 @@ ${PRINT_CSS}
 ${skinCss ? `<style id="skin">\n${skinCss}\n</style>` : ''}
 ${filterCss ? `<style id="filter">\n${filterCss}\n</style>` : ''}
 </head>
-<body${filter.filter ? ` class="filter-${filter.id}"` : ''}>
+<body${filter.operations.length ? ` class="filter-${filter.id}"` : ''}>
+  ${filterDefs}
   <h1><a class="app-link" href="https://aimless.earth"><img class="app-icon" src="${logoDataUri(icon)}" alt="">Aimless</a></h1>
   <div class="seed">${walk.seed}</div>
   ${voice ? `<div class="walk-voice">Voice of ${voice}</div>` : ''}

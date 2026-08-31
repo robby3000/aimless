@@ -48,14 +48,15 @@ public/
     geo.js  rng.js  walk.js  deck.js  store.js  dexie.mjs  proximity.js  export.js  skins.js
     platform.js         # UA detection: isIOS, isInAppBrowser, isStandalone
     inner.js            # The Inner voice: I Ching hexagram from coordinates (docs/iching/)
-    filters.js          # photo filter presets for the Walk Detail FILTER rail
+    filters.js          # ordered photo filter presets and Wobbletone translation
+    filter-renderer.js  # ordered canvas pipeline for filtered share cards
     kml.js              # KML route export (plan + trace + stop placemarks)
   data/
     crow.json  threshold.json  lattice.json
     inner.json          # 64 hexagrams: number, hex_font, binary, title, haiku
 test/
   geo.test.js  rng.test.js  walk.test.js  deck.test.js  proximity.test.js  skins.test.js
-  platform.test.js  export.test.js  inner.test.js  filters.test.js  kml.test.js
+  platform.test.js  export.test.js  inner.test.js  filters.test.js  filter-renderer.test.js  kml.test.js
 scripts/
   make-icons.mjs      # npm run icons
   stamp-sw.mjs        # npm run stamp -- rewrites the sw.js cache name

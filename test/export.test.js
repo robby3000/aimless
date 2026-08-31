@@ -1,6 +1,7 @@
 import { test, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildHTMLExport, voiceName, formatWalkDate } from '../public/lib/export.js';
+import { FILTERS, translateWobbletonePreset } from '../public/lib/filters.js';
 
 const WALK = {
   id: 'walk-1',
@@ -131,17 +132,58 @@ test('haiku lines become one block element per line', async () => {
   assert.equal((html.match(/<span class="haiku-line">/g) || []).length, 3);
 });
 
-test('photos are wrapped in .photo-frame so overlay filters have a parent', async () => {
+test('photos are wrapped in .photo-frame for ordered filter operations', async () => {
   const html = await buildHTMLExport(WALK, [{ stopSeq: 0, dataUrl: 'data:image/jpeg;base64,QUJD' }], '<svg></svg>');
-  assert.ok(html.includes('<div class="photo-frame"><img src="data:image/jpeg;base64,QUJD"'));
+  assert.ok(html.includes('<div class="photo-frame"><img class="filter-image" src="data:image/jpeg;base64,QUJD"'));
   assert.ok(html.includes('.photo-frame { position: relative;'));
 });
 
-test('a photo filter adds a body class and its CSS block', async () => {
-  const html = await buildHTMLExport(WALK, [], '<svg></svg>', '', 'sky', 'noire');
+test('a photo filter adds a body class and ordered operation markup', async () => {
+  const dataUrl = 'data:image/jpeg;base64,QUJD';
+  const html = await buildHTMLExport(WALK, [{ stopSeq: 0, dataUrl }], '<svg></svg>', '', 'sky', 'noire');
   assert.ok(html.includes('<body class="filter-noire">'));
-  assert.ok(html.includes('body.filter-noire .photo-frame img { filter: grayscale(100%)'));
-  assert.ok(html.includes('body.filter-noire .photo-frame::after'));
+  assert.ok(html.includes('filter:grayscale(100%) contrast(175%) brightness(85%)'));
+  assert.ok(html.includes('radial-gradient(circle, transparent 40%, rgba(0,0,0,0.85) 100%)'));
+  assert.equal((html.match(/data:image\/jpeg;base64,QUJD/g) || []).length, 1);
+});
+
+test('Psych post 2 export preserves its ordered stack and shared grain', async () => {
+  const dataUrl = 'data:image/jpeg;base64,PSYCH';
+  const html = await buildHTMLExport(WALK, [{ stopSeq: 0, dataUrl }], '<svg></svg>', '', 'sky', 'psych-post-2');
+  assert.ok(html.includes('<body class="filter-psych-post-2">'));
+  const saturation = html.indexOf('filter:saturate(120%)');
+  const vignette = html.indexOf('radial-gradient(ellipse at center, transparent 40%, #000000 100%)');
+  const blur = html.indexOf('filter:blur(8.7px)');
+  const posterize = html.indexOf('filter:url(#aimless-psych-post-2-4)');
+  const grain = html.indexOf('background-image:var(--aimless-grain)');
+  const psychedelic = html.indexOf('filter:saturate(280%) contrast(130%)');
+  assert.ok([saturation, vignette, blur, posterize, grain, psychedelic].every((position) => position >= 0));
+  assert.equal(html.split(dataUrl).length - 1, 1);
+  assert.equal((html.match(/--aimless-grain:/g) || []).length, 1);
+  assert.match(html, /animation-duration:20s/);
+  assert.match(html, /prefers-reduced-motion/);
+});
+
+test('advanced exports emit shared assets once and each photo source once', async () => {
+  const filter = translateWobbletonePreset({
+    id: 'advanced', name: 'Advanced', effects: [
+      { defId: 'duotone', params: { shadow: '#102030', highlight: '#f0d0b0', contrast: 20 } },
+      { defId: 'grain', params: { size: 1, opacity: 20, blend: 'overlay' } },
+      { defId: 'bloom', params: { blur: 8, threshold: 140, contrast: 180, saturate: 100, opacity: 30, color: '#ffffff', tint: 0, blend: 'screen' } },
+    ],
+  });
+  FILTERS.push(filter);
+  try {
+    const walk = { ...WALK, stops: Array.from({ length: 7 }, (_, seq) => ({ seq, lat: 55.86 + seq / 1000, lng: -4.25, reachedAt: 1, cardText: `Card ${seq}` })) };
+    const photos = walk.stops.map(({ seq }) => ({ stopSeq: seq, dataUrl: `data:image/jpeg;base64,PHOTO${seq}` }));
+    const html = await buildHTMLExport(walk, photos, '<svg></svg>', '', 'sky', 'advanced');
+    photos.forEach(({ dataUrl }) => assert.equal(html.split(dataUrl).length - 1, 1));
+    assert.equal((html.match(/id="aimless-advanced-1"/g) || []).length, 1);
+    assert.equal((html.match(/id="aimless-advanced-3"/g) || []).length, 1);
+    assert.equal((html.match(/--aimless-grain:/g) || []).length, 1);
+  } finally {
+    FILTERS.pop();
+  }
 });
 
 test('Original adds no filter class or CSS', async () => {

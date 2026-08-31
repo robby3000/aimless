@@ -955,7 +955,8 @@
     import { SKINS, getSkin, scopeCSS, BASE_CSS } from './lib/skins.js';
     import { isIOS, isInAppBrowser, isStandalone } from './lib/platform.js';
     import { buildHexIndex, innerCard } from './lib/inner.js';
-    import { FILTERS, getFilter, buildFilterCSS, PHOTO_FRAME_CSS } from './lib/filters.js';
+    import { FILTERS, getFilter, buildFilterCSS, buildFilterDefs, buildFilteredPhotoHTML, PHOTO_FRAME_CSS } from './lib/filters.js';
+    import { renderPhotoToCanvas } from './lib/filter-renderer.js';
 
     // --- Screen navigation ---
     const screens = {
@@ -1069,11 +1070,11 @@
       skinStyle.textContent = scopeCSS(getSkin(currentSkin).css, '#detail-content');
     }
 
-    // A filter change is pure CSS: toggle the container class and swap the
-    // style text. No re-render (unlike skins, whose SVG colours are attrs).
+    // A filter change updates the active pipeline class and its shared assets;
+    // showWalkDetail rebuilds each photo's ordered operation wrappers.
     function applyFilter() {
       const f = getFilter(currentFilter);
-      elDetailContent.className = f.filter ? `filter-${f.id}` : '';
+      elDetailContent.className = f.operations.length ? `filter-${f.id}` : '';
       filterStyle.textContent = buildFilterCSS(f.id, '#detail-content');
     }
 
@@ -1145,6 +1146,7 @@
       currentFilter = value;
       applyFilter();
       savePrefs();
+      if (currentDetailWalk) showWalkDetail(currentDetailWalk.id);
     });
 
     // --- Settings ---
@@ -2237,7 +2239,7 @@
         // Prefer the stored data URL; the blob branch only exists for walks
         // saved before the switch (and on iOS those blobs may be corrupt).
         const photoHtml = photo
-          ? `<div class="photo-frame"><img src="${photo.dataUrl || URL.createObjectURL(photo.blob)}" alt="photo"></div>`
+          ? buildFilteredPhotoHTML(photo.dataUrl || URL.createObjectURL(photo.blob), currentFilter, 'photo')
           : '';
         const status = s.approached
           ? '<span class="status approached">close as I can get</span>'
@@ -2266,6 +2268,7 @@
       }).join('');
 
       document.getElementById('detail-content').innerHTML = `
+        ${buildFilterDefs(currentFilter)}
         <h1>Aimless</h1>
         <div class="seed">${walk.seed}</div>
         ${voice ? `<div class="walk-voice">Voice of ${voice}</div>` : ''}
@@ -2327,42 +2330,12 @@
         // may be unreadable on iOS (WebKit corrupts them after restart) -
         // then the card is drawn without a photo rather than failing.
         const src = photo.dataUrl || URL.createObjectURL(photo.blob);
-        try {
-          const img = await loadImage(src);
-          const scale = Math.max(CARD_SIZE / img.width, CARD_SIZE / img.height);
-          const dw = img.width * scale;
-          const dh = img.height * scale;
-          // The active photo filter, mirrored from the Walk Detail preview.
-          // ctx.filter needs Safari 18+; on older Safari the photo draws
-          // unfiltered (the overlay below still applies).
-          const filter = getFilter(currentFilter);
-          if (filter.filter && 'filter' in ctx) ctx.filter = filter.filter;
-          ctx.drawImage(img, (CARD_SIZE - dw) / 2, (CARD_SIZE - dh) / 2, dw, dh);
-          ctx.filter = 'none';
-          // Overlay presets (vignette, duotone): the ::after layer's canvas
-          // equivalent. Covers the whole card since the photo cover-fills it.
-          if (filter.overlay) {
-            const g = filter.overlay.gradient;
-            let grad;
-            if (g.kind === 'radial') {
-              // radial-gradient(circle, ...) sizes to the farthest corner.
-              grad = ctx.createRadialGradient(
-                CARD_SIZE / 2, CARD_SIZE / 2, 0,
-                CARD_SIZE / 2, CARD_SIZE / 2, Math.hypot(CARD_SIZE, CARD_SIZE) / 2
-              );
-            } else {
-              // Only 45deg exists today: CSS 45deg on a square runs from
-              // bottom-left to top-right.
-              grad = ctx.createLinearGradient(0, CARD_SIZE, CARD_SIZE, 0);
-            }
-            for (const [offset, color] of g.stops) grad.addColorStop(offset, color);
-            ctx.save();
-            ctx.globalCompositeOperation = filter.overlay.blend === 'normal' ? 'source-over' : filter.overlay.blend;
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, CARD_SIZE, CARD_SIZE);
-            ctx.restore();
-          }
-        } catch { /* photo unreadable - card goes out bare */ }
+        let img = null;
+        try { img = await loadImage(src); } catch { /* photo unreadable - card goes out bare */ }
+        if (img) {
+          const rendered = await renderPhotoToCanvas(img, currentFilter, CARD_SIZE, CARD_SIZE);
+          ctx.drawImage(rendered, 0, 0);
+        }
         if (!photo.dataUrl) URL.revokeObjectURL(src);
       }
 
@@ -2494,7 +2467,14 @@
         const db = await dbPromise;
         const photos = db ? await byIndex(db, 'photos', 'walkId', currentDetailWalk.id) : [];
         photos.sort((a, b) => a.stopSeq - b.stopSeq);
-        const cardBlob = await buildShareCard(currentDetailWalk, photos[0] ?? null);
+        let cardBlob;
+        try {
+          cardBlob = await buildShareCard(currentDetailWalk, photos[0] ?? null);
+        } catch (err) {
+          console.error('Card filter render failed:', err);
+          alert(`This filter could not render on this device: ${err.message}`);
+          return;
+        }
         const filename = `aimless-${currentDetailWalk.seed}-card.png`;
         const cardFile = new File([cardBlob], filename, { type: 'image/png' });
         if (navigator.canShare && navigator.canShare({ files: [cardFile] })) {
