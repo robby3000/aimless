@@ -285,6 +285,57 @@
       font-size: 0.9rem;
       color: var(--fg-dim);
     }
+    /* Arrival panel replaces the compass readout when a waypoint is reached.
+       It shows a large round Photograph button (with a skip link), then
+       morphs into a Continue button after the user takes or skips a photo. */
+    .arrival-panel {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+    .arrival-panel.visible { display: flex; }
+    .arrival-main-btn {
+      width: 110px;
+      height: 110px;
+      border-radius: 50%;
+      border: 2px solid var(--accent-large);
+      background: var(--surface);
+      color: var(--accent-large);
+      font-size: 2.8rem;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
+    }
+    .arrival-main-btn:active {
+      background: var(--accent-large);
+      color: var(--bg);
+    }
+    .arrival-label {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: var(--fg);
+    }
+    .arrival-skip {
+      background: none;
+      border: none;
+      color: var(--fg-dim);
+      font-size: 0.9rem;
+      text-decoration: underline;
+      cursor: pointer;
+      padding: 2px 8px;
+    }
+    .arrival-thumb {
+      max-width: 72px;
+      max-height: 72px;
+      border-radius: 8px;
+      border: 1px solid var(--surface-2);
+      display: none;
+    }
+    .arrival-thumb.visible { display: block; }
     .stop-counter {
       font-size: 0.85rem;
       color: var(--fg-dim);
@@ -545,13 +596,13 @@
 
     /* --- Focused walk state: everything but the compass fades out and
        becomes unresponsive, so pocket taps cannot end the walk --- */
-    header, nav, .walk-header, #stop-counter, #card-display, #photo-row,
+    header, nav, .walk-header, #stop-counter, #card-display,
     #screen-walk .walk-actions, #walk-status {
       transition: opacity 0.4s;
     }
     body.walk-focused header, body.walk-focused nav,
     body.walk-focused .walk-header, body.walk-focused #stop-counter,
-    body.walk-focused #card-display, body.walk-focused #photo-row,
+    body.walk-focused #card-display,
     body.walk-focused #screen-walk .walk-actions, body.walk-focused #walk-status {
       opacity: 0;
       pointer-events: none;
@@ -638,23 +689,6 @@
       transition: opacity 0.3s;
     }
     #arrival-flash.flash { opacity: 0.3; }
-
-    /* --- Photo row --- */
-    .photo-row {
-      display: none;
-      flex-direction: column;
-      gap: 8px;
-      align-items: center;
-    }
-    .photo-row.visible { display: flex; }
-    .photo-thumb {
-      max-width: 120px;
-      max-height: 120px;
-      border-radius: 8px;
-      border: 1px solid var(--surface-2);
-      display: none;
-    }
-    .photo-thumb.visible { display: block; }
 
     /* --- Done screen --- */
     #screen-done { gap: 16px; }
@@ -778,7 +812,16 @@
       <div id="compass-arrow" class="compass-arrow">&#8593;</div>
       <div id="compass-dist" class="compass-dist">---</div>
       <div id="compass-bearing" class="compass-bearing">---&deg;</div>
+      <div id="arrival-panel" class="arrival-panel" hidden>
+        <button id="btn-arrival-main" class="arrival-main-btn">
+          <span id="arrival-icon" class="arrival-icon">&#128247;</span>
+        </button>
+        <span id="arrival-label" class="arrival-label">Photograph</span>
+        <button id="btn-arrival-skip" class="arrival-skip">skip</button>
+        <img id="arrival-thumb" class="arrival-thumb" alt="" hidden>
+      </div>
     </div>
+    <input type="file" id="photo-input" accept="image/*" capture="environment" hidden>
     <div id="stop-counter" class="stop-counter">Stop <b>1</b> of 5</div>
     <div id="card-display" class="card-display">
       <div id="card-voice" class="voice"></div>
@@ -788,14 +831,8 @@
       </div>
       <div id="card-text"></div>
     </div>
-    <div id="photo-row" class="photo-row">
-      <button id="btn-photo" class="btn-full">&#128247; Photograph</button>
-      <input type="file" id="photo-input" accept="image/*" capture="environment" hidden>
-      <img id="photo-thumb" class="photo-thumb" alt="">
-    </div>
     <div class="walk-actions">
       <button id="btn-approach" class="btn-full">Close as I can get</button>
-      <button id="btn-continue" class="btn-primary btn-full" hidden>Continue</button>
       <button id="btn-give-up" class="btn-danger btn-full">Give up</button>
       <button id="btn-home-done" class="btn-primary btn-full" hidden>I'm back</button>
     </div>
@@ -1271,17 +1308,19 @@
     const cardHexTitle = document.getElementById('card-hex-title');
     const cardText = document.getElementById('card-text');
     const btnApproach = document.getElementById('btn-approach');
-    const btnContinue = document.getElementById('btn-continue');
     const btnGiveUp = document.getElementById('btn-give-up');
     const walkStatus = document.getElementById('walk-status');
     const walkSeed = document.getElementById('walk-seed');
     const walkTimer = document.getElementById('walk-timer');
     const arrivalFlash = document.getElementById('arrival-flash');
-    const photoRow = document.getElementById('photo-row');
-    const btnPhoto = document.getElementById('btn-photo');
     const photoInput = document.getElementById('photo-input');
-    const photoThumb = document.getElementById('photo-thumb');
     const compassView = document.getElementById('compass-view');
+    const arrivalPanel = document.getElementById('arrival-panel');
+    const btnArrivalMain = document.getElementById('btn-arrival-main');
+    const arrivalIcon = document.getElementById('arrival-icon');
+    const arrivalLabel = document.getElementById('arrival-label');
+    const btnArrivalSkip = document.getElementById('btn-arrival-skip');
+    const arrivalThumb = document.getElementById('arrival-thumb');
 
     // --- Active walk state ---
     let walk = null;
@@ -1841,11 +1880,11 @@
       // Show the card.
       showCard(stop.card, walk.voice);
 
-      // Show photo row and continue button. On the final stop the button
-      // ends the walk, so label it Finish.
-      photoRow.classList.add('visible');
-      btnContinue.hidden = false;
-      btnContinue.textContent = nextStopIndex(walk.plan.stops) < 0 ? 'Finish' : 'Continue';
+      // Replace the compass readout with the arrival panel. The panel starts
+      // in the "photo" state (big round Photograph button + skip link). After
+      // the user takes or skips a photo it morphs into a Continue button.
+      showArrivalPanel();
+
       btnApproach.hidden = true;
 
       walkStatus.textContent = approached
@@ -1872,11 +1911,7 @@
       cardDisplay.classList.remove('visible');
       cardHex.hidden = true;
       cardText.classList.remove('haiku');
-      photoRow.classList.remove('visible');
-      photoThumb.classList.remove('visible');
-      photoThumb.src = '';
-      btnContinue.hidden = true;
-      btnContinue.textContent = 'Continue';
+      hideArrivalPanel();
       btnApproach.hidden = false;
     }
 
@@ -1889,17 +1924,67 @@
       }
     }
 
-    // --- Continue button: advance to next stop ---
-    btnContinue.addEventListener('click', () => {
-      hideCard();
-      updateStopCounter();
-      resetFocusTimer();
-      // If all stops done, finish.
-      if (nextStopIndex(walk.plan.stops) < 0) {
-        finishWalk();
+    // --- Arrival panel state ---
+    // 'photo'    — big round Photograph button + skip link shown.
+    // 'continue' — button morphed to Continue (or Finish on last stop).
+    // null       — panel hidden, compass readout restored.
+    let arrivalState = null;
+
+    function showArrivalPanel() {
+      // Hide the compass readout; the arrival panel takes its place.
+      compassArrow.style.display = 'none';
+      compassDist.style.display = 'none';
+      compassBearing.style.display = 'none';
+      arrivalPanel.classList.add('visible');
+      setArrivalState('photo');
+    }
+
+    function hideArrivalPanel() {
+      arrivalPanel.classList.remove('visible');
+      arrivalThumb.classList.remove('visible');
+      arrivalThumb.src = '';
+      compassArrow.style.display = '';
+      compassDist.style.display = '';
+      compassBearing.style.display = '';
+      arrivalState = null;
+    }
+
+    function setArrivalState(state) {
+      arrivalState = state;
+      const isLast = nextStopIndex(walk.plan.stops) < 0;
+      if (state === 'photo') {
+        arrivalIcon.textContent = '\u{1F4F7}';
+        arrivalLabel.textContent = 'Photograph';
+        btnArrivalSkip.hidden = false;
       } else {
-        walkStatus.textContent = '';
+        // 'continue' state — morph the button.
+        arrivalIcon.textContent = '\u2192';
+        arrivalLabel.textContent = isLast ? 'Finish' : 'Continue';
+        btnArrivalSkip.hidden = true;
       }
+    }
+
+    // The big round button does double duty: opens the camera in 'photo'
+    // state, advances the walk in 'continue' state.
+    btnArrivalMain.addEventListener('click', () => {
+      if (arrivalState === 'photo') {
+        photoInput.click();
+      } else if (arrivalState === 'continue') {
+        hideCard();
+        updateStopCounter();
+        resetFocusTimer();
+        if (nextStopIndex(walk.plan.stops) < 0) {
+          finishWalk();
+        } else {
+          walkStatus.textContent = '';
+        }
+      }
+    });
+
+    // Skip: skip the photo, go straight to the continue state.
+    btnArrivalSkip.addEventListener('click', () => {
+      setArrivalState('continue');
+      resetFocusTimer();
     });
 
     // --- Close as I can get ---
@@ -1916,16 +2001,15 @@
     // cost is ~2-2.5x the base64 storage of the old 800px size.
     const PHOTO_MAX_DIM = 1200;
 
-    btnPhoto.addEventListener('click', () => photoInput.click());
-
     photoInput.addEventListener('change', async () => {
       const file = photoInput.files[0];
       if (!file) return;
       const blob = await downscaleImage(file, PHOTO_MAX_DIM);
       walk.photos[walk.plan.stops.filter((s) => s.reachedAt).length - 1] = blob;
-      photoThumb.src = URL.createObjectURL(blob);
-      photoThumb.classList.add('visible');
+      arrivalThumb.src = URL.createObjectURL(blob);
+      arrivalThumb.classList.add('visible');
       photoInput.value = '';   // allow re-capture
+      setArrivalState('continue');
       resetFocusTimer();
       saveActiveWalk();
     });
@@ -2140,7 +2224,6 @@
       walkStatus.textContent = '';
       // Only the "I'm home" button is relevant in this mode.
       btnApproach.hidden = true;
-      btnContinue.hidden = true;
       btnGiveUp.hidden = true;
       btnHomeDone.hidden = false;
       navButtons.walk.disabled = false;
