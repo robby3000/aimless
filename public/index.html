@@ -957,6 +957,7 @@
     import { buildHexIndex, innerCard } from './lib/inner.js';
     import { FILTERS, getFilter, buildFilterCSS, buildFilterDefs, buildFilteredPhotoHTML, PHOTO_FRAME_CSS } from './lib/filters.js';
     import { renderPhotoToCanvas } from './lib/filter-renderer.js';
+    import { resolveNavTarget, canStartNewWalk } from './lib/walk-nav.js';
 
     // --- Screen navigation ---
     const screens = {
@@ -983,7 +984,15 @@
       }
     }
 
-    navButtons.go.addEventListener('click', () => showScreen('go'));
+    navButtons.go.addEventListener('click', () => {
+      const action = resolveNavTarget(!!walk, 'go');
+      if (action === 'show-walk') { showScreen('walk'); return; }
+      showScreen('go');
+    });
+    navButtons.walk.addEventListener('click', () => {
+      const action = resolveNavTarget(!!walk, 'walk');
+      if (action === 'show-walk') { showScreen('walk'); return; }
+    });
     navButtons.archive.addEventListener('click', () => { renderArchive(); showScreen('archive'); });
     navButtons.info.addEventListener('click', () => showScreen('info'));
 
@@ -1668,6 +1677,13 @@
 
     // --- Go button ---
     btnGo.addEventListener('click', async () => {
+      // Don't start a new walk while one is already in progress — that would
+      // overwrite the walk variable, leak the GPS watch and timer, and lose all
+      // accumulated data. Send the user back to their active walk instead.
+      if (!canStartNewWalk(!!walk)) {
+        showScreen('walk');
+        return;
+      }
       // FIRST, synchronously: iOS only honors the motion-permission prompt
       // while the tap's user activation is still live. Every await below
       // (GPS fix, voice fetch, IndexedDB) would expire it, and the prompt
