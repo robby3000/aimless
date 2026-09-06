@@ -730,11 +730,47 @@
     #detail-content { flex: 1; min-height: 0; overflow-y: auto; }
     #detail-content img { max-width: 100%; }
 
+    /* --- Portrait nudge overlay --- */
+    /* iOS Safari does not implement the manifest "orientation" field or
+       screen.orientation.lock(), so the only universal way to keep a phone
+       in portrait is a soft overlay shown when a touch device is in
+       landscape. Desktops (pointer: fine) never see it. */
+    #portrait-nudge {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      background: var(--bg);
+      color: var(--fg);
+      padding: 24px;
+      text-align: center;
+    }
+    #portrait-nudge .nudge-icon {
+      width: 64px;
+      height: 64px;
+      opacity: 0.85;
+      animation: nudge-rotate 2.4s ease-in-out infinite;
+    }
+    @keyframes nudge-rotate {
+      0%, 100% { transform: rotate(0deg); }
+      50%      { transform: rotate(-90deg); }
+    }
+    #portrait-nudge .nudge-text {
+      font-size: 17px;
+      letter-spacing: 0.02em;
+      color: var(--fg-dim);
+    }
+
     @media print {
       html, body { height: auto; overflow: visible; }
       body { background: white; color: black; }
       header, nav, .walk-actions, .detail-controls,
       .sheet-overlay, .sheet,
+      #portrait-nudge,
       #screen-go, #screen-walk, #screen-archive, #screen-info { display: none !important; }
       #screen-detail { display: flex !important; overflow: visible; }
       #detail-content { overflow: visible; }
@@ -758,6 +794,16 @@
   <div id="inapp-banner" class="storage-banner" hidden>
     <span>You're inside an app's built-in browser — the compass and GPS often don't work here. Open Aimless in Safari (Share → Open in Safari) for the full walk.</span>
     <button id="inapp-banner-dismiss" aria-label="Dismiss">×</button>
+  </div>
+
+  <!-- Portrait nudge: iOS has no orientation-lock API, so a soft CSS overlay is
+       the only universal way to ask a phone held in landscape to rotate. -->
+  <div id="portrait-nudge" aria-hidden="true">
+    <svg class="nudge-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="7" y="2" width="10" height="20" rx="2.5"/>
+      <line x1="11" y1="18.5" x2="13" y2="18.5"/>
+    </svg>
+    <div class="nudge-text">Rotate to portrait</div>
   </div>
 
   <!-- Go screen -->
@@ -2626,6 +2672,24 @@
         releaseWakeLock();
       }
     });
+
+    // --- Portrait nudge overlay ---
+    // iOS Safari ignores the manifest "orientation" field and does not
+    // implement screen.orientation.lock(), so there is no programmatic way
+    // to keep an installed PWA portrait on iOS. This overlay is the only
+    // universal fallback: shown when a touch device (pointer: coarse) is
+    // held in landscape. Desktops never see it. The matchMedia 'change'
+    // event fires on rotation, so the overlay tracks the device live
+    // without polling.
+    (function () {
+      const nudge = document.getElementById('portrait-nudge');
+      if (!nudge || !window.matchMedia) return;
+      const mq = window.matchMedia('(orientation: landscape) and (pointer: coarse)');
+      const update = () => { nudge.style.display = mq.matches ? 'flex' : 'none'; };
+      update();
+      if (mq.addEventListener) mq.addEventListener('change', update);
+      else if (mq.addListener) mq.addListener(update);
+    })();
 
     // --- Initial load ---
     renderArchive();
