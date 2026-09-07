@@ -677,6 +677,17 @@
       font-size: 0.9rem;
       padding: 8px;
     }
+    .approx-btn {
+      background: none;
+      border: 1px solid var(--accent-dim);
+      color: var(--fg);
+      padding: 4px 12px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      margin: 0 4px;
+    }
+    .approx-btn:active { background: var(--accent-dim); }
 
     /* --- Flash for arrival --- */
     #arrival-flash {
@@ -1031,7 +1042,7 @@
     import { randomSeed } from './lib/rng.js';
     import { drawWalk, pushRecent, recentKeys } from './lib/deck.js';
     import { openDB, getPrefs, setPrefs, put, get, all, byIndex, del } from './lib/store.js';
-    import { createTracker, reachStop, unreachableRate } from './lib/proximity.js';
+    import { createTracker, reachStop, unreachableRate, MAX_ACCURACY_M } from './lib/proximity.js';
     import { haversine, bearing, simplify, pathLength, formatDistance, formatKm, compassPoint, bounds, headingFromAlpha, nextRotation, createTraceGate } from './lib/geo.js';
     import { buildHTMLExport, downloadFile, blobToDataURL, voiceName, formatWalkDate } from './lib/export.js';
     import { buildKmlString } from './lib/kml.js';
@@ -1760,6 +1771,90 @@
       }, 1000);
     }
 
+    // --- Accurate position acquisition ---
+    // On a cold start the first GPS fix is often a low-accuracy cell/Wi-Fi
+    // position hundreds of metres off. Planning a walk from it displaces the
+    // first leg and the trace start. This watches until accuracy converges
+    // to MAX_ACCURACY_M, with a fallback to the best fix seen after
+    // APPROX_TIMEOUT_MS. Returns { pos, approximate }.
+    const APPROX_TIMEOUT_MS = 10000;
+    const APPROX_FALLBACK_M = 150;
+
+    function getAccuratePosition() {
+      return new Promise((resolve, reject) => {
+        const start = Date.now();
+        let best = null;
+        let watchId = null;
+        let settled = false;
+
+        const cleanup = () => {
+          if (watchId != null) navigator.geolocation.clearWatch(watchId);
+          watchId = null;
+        };
+
+        watchId = navigator.geolocation.watchPosition(
+          (pos) => {
+            if (settled) return;
+            const acc = typeof pos.coords.accuracy === 'number' ? pos.coords.accuracy : Infinity;
+            if (!best || acc < (typeof best.coords.accuracy === 'number' ? best.coords.accuracy : Infinity)) {
+              best = pos;
+            }
+            // Good fix: resolve immediately.
+            if (acc <= MAX_ACCURACY_M) {
+              settled = true;
+              cleanup();
+              resolve({ pos, approximate: false });
+              return;
+            }
+            // Show live accuracy after 1s so the user knows it's converging.
+            if (Date.now() - start > 1000) {
+              goStatus.textContent = `Getting your location… (${Math.round(acc)}m)`;
+            }
+          },
+          (err) => {
+            if (settled) return;
+            // Only fail immediately on permission denied with no fix at all.
+            // Other errors (transient timeout) may still produce a fix later.
+            if (err.code === err.PERMISSION_DENIED && !best) {
+              settled = true;
+              cleanup();
+              reject(err);
+            }
+          },
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        );
+
+        // Fallback: after APPROX_TIMEOUT_MS, accept the best fix if it's at
+        // least within APPROX_FALLBACK_M. Otherwise reject.
+        setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          const bestAcc = best && typeof best.coords.accuracy === 'number' ? best.coords.accuracy : Infinity;
+          if (best && bestAcc <= APPROX_FALLBACK_M) {
+            resolve({ pos: best, approximate: true });
+          } else if (best) {
+            reject(new Error(`GPS accuracy too low (${Math.round(bestAcc)}m). Try again outdoors.`));
+          } else {
+            reject(new Error('Could not get your location. Check GPS and try again.'));
+          }
+        }, APPROX_TIMEOUT_MS);
+      });
+    }
+
+    // Ask the user whether to proceed with an approximate start position.
+    // Resolves true (continue) or false (cancel).
+    function confirmApproximateStart(accuracyM) {
+      return new Promise((resolve) => {
+        goStatus.innerHTML =
+          `Start position approximate (${Math.round(accuracyM)}m). ` +
+          `<button class="approx-btn" id="approx-yes">Continue</button>` +
+          `<button class="approx-btn" id="approx-no">Cancel</button>`;
+        document.getElementById('approx-yes').addEventListener('click', () => resolve(true));
+        document.getElementById('approx-no').addEventListener('click', () => resolve(false));
+      });
+    }
+
     // --- Go button ---
     btnGo.addEventListener('click', async () => {
       // Don't start a new walk while one is already in progress — that would
@@ -1784,7 +1879,14 @@
         // allows both. Wait for the motion answer first — unlike motion,
         // geolocation prompts don't need a live user gesture.
         await settleSensorPermission(sensorPermission);
-        const pos = await getPosition();
+        const { pos, approximate } = await getAccuratePosition();
+        if (approximate) {
+          const proceed = await confirmApproximateStart(pos.coords.accuracy);
+          if (!proceed) {
+            goStatus.textContent = '';
+            return;
+          }
+        }
         const origin = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         const seed = randomSeed();
         const stops = parseInt(elStops.value, 10);
