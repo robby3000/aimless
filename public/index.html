@@ -689,6 +689,63 @@
     }
     .approx-btn:active { background: var(--accent-dim); }
 
+    /* --- First-visit welcome modal --- */
+    .welcome-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 24px;
+    }
+    .welcome-overlay[hidden] { display: none; }
+    .welcome-card {
+      background: var(--surface);
+      border: 1px solid var(--accent-dim);
+      border-radius: var(--radius);
+      padding: 28px 24px;
+      max-width: 400px;
+      width: 100%;
+      text-align: left;
+    }
+    .welcome-card h2 {
+      margin-bottom: 16px;
+      font-size: 1.3rem;
+      color: var(--fg);
+    }
+    .welcome-card p {
+      font-size: 0.92rem;
+      line-height: 1.55;
+      color: var(--fg-dim);
+      margin-bottom: 14px;
+    }
+    .welcome-card strong { color: var(--fg); }
+    .welcome-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 20px;
+    }
+    .welcome-btn {
+      flex: 1;
+      padding: 12px;
+      border: 1px solid var(--accent-dim);
+      border-radius: var(--radius);
+      background: none;
+      color: var(--fg);
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    .welcome-btn.primary {
+      background: var(--accent);
+      color: var(--bg);
+      border-color: var(--accent);
+      font-weight: 600;
+    }
+    .welcome-btn:active { background: var(--accent-dim); color: var(--fg); }
+    .welcome-btn.primary:active { background: var(--accent-dim); color: var(--fg); }
+
     /* --- Flash for arrival --- */
     #arrival-flash {
       position: fixed;
@@ -781,7 +838,7 @@
       body { background: white; color: black; }
       header, nav, .walk-actions, .detail-controls,
       .sheet-overlay, .sheet,
-      #portrait-nudge,
+      #portrait-nudge, #welcome-overlay,
       #screen-go, #screen-walk, #screen-archive, #screen-info { display: none !important; }
       #screen-detail { display: flex !important; overflow: visible; }
       #detail-content { overflow: visible; }
@@ -815,6 +872,20 @@
       <line x1="11" y1="18.5" x2="13" y2="18.5"/>
     </svg>
     <div class="nudge-text">Rotate to portrait</div>
+  </div>
+
+  <!-- First-visit welcome modal. Shown once per browser (localStorage flag). -->
+  <div id="welcome-overlay" class="welcome-overlay" hidden>
+    <div class="welcome-card">
+      <h2>Welcome to Aimless</h2>
+      <p>Press Go and follow a compass arrow to a set of random waypoints. Take photos at the waypoints and you'll end up with a self-contained HTML story of your walk.</p>
+      <p><strong>Install it for the full experience.</strong> Add Aimless to your home screen and it runs as a real app — full screen, offline, with protected storage for your walks.</p>
+      <p><strong>Nothing leaves your phone.</strong> No account, no server, no tracking. Your walks, photos and cards live only in this browser. Export anything you want to keep as a self-contained file.</p>
+      <div class="welcome-actions">
+        <button id="welcome-install" class="welcome-btn primary">Install</button>
+        <button id="welcome-later" class="welcome-btn">Maybe later</button>
+      </div>
+    </div>
   </div>
 
   <!-- Go screen -->
@@ -1140,6 +1211,46 @@
     }
     document.getElementById('inapp-banner-dismiss').addEventListener('click', () => {
       document.getElementById('inapp-banner').hidden = true;
+    });
+
+    // --- First-visit welcome modal ---
+    // Shows once per browser (localStorage flag), unless the app is already
+    // installed (standalone) — in which case the install pitch is irrelevant.
+    // The beforeinstallprompt event is captured on load so it's available when
+    // the user taps Install; on iOS it never fires, so the button falls back
+    // to sending the user to the Info screen's install instructions.
+    let deferredInstallPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+    });
+
+    const welcomeOverlay = document.getElementById('welcome-overlay');
+    const WELCOME_KEY = 'aimless.welcomeSeen';
+    try {
+      if (!localStorage.getItem(WELCOME_KEY) && !runningStandalone) {
+        welcomeOverlay.hidden = false;
+      }
+    } catch { /* private mode — skip the modal */ }
+
+    function dismissWelcome() {
+      welcomeOverlay.hidden = true;
+      try { localStorage.setItem(WELCOME_KEY, '1'); } catch { /* ignore */ }
+    }
+
+    document.getElementById('welcome-later').addEventListener('click', dismissWelcome);
+
+    document.getElementById('welcome-install').addEventListener('click', async () => {
+      if (deferredInstallPrompt) {
+        dismissWelcome();
+        deferredInstallPrompt.prompt();
+        deferredInstallPrompt = null;
+      } else {
+        // No native prompt (iOS, or already installed, or browser doesn't
+        // support it). Send the user to the Info screen's install FAQ.
+        dismissWelcome();
+        showScreen('info');
+      }
     });
 
     // --- Walk Result skins ---
