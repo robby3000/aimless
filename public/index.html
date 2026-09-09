@@ -722,6 +722,7 @@
       margin-bottom: 14px;
     }
     .welcome-card strong { color: var(--fg); }
+    .welcome-card a { color: var(--accent); text-decoration: underline; }
     .welcome-actions {
       display: flex;
       gap: 12px;
@@ -881,10 +882,7 @@
       <p>An app for random walks.</p>
       <p>Inspired by psychogeography as a photographic tool to generate a set of waypoints to explore, Aimless is also just a fun way to go on a different walk every day - while creating a beautiful artifact of your walk to keep and share. Follow the arrow, capture photos when prompted, configure your HTML keepsake when you get home.</p>
       <p><strong>Total Privacy:</strong> this is a local web app that only runs on your phone, no account required.</p>
-      <div class="welcome-actions">
-        <button id="welcome-install" class="welcome-btn primary">Install</button>
-        <button id="welcome-later" class="welcome-btn">Maybe later</button>
-      </div>
+      <p>Installing to your home screen will ensure your walk artifacts are preserved - see <a href="#" id="welcome-info-link">Info</a> tab.</p>
     </div>
   </div>
 
@@ -1229,22 +1227,14 @@
       try { localStorage.setItem(WELCOME_KEY, '1'); } catch { /* ignore */ }
     }
 
-    document.getElementById('welcome-later').addEventListener('click', dismissWelcome);
-
-    document.getElementById('welcome-install').addEventListener('click', () => {
-      const card = document.querySelector('.welcome-card');
-      card.innerHTML =
-        '<h2>Install Aimless</h2>' +
-        '<p>Installing to your home screen will ensure your walk artifacts are preserved - see <a href="#" id="welcome-info-link">Info</a> tab.</p>' +
-        '<div class="welcome-actions">' +
-          '<button class="welcome-btn" id="welcome-close">Close</button>' +
-        '</div>';
-      document.getElementById('welcome-info-link').addEventListener('click', (e) => {
-        e.preventDefault();
-        dismissWelcome();
-        showScreen('info');
-      });
-      document.getElementById('welcome-close').addEventListener('click', dismissWelcome);
+    // Tap anywhere outside the card, or the Info link, dismisses the modal.
+    welcomeOverlay.addEventListener('click', (e) => {
+      if (e.target === welcomeOverlay) dismissWelcome();
+    });
+    document.getElementById('welcome-info-link').addEventListener('click', (e) => {
+      e.preventDefault();
+      dismissWelcome();
+      showScreen('info');
     });
 
     // --- Walk Result skins ---
