@@ -1216,15 +1216,6 @@
     // --- First-visit welcome modal ---
     // Shows once per browser (localStorage flag), unless the app is already
     // installed (standalone) — in which case the install pitch is irrelevant.
-    // The beforeinstallprompt event is captured on load so it's available when
-    // the user taps Install; on iOS it never fires, so the button falls back
-    // to sending the user to the Info screen's install instructions.
-    let deferredInstallPrompt = null;
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredInstallPrompt = e;
-    });
-
     const welcomeOverlay = document.getElementById('welcome-overlay');
     const WELCOME_KEY = 'aimless.welcomeSeen';
     try {
@@ -1240,17 +1231,20 @@
 
     document.getElementById('welcome-later').addEventListener('click', dismissWelcome);
 
-    document.getElementById('welcome-install').addEventListener('click', async () => {
-      if (deferredInstallPrompt) {
-        dismissWelcome();
-        deferredInstallPrompt.prompt();
-        deferredInstallPrompt = null;
-      } else {
-        // No native prompt (iOS, or already installed, or browser doesn't
-        // support it). Send the user to the Info screen's install FAQ.
+    document.getElementById('welcome-install').addEventListener('click', () => {
+      const card = document.querySelector('.welcome-card');
+      card.innerHTML =
+        '<h2>Install Aimless</h2>' +
+        '<p>Installing to your home screen will ensure your walk artifacts are preserved - see <a href="#" id="welcome-info-link">Info</a> tab.</p>' +
+        '<div class="welcome-actions">' +
+          '<button class="welcome-btn" id="welcome-close">Close</button>' +
+        '</div>';
+      document.getElementById('welcome-info-link').addEventListener('click', (e) => {
+        e.preventDefault();
         dismissWelcome();
         showScreen('info');
-      }
+      });
+      document.getElementById('welcome-close').addEventListener('click', dismissWelcome);
     });
 
     // --- Walk Result skins ---
