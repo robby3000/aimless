@@ -1118,7 +1118,8 @@
     import { SKINS, getSkin, scopeCSS, BASE_CSS } from './lib/skins.js';
     import { isIOS, isInAppBrowser, isStandalone } from './lib/platform.js';
     import { buildHexIndex, innerCard } from './lib/inner.js';
-    import { FILTERS, getFilter, buildFilterCSS, buildFilterDefs, buildFilteredPhotoHTML, PHOTO_FRAME_CSS } from './lib/filters.js';
+    import { FILTERS, getFilter, PHOTO_FRAME_CSS } from './lib/filters.js';
+    import { renderToCanvas } from './lib/engine/canvas.js';
     import { renderPhotoToCanvas } from './lib/filter-renderer.js';
     import { resolveNavTarget, canStartNewWalk } from './lib/walk-nav.js';
 
@@ -1258,22 +1259,11 @@
     const frameStyle = document.createElement('style');
     frameStyle.textContent = scopeCSS(PHOTO_FRAME_CSS, '#detail-content');
     document.head.appendChild(frameStyle);
-    const filterStyle = document.createElement('style');
-    document.head.appendChild(filterStyle);
-    const elDetailContent = document.getElementById('detail-content');
     let currentSkin = 'default';
     let currentFilter = 'original';
 
     function applySkin() {
       skinStyle.textContent = scopeCSS(getSkin(currentSkin).css, '#detail-content');
-    }
-
-    // A filter change updates the active pipeline class and its shared assets;
-    // showWalkDetail rebuilds each photo's ordered operation wrappers.
-    function applyFilter() {
-      const f = getFilter(currentFilter);
-      elDetailContent.className = f.spec.effects.length ? `filter-${f.id}` : '';
-      filterStyle.textContent = buildFilterCSS(f.id, '#detail-content');
     }
 
     // Horizontal scroll-snap rail: the centred token is the selected one.
@@ -1342,8 +1332,8 @@
     });
     const filterRail = makeRail(railFilter, (value) => {
       currentFilter = value;
-      applyFilter();
       savePrefs();
+      // Photos are baked pixels, so a filter change rebuilds the detail view.
       if (currentDetailWalk) showWalkDetail(currentDetailWalk.id);
     });
 
@@ -2548,6 +2538,32 @@
     // --- Walk detail ---
     let currentDetailWalk = null;
 
+    // Detail photos render through the engine at a preview cap, then cache
+    // as data URLs keyed by photo + filter — the same pixels A5 embeds.
+    const PREVIEW_MAX_DIM = 1200;
+    const photoRenderCache = new Map();
+
+    async function renderDetailPhoto(photo, filterId) {
+      const key = `${photo.id}:${filterId}`;
+      if (photoRenderCache.has(key)) return photoRenderCache.get(key);
+      const objectUrl = !photo.dataUrl && photo.blob;
+      const src = photo.dataUrl || (photo.blob ? URL.createObjectURL(photo.blob) : null);
+      if (!src) return null;
+      try {
+        const img = await loadImage(src);
+        const canvas = renderToCanvas(img, getFilter(filterId).spec, { maxDim: PREVIEW_MAX_DIM });
+        const url = canvas.toDataURL('image/jpeg', 0.85);
+        photoRenderCache.set(key, url);
+        if (photoRenderCache.size > 40) photoRenderCache.delete(photoRenderCache.keys().next().value);
+        if (objectUrl) URL.revokeObjectURL(src);
+        return url;
+      } catch {
+        // A legacy IndexedDB blob may be unreadable on iOS — show the raw
+        // source rather than dropping the photo.
+        return src;
+      }
+    }
+
     async function showWalkDetail(walkId) {
       const db = await dbPromise;
       if (!db) return;
@@ -2570,18 +2586,23 @@
       const trace = walk.trace || [];
       const svg = traceSVG({ origin: walk.origin, stops: walk.stops }, trace, getSkin(currentSkin).trace);
 
-      // Build stop cards with photos.
+      // Build stop cards with photos. Photos are baked pixels: each renders
+      // through the engine once per filter and caches as a data URL.
       const photoMap = new Map();
       for (const p of photos) photoMap.set(p.stopSeq, p);
+      const renderedPhotos = new Map();
+      await Promise.all(photos.map(async (p) => {
+        const url = await renderDetailPhoto(p, currentFilter);
+        if (url) renderedPhotos.set(p.stopSeq, url);
+      }));
+      const clipped = getFilter(currentFilter).spec.effects.length ? ' filter-clipped' : '';
 
       // Same markup vocabulary as the HTML export, so the shared base styles
       // and skins behave identically here and in the exported file.
       const stopHtml = walk.stops.map((s, i) => {
-        const photo = photoMap.get(s.seq);
-        // Prefer the stored data URL; the blob branch only exists for walks
-        // saved before the switch (and on iOS those blobs may be corrupt).
-        const photoHtml = photo
-          ? buildFilteredPhotoHTML(photo.dataUrl || URL.createObjectURL(photo.blob), currentFilter, 'photo')
+        const photoUrl = renderedPhotos.get(s.seq);
+        const photoHtml = photoUrl
+          ? `<div class="photo-frame${clipped}"><img class="filter-image" src="${photoUrl}" alt="photo"></div>`
           : '';
         const status = s.approached
           ? '<span class="status approached">close as I can get</span>'
@@ -2610,7 +2631,6 @@
       }).join('');
 
       document.getElementById('detail-content').innerHTML = `
-        ${buildFilterDefs(currentFilter)}
         <h1>Aimless</h1>
         <div class="seed">${walk.seed}</div>
         ${voice ? `<div class="walk-voice">Voice of ${voice}</div>` : ''}
@@ -2623,7 +2643,6 @@
       `;
 
       applySkin();
-      applyFilter();
       showScreen('detail');
       // Sync the rails after the screen is visible so their geometry exists.
       skinRail.setValue(currentSkin);
