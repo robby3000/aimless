@@ -50,6 +50,7 @@ public/
     inner.js            # The Inner voice: I Ching hexagram from coordinates (docs/iching/)
     filters.js          # ordered photo filter presets and Wobbletone translation
     filter-renderer.js  # ordered canvas pipeline for filtered share cards
+    engine/             # wobbletone-engine git submodule — shared CPU renderer (do not edit here)
     kml.js              # KML route export (plan + trace + stop placemarks)
     walk-nav.js         # navigation guard: prevents bottom-nav taps from canceling a walk
   data/
@@ -123,6 +124,11 @@ in the sibling `glyph-drift` repo at `docs/device-reality.md`.
 `sw.js` derives its root from `new URL('./', self.location)`. This is what lets the same build
 serve from a domain root and from the `/aimless/` GitHub Pages prefix. Do not "tidy" them back
 to absolute paths.
+
+**Never edit files under `public/lib/engine/`** — it is a git submodule of
+`wobbletone-engine`. Change the engine repo, push, then bump the submodule
+pointer here (`cd public/lib/engine && git fetch && git checkout <sha>`). CI
+checks out with `submodules: true`; the engine repo is public.
 
 Vanilla ES modules. Pure logic in `public/lib/*.js`, tested with `node --test`; anything touching
 the DOM, storage or geolocation stays in `public/index.html` or `sim.html` and is verified manually

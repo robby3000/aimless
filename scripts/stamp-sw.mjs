@@ -19,7 +19,10 @@ const SW = join(PUBLIC, 'sw.js');
 // would make the hash depend on itself and never settle.
 // .DS_Store is excluded at any depth: macOS metadata that exists locally but
 // not in CI, so including it makes the stamp pass on macOS and fail on Linux.
-const EXCLUDE = new Set(['sw.js', '.DS_Store']);
+// .git is excluded: public/lib/engine is a git submodule, and its .git
+// gitfile records a machine-specific path (absolute in CI checkouts,
+// relative locally) — including it makes the stamp machine-dependent.
+const EXCLUDE = new Set(['sw.js', '.DS_Store', '.git']);
 
 /** Every file under public/, as paths relative to public/, sorted. */
 function walk(dir) {

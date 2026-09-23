@@ -2,7 +2,7 @@
 // A walking app must work with no signal - precache the shell, fall back to
 // cache for everything else. No CDN, no external resources (roadmap A2).
 
-const CACHE = 'aimless-v0.2.0-523ea530';
+const CACHE = 'aimless-v0.2.0-78a05374';
 
 // Resolved against the worker's own URL, so the app works at a domain root
 // or under a subpath (GitHub Pages project sites) with no changes.
@@ -36,6 +36,24 @@ const PRECACHE = [
   './lib/filters.js',
   './lib/filter-renderer.js',
   './lib/walk-nav.js',
+  './lib/engine/version.js',
+  './lib/engine/spec.js',
+  './lib/engine/registry.js',
+  './lib/engine/rng.js',
+  './lib/engine/color.js',
+  './lib/engine/buffer.js',
+  './lib/engine/render.js',
+  './lib/engine/canvas.js',
+  './lib/engine/incremental.js',
+  './lib/engine/effects/pointwise.js',
+  './lib/engine/effects/tone.js',
+  './lib/engine/effects/blur.js',
+  './lib/engine/effects/overlay.js',
+  './lib/engine/effects/grain.js',
+  './lib/engine/effects/glitch.js',
+  './lib/engine/effects/bloom.js',
+  './lib/engine/effects/dropshadow.js',
+  './lib/engine/effects/compound.js',
   './data/crow.json',
   './data/threshold.json',
   './data/lattice.json',
