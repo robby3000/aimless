@@ -49,7 +49,7 @@ public/
     platform.js         # UA detection: isIOS, isInAppBrowser, isStandalone
     inner.js            # The Inner voice: I Ching hexagram from coordinates (docs/iching/)
     filters.js          # Filter Spec presets ({id,name,spec}) + Wobbletone translation
-    filter-renderer.js  # ordered canvas pipeline for filtered share cards
+    filter-renderer.js  # thin engine adapter: cover-fit + renderToCanvas (share cards)
     engine/             # wobbletone-engine git submodule — shared CPU renderer (do not edit here)
     kml.js              # KML route export (plan + trace + stop placemarks)
     walk-nav.js         # navigation guard: prevents bottom-nav taps from canceling a walk
@@ -58,7 +58,8 @@ public/
     inner.json          # 64 hexagrams: number, hex_font, binary, title, haiku
 test/
   geo.test.js  rng.test.js  walk.test.js  deck.test.js  proximity.test.js  skins.test.js
-  platform.test.js  export.test.js  inner.test.js  filters.test.js  filter-renderer.test.js  kml.test.js  walk-nav.test.js
+  platform.test.js  export.test.js  inner.test.js  filters.test.js  filter-renderer.test.js
+  kml.test.js  walk-nav.test.js  engine.test.js
 scripts/
   make-icons.mjs      # npm run icons
   stamp-sw.mjs        # npm run stamp -- rewrites the sw.js cache name
@@ -129,6 +130,12 @@ to absolute paths.
 `wobbletone-engine`. Change the engine repo, push, then bump the submodule
 pointer here (`cd public/lib/engine && git fetch && git checkout <sha>`). CI
 checks out with `submodules: true`; the engine repo is public.
+
+Photo filters are Filter Specs (`{id, name, spec}` in `filters.js`), rendered to pixels by the
+`engine/` submodule (`renderToCanvas`). Preview, share cards, and export all use baked pixels —
+there is no CSS/SVG filter pipeline. Runtime-imported specs persist in the `filters` store (Dexie
+schema v2) and resolve through `getFilter` after the built-ins. Exported keepsakes must stay free
+of scripts and filter machinery — `export.test.js` asserts it.
 
 Vanilla ES modules. Pure logic in `public/lib/*.js`, tested with `node --test`; anything touching
 the DOM, storage or geolocation stays in `public/index.html` or `sim.html` and is verified manually
