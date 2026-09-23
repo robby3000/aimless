@@ -1,7 +1,6 @@
-import { test, afterEach } from 'node:test';
+import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildHTMLExport, voiceName, formatWalkDate } from '../public/lib/export.js';
-import { FILTERS, translateWobbletonePreset } from '../public/lib/filters.js';
 
 const WALK = {
   id: 'walk-1',
@@ -33,9 +32,7 @@ const INNER_WALK = {
   ],
 };
 
-afterEach(() => { delete globalThis.FileReader; });
-
-test('buildHTMLExport embeds a stored data URL as-is', async () => {
+test('buildHTMLExport embeds a rendered data URL as-is', async () => {
   const dataUrl = 'data:image/jpeg;base64,QUJD';
   const html = await buildHTMLExport(WALK, [{ stopSeq: 0, dataUrl }], '<svg></svg>');
   assert.ok(html.includes(`src="${dataUrl}"`));
@@ -43,22 +40,11 @@ test('buildHTMLExport embeds a stored data URL as-is', async () => {
   assert.ok(html.includes('moss-fern-quartz'));
 });
 
-test('buildHTMLExport converts a legacy blob via FileReader', async () => {
-  globalThis.FileReader = class {
-    readAsDataURL() { this.result = 'data:image/jpeg;base64,REVG'; this.onload(); }
-  };
+test('buildHTMLExport skips photos without a rendered dataUrl', async () => {
+  // The caller renders photos through the engine first; anything without a
+  // dataUrl (e.g. an unreadable legacy IndexedDB blob) is omitted.
   const html = await buildHTMLExport(WALK, [{ stopSeq: 0, blob: new Blob(['x']) }], '<svg></svg>');
-  assert.ok(html.includes('src="data:image/jpeg;base64,REVG"'));
-});
-
-test('buildHTMLExport skips a photo whose legacy blob cannot be read', async () => {
-  // iOS WebKit corrupts IndexedDB-stored blobs after a restart; the export
-  // must still be produced, just without that photo.
-  globalThis.FileReader = class {
-    readAsDataURL() { this.error = new Error('WebKitBlobResource error 1'); this.onerror(); }
-  };
-  const html = await buildHTMLExport(WALK, [{ stopSeq: 0, blob: new Blob(['x']) }], '<svg></svg>');
-  assert.ok(!html.includes('<img src="data:'));
+  assert.ok(!html.includes('<img src='));
   assert.ok(html.includes('First card.'));
 });
 
@@ -132,67 +118,38 @@ test('haiku lines become one block element per line', async () => {
   assert.equal((html.match(/<span class="haiku-line">/g) || []).length, 3);
 });
 
-test('photos are wrapped in .photo-frame for ordered filter operations', async () => {
+test('photos embed as plain img in a .photo-frame wrapper', async () => {
   const html = await buildHTMLExport(WALK, [{ stopSeq: 0, dataUrl: 'data:image/jpeg;base64,QUJD' }], '<svg></svg>');
-  assert.ok(html.includes('<div class="photo-frame"><img class="filter-image" src="data:image/jpeg;base64,QUJD"'));
-  assert.ok(html.includes('.photo-frame { position: relative;'));
+  assert.ok(html.includes('<div class="photo-frame"><img src="data:image/jpeg;base64,QUJD" alt="photo"></div>'));
+  assert.ok(html.includes('.photo-frame'));
 });
 
-test('a photo filter adds a body class and ordered operation markup', async () => {
+test('exported artifacts carry no script or filter machinery', async () => {
   const dataUrl = 'data:image/jpeg;base64,QUJD';
-  const html = await buildHTMLExport(WALK, [{ stopSeq: 0, dataUrl }], '<svg></svg>', '', 'sky', 'noire');
-  assert.ok(html.includes('<body class="filter-noire">'));
-  assert.ok(html.includes('filter:grayscale(100%) contrast(175%) brightness(85%)'));
-  assert.ok(html.includes('radial-gradient(circle, transparent 40%, rgba(0,0,0,0.85) 100%)'));
+  const html = await buildHTMLExport(WALK, [{ stopSeq: 0, dataUrl }], '<svg></svg>');
+  assert.ok(!html.includes('<script'));
+  assert.ok(!html.includes('filter:'));
+  assert.ok(!html.includes('url(#'));
+  assert.ok(!html.includes('filter-step'));
+  assert.ok(!html.includes('filter-defs'));
+  assert.ok(!html.includes('filter-composite'));
+  assert.ok(!html.includes('filter-overlay'));
+  assert.ok(html.includes('<body>'));
   assert.equal((html.match(/data:image\/jpeg;base64,QUJD/g) || []).length, 1);
 });
 
-test('Psych post 2 export preserves its ordered stack and shared grain', async () => {
-  const dataUrl = 'data:image/jpeg;base64,PSYCH';
-  const html = await buildHTMLExport(WALK, [{ stopSeq: 0, dataUrl }], '<svg></svg>', '', 'sky', 'psych-post-2');
-  assert.ok(html.includes('<body class="filter-psych-post-2">'));
-  const saturation = html.indexOf('filter:saturate(120%)');
-  const vignette = html.indexOf('radial-gradient(ellipse at center, transparent 40%, #000000 100%)');
-  const blur = html.indexOf('filter:blur(8.7px)');
-  const posterize = html.indexOf('filter:url(#aimless-psych-post-2-4)');
-  const grain = html.indexOf('background-image:var(--aimless-grain)');
-  const psychedelic = html.indexOf('filter:saturate(280%) contrast(130%)');
-  assert.ok([saturation, vignette, blur, posterize, grain, psychedelic].every((position) => position >= 0));
-  assert.equal(html.split(dataUrl).length - 1, 1);
-  assert.equal((html.match(/--aimless-grain:/g) || []).length, 1);
-  assert.match(html, /background-size:90px/);
-  assert.match(html, /data:image\/png;base64/);
-  assert.match(html, /animation-duration:20s/);
-  assert.match(html, /prefers-reduced-motion/);
+test('skin CSS filter declarations are stripped from the embedded styles', async () => {
+  const skin = 'img { border: 2px solid #33ff33; border-radius: 0; filter: contrast(1.1); }';
+  const html = await buildHTMLExport(WALK, [], '<svg></svg>', skin);
+  assert.ok(html.includes('border: 2px solid #33ff33'));
+  assert.ok(!html.includes('filter:'));
 });
 
-test('advanced exports emit shared assets once and each photo source once', async () => {
-  const filter = translateWobbletonePreset({
-    id: 'advanced', name: 'Advanced', effects: [
-      { defId: 'duotone', params: { shadow: '#102030', highlight: '#f0d0b0', contrast: 20 } },
-      { defId: 'grain', params: { size: 1, opacity: 20, blend: 'overlay' } },
-      { defId: 'bloom', params: { blur: 8, threshold: 140, contrast: 180, saturate: 100, opacity: 30, color: '#ffffff', tint: 0, blend: 'screen' } },
-    ],
-  });
-  FILTERS.push(filter);
-  try {
-    const walk = { ...WALK, stops: Array.from({ length: 7 }, (_, seq) => ({ seq, lat: 55.86 + seq / 1000, lng: -4.25, reachedAt: 1, cardText: `Card ${seq}` })) };
-    const photos = walk.stops.map(({ seq }) => ({ stopSeq: seq, dataUrl: `data:image/jpeg;base64,PHOTO${seq}` }));
-    const html = await buildHTMLExport(walk, photos, '<svg></svg>', '', 'sky', 'advanced');
-    photos.forEach(({ dataUrl }) => assert.equal(html.split(dataUrl).length - 1, 1));
-    assert.equal((html.match(/id="aimless-advanced-1"/g) || []).length, 1);
-    assert.equal((html.match(/id="aimless-advanced-3"/g) || []).length, 1);
-    assert.equal((html.match(/--aimless-grain:/g) || []).length, 1);
-  } finally {
-    FILTERS.pop();
-  }
-});
-
-test('Original adds no filter class or CSS', async () => {
-  const html = await buildHTMLExport(WALK, [], '<svg></svg>');
-  assert.ok(html.includes('<body>'));
-  assert.ok(!html.includes('filter-original'));
-  assert.ok(!html.includes('<style id="filter">'));
+test('each photo source appears exactly once', async () => {
+  const walk = { ...WALK, stops: Array.from({ length: 7 }, (_, seq) => ({ seq, lat: 55.86 + seq / 1000, lng: -4.25, reachedAt: 1, cardText: `Card ${seq}` })) };
+  const photos = walk.stops.map(({ seq }) => ({ stopSeq: seq, dataUrl: `data:image/jpeg;base64,PHOTO${seq}` }));
+  const html = await buildHTMLExport(walk, photos, '<svg></svg>');
+  photos.forEach(({ dataUrl }) => assert.equal(html.split(dataUrl).length - 1, 1));
 });
 
 test('voiceName maps slugs and tolerates unknowns', () => {

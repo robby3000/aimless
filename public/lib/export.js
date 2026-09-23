@@ -4,8 +4,21 @@
 import { unreachableRate } from './proximity.js';
 import { formatKm } from './geo.js';
 import { BASE_CSS, PRINT_CSS } from './skins.js';
-import { buildFilterCSS, buildFilterDefs, buildFilteredPhotoHTML, getFilter, PHOTO_FRAME_CSS } from './filters.js';
 import { buildKmlString } from './kml.js';
+
+const esc = (value) => String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+// Exported artifacts are baked pixels in plain <img> tags — no CSS/SVG
+// filter machinery. This is the only photo styling the keepsake needs.
+const PHOTO_CSS = `.photo-frame { margin-top: 8px; border-radius: 8px; overflow: hidden; }
+.photo-frame img { display: block; width: 100%; height: auto; }`;
+
+// The keepsake must contain no filter processing at all: baked images,
+// no `filter:` declarations. Skins may legitimately carry img filters
+// (e.g. oldskool's contrast bump) — strip them from the embedded CSS.
+function stripFilterDeclarations(css) {
+  return css.replace(/filter\s*:[^;}]+;?/g, '');
+}
 
 /**
  * The transparent monochrome app icons (public/icons/icon-*.svg), inlined
@@ -64,31 +77,19 @@ export function blobToDataURL(blob) {
 /**
  * Build a self-contained HTML document for a walk.
  * @param {object} walk  The walk record from IndexedDB.
- * @param {Array} photos Array of { stopSeq, dataUrl?, blob? } for this walk.
+ * @param {Array} photos Array of { stopSeq, dataUrl } for this walk — the
+ *   caller renders each photo through the engine first, so every dataUrl
+ *   is already filtered baked pixels.
  * @param {string} svgTrace  Pre-rendered SVG string of the trace.
  * @param {string} [skinCss]  Optional skin CSS fragment (lib/skins.js),
  *   embedded after the base styles. CSS only - no scripts, ever.
  * @param {string} [icon]  Logo variant ('light' | 'dark' | 'sky') - the
  *   active skin's `icon` field, chosen for contrast against its background.
- * @param {string} [filterId]  Photo filter preset (lib/filters.js); the
- *   export carries the same filter as the Walk Detail preview.
  */
-export async function buildHTMLExport(walk, photos, svgTrace, skinCss = '', icon = 'sky', filterId = 'original') {
-  const photoMap = new Map();
-  for (const p of photos) photoMap.set(p.stopSeq, p);
-
+export async function buildHTMLExport(walk, photos, svgTrace, skinCss = '', icon = 'sky') {
   const photoDataUrls = new Map();
-  for (const [seq, p] of photoMap) {
-    if (p.dataUrl) {
-      photoDataUrls.set(seq, p.dataUrl);
-    } else if (p.blob) {
-      try {
-        photoDataUrls.set(seq, await blobToDataURL(p.blob));
-      } catch {
-        // Legacy IndexedDB blob unreadable (WebKit corrupts stored blobs
-        // after a restart) - export the walk without this photo.
-      }
-    }
+  for (const p of photos) {
+    if (p.dataUrl) photoDataUrls.set(p.stopSeq, p.dataUrl);
   }
 
   const date = walk.started ? formatWalkDate(walk.started) : 'Unknown date';
@@ -99,7 +100,7 @@ export async function buildHTMLExport(walk, photos, svgTrace, skinCss = '', icon
 
   const stopCards = walk.stops.map((s, i) => {
     const photoUrl = photoDataUrls.get(s.seq);
-    const photoHtml = photoUrl ? buildFilteredPhotoHTML(photoUrl, filterId) : '';
+    const photoHtml = photoUrl ? `<div class="photo-frame"><img src="${esc(photoUrl)}" alt="photo"></div>` : '';
     const status = s.approached
       ? '<span class="status approached">close as I can get</span>'
       : s.reachedAt
@@ -126,11 +127,9 @@ export async function buildHTMLExport(walk, photos, svgTrace, skinCss = '', icon
     </div>`;
   }).join('\n');
 
-  // The active photo filter rides along as a class on <body> plus its CSS,
-  // so the keepsake looks like the Walk Detail preview did.
-  const filter = getFilter(filterId);
-  const filterCss = buildFilterCSS(filter.id, 'body');
-  const filterDefs = buildFilterDefs(filter.id);
+  // Filtered pixels are baked into the photo data URLs — the artifact
+  // carries no filter markup, no SVG defs, no CSS filter declarations.
+  const embeddedCss = stripFilterDeclarations(`${BASE_CSS}\n${PHOTO_CSS}\n@media print {\n${PRINT_CSS}\n}`);
 
   // Embed the KML route as a data URI so the keepsake offers a route export
   // with no scripts — just an anchor with a download attribute. The KML is
@@ -145,17 +144,11 @@ export async function buildHTMLExport(walk, photos, svgTrace, skinCss = '', icon
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Aimless — Walk ${walk.seed}</title>
 <style>
-${BASE_CSS}
-${PHOTO_FRAME_CSS}
-@media print {
-${PRINT_CSS}
-}
+${embeddedCss}
 </style>
-${skinCss ? `<style id="skin">\n${skinCss}\n</style>` : ''}
-${filterCss ? `<style id="filter">\n${filterCss}\n</style>` : ''}
+${skinCss ? `<style id="skin">\n${stripFilterDeclarations(skinCss)}\n</style>` : ''}
 </head>
-<body${filter.spec.effects.length ? ` class="filter-${filter.id}"` : ''}>
-  ${filterDefs}
+<body>
   <h1><a class="app-link" href="https://aimless.earth"><img class="app-icon" src="${logoDataUri(icon)}" alt="">Aimless</a></h1>
   <div class="seed">${walk.seed}</div>
   ${voice ? `<div class="walk-voice">Voice of ${voice}</div>` : ''}

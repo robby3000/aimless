@@ -3,13 +3,7 @@ import assert from 'node:assert/strict';
 import { validateSpec } from '../public/lib/engine/spec.js';
 import {
   FILTERS,
-  buildFilterCSS,
-  buildFilterDefs,
-  buildFilteredPhotoHTML,
   getFilter,
-  gradientCSS,
-  grainDataUri,
-  specToOperations,
   translateWobbletoneArchive,
   translateWobbletonePreset,
   validateFilter,
@@ -118,52 +112,15 @@ test('Psych post 2 preserves its source order, values, and display name', () => 
   assert.equal(effects[5].params.animate, 'yes');
 });
 
-test('specToOperations bridges spec effects to the legacy markup path', () => {
-  const ops = specToOperations(getFilter('old-film').spec);
-  assert.deepEqual(ops.map((operation) => operation.kind), ['css-filter', 'overlay']);
-  assert.equal(ops[0].value, 'sepia(35%) contrast(90%) brightness(105%) saturate(85%)');
-  assert.equal(ops[1].effect, 'gradient');
-  assert.equal(ops[1].params.blend, 'multiply');
-  const psych = specToOperations(getFilter('psych-post-2').spec);
-  assert.deepEqual(psych.map((operation) => operation.kind), ['css-filter', 'overlay', 'css-filter', 'pixel', 'grain', 'css-filter']);
-  assert.deepEqual(psych[5].animation, { name: 'hue-cycle', duration: 20 });
-});
-
 test('getFilter falls back to original for unknown ids', () => {
   assert.equal(getFilter('pop').name, 'Pop');
   assert.equal(getFilter('nope').id, 'original');
-});
-
-test('gradientCSS renders radial and linear CSS gradients', () => {
-  assert.equal(
-    gradientCSS({ kind: 'radial', stops: [[0.6, 'transparent'], [1, 'rgba(0,0,0,0.85)']] }),
-    'radial-gradient(circle, transparent 60%, rgba(0,0,0,0.85) 100%)'
-  );
-  assert.equal(
-    gradientCSS({ kind: 'linear', angle: 45, stops: [[0, 'red'], [1, 'blue']] }),
-    'linear-gradient(45deg, red 0%, blue 100%)'
-  );
-  assert.equal(
-    gradientCSS({ kind: 'linear', angle: 0, stops: [[0, 'red'], [1, 'blue']] }),
-    'linear-gradient(0deg, red 0%, blue 100%)'
-  );
 });
 
 test('all current Wobbletone effects translate into spec effects in order', () => {
   const filter = translateWobbletonePreset({ id: 'everything', name: 'Everything', effects: EFFECTS });
   assert.equal(filter.spec.effects.length, EFFECTS.length);
   assert.deepEqual(filter.spec.effects.map((effect) => effect.type), EFFECTS.map((effect) => effect.defId));
-  // specToOperations coalesces contiguous css-filter runs; the animated
-  // psychedelic op stays on its own op.
-  const ops = specToOperations(filter.spec);
-  assert.deepEqual(ops.map((operation) => operation.kind), [
-    'css-filter',
-    ...Array(5).fill('pixel'),
-    'bloom', 'pixel', 'overlay', 'overlay', 'grain',
-    'overlay', 'overlay', 'overlay', 'pixel',
-    'css-filter', 'css-filter',
-  ]);
-  assert.ok(ops[15].animation);
 });
 
 test('versioned Wobbletone archives translate and incompatible archives fail', () => {
@@ -212,57 +169,4 @@ test('validateFilter requires a valid id, name, and spec', () => {
     () => validateFilter({ id: 'bad', name: 'Bad', spec: { format: 'wobbletone-filter', version: 1, effects: [{ type: 'future-effect', params: {} }] } }),
     /future-effect/
   );
-});
-
-test('photo markup preserves arbitrary operation ordering and the source once', () => {
-  const dataUrl = 'data:image/jpeg;base64,QUJD';
-  const html = buildFilteredPhotoHTML(dataUrl, 'old-film', 'photo');
-  assert.equal((html.match(/data:image\/jpeg/g) || []).length, 1);
-  assert.ok(html.indexOf('filter-image') < html.indexOf('filter-overlay'));
-  assert.ok(html.includes('filter:sepia(35%) contrast(90%)'));
-  assert.ok(html.includes('mix-blend-mode:multiply'));
-  assert.ok(html.includes('filter-clipped'));
-});
-
-test('SVG definitions are deterministic and emitted once per operation', () => {
-  const filter = translateWobbletonePreset({ id: 'tone', name: 'Tone', effects: [EFFECTS[9], EFFECTS[14], EFFECTS[22]] });
-  FILTERS.push(filter);
-  try {
-    const first = buildFilterDefs('tone');
-    const second = buildFilterDefs('tone');
-    assert.equal(first, second);
-    assert.match(first, /id="aimless-tone-1"/);
-    assert.match(first, /id="aimless-tone-2"/);
-    assert.match(first, /id="aimless-tone-3"/);
-    assert.equal((first.match(/<filter /g) || []).length, 3);
-    assert.match(first, /<feComposite in="rgb" in2="SourceGraphic" operator="in"\/>/);
-  } finally {
-    FILTERS.pop();
-  }
-});
-
-test('grain and animation assets are emitted only when required', () => {
-  const filter = translateWobbletonePreset({ id: 'motion', name: 'Motion', effects: [EFFECTS[18], EFFECTS[23]] });
-  FILTERS.push(filter);
-  try {
-    const css = buildFilterCSS('motion', 'body');
-    assert.equal((css.match(/data:image\/png;base64/g) || []).length, 1);
-    assert.match(css, /@keyframes aimless-hue-cycle/);
-    assert.match(css, /prefers-reduced-motion/);
-    assert.match(css, /print/);
-    const grain = grainDataUri();
-    const png = Buffer.from(grain.split(',')[1], 'base64');
-    assert.equal(png.readUInt32BE(16), 64);
-    assert.equal(png.readUInt32BE(20), 64);
-    assert.equal(png[24], 8);
-    assert.equal(png[25], 0);
-    assert.equal(grain, grainDataUri());
-  } finally {
-    FILTERS.pop();
-  }
-});
-
-test('Original adds no filter-specific CSS or SVG definitions', () => {
-  assert.equal(buildFilterCSS('original', '#detail-content'), '');
-  assert.equal(buildFilterDefs('original'), '');
 });
