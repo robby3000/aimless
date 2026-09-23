@@ -1,7 +1,7 @@
 // IndexedDB via Dexie (vendored ESM build at ./dexie.mjs, Apache-2.0).
-// Three stores (blueprint section 9). The schema matches the original
-// hand-rolled IndexedDB version 1 exactly, so existing databases open
-// without an upgrade.
+// Four stores (blueprint section 9). The v1 schema matches the original
+// hand-rolled IndexedDB exactly, so existing databases open without an
+// upgrade; v2 adds the imported-filter store.
 
 import Dexie from './dexie.mjs';
 
@@ -14,6 +14,9 @@ export function openDB() {
     walks: 'id, started',
     photos: 'id, walkId, [walkId+stopSeq]',
     prefs: 'key',
+  });
+  db.version(2).stores({
+    filters: 'id',
   });
   return db.open().then(() => db);
 }

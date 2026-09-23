@@ -3,7 +3,10 @@ import assert from 'node:assert/strict';
 import { validateSpec } from '../public/lib/engine/spec.js';
 import {
   FILTERS,
+  allFilters,
   getFilter,
+  importFilterSpec,
+  setImportedFilters,
   translateWobbletoneArchive,
   translateWobbletonePreset,
   validateFilter,
@@ -169,4 +172,44 @@ test('validateFilter requires a valid id, name, and spec', () => {
     () => validateFilter({ id: 'bad', name: 'Bad', spec: { format: 'wobbletone-filter', version: 1, effects: [{ type: 'future-effect', params: {} }] } }),
     /future-effect/
   );
+});
+
+test('importFilterSpec validates spec JSON and derives a slug id', () => {
+  const record = importFilterSpec(
+    JSON.stringify({ format: 'wobbletone-filter', version: 1, name: 'My Look', effects: [{ type: 'contrast', params: { v: 150 } }] }),
+    []
+  );
+  assert.equal(record.id, 'my-look');
+  assert.equal(record.name, 'My Look');
+  assert.equal(record.spec.effects[0].params.v, 150);
+});
+
+test('importFilterSpec accepts legacy v1 presets and de-duplicates ids', () => {
+  const record = importFilterSpec({ name: 'Pop', effects: [{ defId: 'contrast', params: { v: 130 } }] }, []);
+  assert.equal(record.id, 'pop-2'); // 'pop' is a built-in
+  assert.equal(record.spec.effects[0].type, 'contrast');
+  const again = importFilterSpec({ name: 'Pop', effects: [] }, ['pop-2']);
+  assert.equal(again.id, 'pop-3');
+});
+
+test('importFilterSpec rejects invalid input loudly', () => {
+  assert.throws(() => importFilterSpec('{nope'), /JSON/);
+  assert.throws(() => importFilterSpec('[]'), /filter specification/);
+  assert.throws(
+    () => importFilterSpec('{"format":"wobbletone-filter","version":1,"effects":[{"type":"nope","params":{}}]}'),
+    /unknown effect type.*nope/
+  );
+});
+
+test('imported filters resolve through getFilter and allFilters', () => {
+  const record = importFilterSpec({ format: 'wobbletone-filter', version: 1, name: 'ZZ Custom', effects: [] }, []);
+  setImportedFilters([record]);
+  try {
+    assert.equal(getFilter('zz-custom').name, 'ZZ Custom');
+    assert.equal(getFilter('pop').name, 'Pop');
+    assert.equal(allFilters().length, FILTERS.length + 1);
+    assert.equal(getFilter('nope').id, 'original');
+  } finally {
+    setImportedFilters([]);
+  }
 });

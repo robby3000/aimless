@@ -149,6 +149,39 @@ export function validateFilter(filter) {
 
 FILTERS.forEach(validateFilter);
 
+// Imported filters live in the 'filters' IndexedDB store; index.html
+// hydrates this list at startup and after every import/delete.
+let importedFilters = [];
+
+export function setImportedFilters(filters) {
+  importedFilters = (filters || []).map((filter) => validateFilter(filter));
+  return importedFilters;
+}
+
+export function allFilters() {
+  return [...FILTERS, ...importedFilters];
+}
+
 export function getFilter(id) {
-  return FILTERS.find((filter) => filter.id === id) || FILTERS.find((filter) => filter.id === 'original');
+  return allFilters().find((filter) => filter.id === id) || FILTERS.find((filter) => filter.id === 'original');
+}
+
+// Parse pasted/file JSON into a validated {id, name, spec} record for the
+// filters store. Accepts a bare Filter Spec, a {spec} record, or a legacy
+// v1 {effects} preset. `takenIds` are extra ids to avoid (live imports).
+export function importFilterSpec(input, takenIds = []) {
+  let parsed;
+  try {
+    parsed = typeof input === 'string' ? JSON.parse(input) : input;
+  } catch {
+    throw new Error('Not valid JSON');
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Not a filter specification');
+  const name = String(parsed.name || (parsed.spec && parsed.spec.name) || '').trim() || 'Imported';
+  const taken = new Set([...FILTERS.map((filter) => filter.id), ...takenIds]);
+  let id = /^[a-z0-9-]+$/.test(parsed.id || '')
+    ? parsed.id
+    : (name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'imported');
+  for (let n = 2; taken.has(id); n += 1) id = `${id.replace(/-\d+$/, '')}-${n}`;
+  return translateWobbletonePreset(parsed, { id, name });
 }

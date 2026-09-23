@@ -498,6 +498,41 @@
     @media (prefers-reduced-motion: reduce) {
       .rail-item { transition: none; }
     }
+    .rail-add {
+      flex-shrink: 0;
+      width: 34px; height: 34px;
+      border: 1px solid rgba(230, 247, 249, 0.18);
+      border-radius: 2px;
+      background: none; color: var(--fg-dim);
+      font-size: 1.1rem; cursor: pointer;
+    }
+    .rail-add:active { color: var(--fg); }
+    #filter-import {
+      background: var(--surface);
+      border: 1px solid rgba(230, 247, 249, 0.09);
+      border-radius: 2px;
+      padding: 10px 12px;
+      display: flex; flex-direction: column; gap: 8px;
+    }
+    #filter-import textarea {
+      width: 100%; box-sizing: border-box; resize: vertical;
+      background: var(--bg); color: var(--fg);
+      border: 1px solid rgba(230, 247, 249, 0.15); border-radius: 2px;
+      font-family: monospace; font-size: 0.8rem; padding: 8px;
+    }
+    .filter-import-actions { display: flex; gap: 8px; }
+    .filter-import-actions button, .filter-imported-row button {
+      flex: 1; padding: 8px;
+      background: none; color: var(--fg);
+      border: 1px solid rgba(230, 247, 249, 0.18); border-radius: 2px;
+      font: inherit; font-size: 0.85rem; cursor: pointer;
+    }
+    .filter-imported-row {
+      display: flex; align-items: center; gap: 10px;
+      padding: 4px 0; font-size: 0.85rem; color: var(--fg-dim);
+    }
+    .filter-imported-row span { flex: 1; }
+    .filter-imported-row button { flex: 0 0 auto; padding: 4px 10px; }
 
     /* Export trigger. A filled primary button, deliberately NOT a surface
        panel: the Skin/Filter rows above are passive choosers (swipe + tap);
@@ -1055,6 +1090,11 @@
         <p>You can therefore use Aimless as an oracle: hold a situation or question in mind as you set out, and let the walk answer. Divination pairs naturally with walking — the hexagrams you receive belong to the places your feet carried you.</p>
       </details>
       <details>
+        <summary>Can I make my own photo filters?</summary>
+        <p>Yes — Aimless filters are portable "filter spec" JSON. Open a walk, tap <strong>+</strong> at the end of the Filter rail, and paste a spec or pick a .json file. Imported filters live on this device, appear at the end of the rail, and can be deleted from the same panel.</p>
+        <p>The easiest way to author one is Wobbletone: build a look, copy the spec from its Code tab, and paste it here.</p>
+      </details>
+      <details>
         <summary>Why is there no map?</summary>
         <p>The absence is the design. Aimless is about being where you are, not navigating somewhere — you follow an arrow, not a route, and the shape of your walk is only revealed afterwards.</p>
       </details>
@@ -1072,6 +1112,17 @@
       <div class="rail-row">
         <span class="rail-label">Filter</span>
         <div class="rail" id="rail-filter"></div>
+        <button id="btn-filter-import" class="rail-add" title="Import filter">+</button>
+      </div>
+      <div id="filter-import" hidden>
+        <textarea id="filter-json" rows="4" spellcheck="false" placeholder='Paste filter spec JSON (from Wobbletone Code tab), or choose a .json file'></textarea>
+        <input type="file" id="filter-file" accept=".json,application/json" hidden>
+        <div class="filter-import-actions">
+          <button id="btn-filter-file">choose file</button>
+          <button id="btn-filter-apply">import</button>
+        </div>
+        <div id="filter-import-status" class="status-msg"></div>
+        <div id="filter-imported"></div>
       </div>
       <button id="btn-detail-export" class="btn-export"><span>export</span><span class="chev">&gt;&gt;&gt;</span></button>
     </div>
@@ -1121,7 +1172,7 @@
     import { SKINS, getSkin, scopeCSS, BASE_CSS } from './lib/skins.js';
     import { isIOS, isInAppBrowser, isStandalone } from './lib/platform.js';
     import { buildHexIndex, innerCard } from './lib/inner.js';
-    import { FILTERS, getFilter } from './lib/filters.js';
+    import { FILTERS, getFilter, allFilters, setImportedFilters, importFilterSpec } from './lib/filters.js';
     import { renderToCanvas } from './lib/engine/canvas.js';
     import { renderPhotoToCanvas } from './lib/filter-renderer.js';
     import { resolveNavTarget, canStartNewWalk } from './lib/walk-nav.js';
@@ -1268,7 +1319,7 @@
     // Tapping a token selects it instantly and scrolls it to the centre;
     // swiping selects once the scroll settles. Same idea as makeWheel, flat.
     function makeRail(el, onSelect) {
-      const items = [...el.querySelectorAll('.rail-item')];
+      let items = [...el.querySelectorAll('.rail-item')];
       let current = -1;
       let settle = null;
 
@@ -1303,13 +1354,19 @@
         }, 90);
       }, { passive: true });
 
-      items.forEach((it, i) => it.addEventListener('click', () => {
+      // Delegated so rebuilt item lists (imported filters) keep working.
+      el.addEventListener('click', (e) => {
+        const it = e.target.closest('.rail-item');
+        const i = it ? items.indexOf(it) : -1;
+        if (i < 0) return;
         select(i, true);
         const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
         el.scrollTo({ left: centerOf(it) - el.clientWidth / 2, behavior: reduce ? 'auto' : 'smooth' });
-      }));
+      });
 
       return {
+        // Re-query items after innerHTML rebuilds.
+        refresh() { items = [...el.querySelectorAll('.rail-item')]; },
         setValue(value) {
           const i = Math.max(0, items.findIndex((it) => it.dataset.value === value));
           select(i, false);
@@ -1332,6 +1389,78 @@
       currentFilter = value;
       savePrefs();
       // Photos are baked pixels, so a filter change rebuilds the detail view.
+      if (currentDetailWalk) showWalkDetail(currentDetailWalk.id);
+    });
+
+    // --- Filter import ---
+    // Imported filters persist in the 'filters' store and ride the same rail
+    // after the built-ins; getFilter resolves them everywhere.
+    const elFilterImport = document.getElementById('filter-import');
+    const elFilterJson = document.getElementById('filter-json');
+    const elFilterFile = document.getElementById('filter-file');
+    const elFilterImportStatus = document.getElementById('filter-import-status');
+    const elFilterImported = document.getElementById('filter-imported');
+
+    function renderFilterRail() {
+      railFilter.innerHTML = allFilters().map((f) => `<div class="rail-item" data-value="${f.id}">${f.name}</div>`).join('');
+      filterRail.refresh();
+      filterRail.setValue(currentFilter);
+    }
+
+    function renderImportedList() {
+      const imported = allFilters().slice(FILTERS.length);
+      elFilterImported.innerHTML = imported.map((f) =>
+        `<div class="filter-imported-row"><span>${f.name}</span><button data-delete="${f.id}">delete</button></div>`).join('');
+    }
+
+    async function refreshImportedFilters() {
+      const db = await dbPromise;
+      setImportedFilters(db ? await all(db, 'filters') : []);
+      renderFilterRail();
+      renderImportedList();
+    }
+
+    async function applyFilterImport(json) {
+      const db = await dbPromise;
+      try {
+        const record = importFilterSpec(json, allFilters().map((f) => f.id));
+        if (db) await put(db, 'filters', record);
+        else setImportedFilters([...allFilters().slice(FILTERS.length), record]);
+        await refreshImportedFilters();
+        currentFilter = record.id;
+        savePrefs();
+        filterRail.setValue(record.id);
+        if (currentDetailWalk) showWalkDetail(currentDetailWalk.id);
+        elFilterImportStatus.textContent = `Imported "${record.name}".`;
+        elFilterJson.value = '';
+      } catch (err) {
+        elFilterImportStatus.textContent = err.message;
+      }
+    }
+
+    document.getElementById('btn-filter-import').addEventListener('click', () => {
+      elFilterImport.hidden = !elFilterImport.hidden;
+    });
+    document.getElementById('btn-filter-apply').addEventListener('click', () => {
+      applyFilterImport(elFilterJson.value);
+    });
+    document.getElementById('btn-filter-file').addEventListener('click', () => elFilterFile.click());
+    elFilterFile.addEventListener('change', async () => {
+      const file = elFilterFile.files && elFilterFile.files[0];
+      elFilterFile.value = '';
+      if (!file) return;
+      applyFilterImport(await file.text());
+    });
+    elFilterImported.addEventListener('click', async (e) => {
+      const id = e.target.dataset && e.target.dataset.delete;
+      if (!id) return;
+      const db = await dbPromise;
+      if (db) await del(db, 'filters', id);
+      if (currentFilter === id) {
+        currentFilter = 'original';
+        savePrefs();
+      }
+      await refreshImportedFilters();
       if (currentDetailWalk) showWalkDetail(currentDetailWalk.id);
     });
 
@@ -1391,6 +1520,7 @@
       const db = await dbPromise;
       if (!db) return DEFAULT_PREFS;
       const prefs = await getPrefs(db, DEFAULT_PREFS);
+      await refreshImportedFilters();
       wheelStops.setValue(String(prefs.stops ?? DEFAULT_PREFS.stops));
       wheelBudget.setValue(String(prefs.budgetMin ?? DEFAULT_PREFS.budgetMin));
       wheelVoice.setValue(prefs.voice ?? DEFAULT_PREFS.voice);
