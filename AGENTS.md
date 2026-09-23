@@ -48,7 +48,7 @@ public/
     geo.js  rng.js  walk.js  deck.js  store.js  dexie.mjs  proximity.js  export.js  skins.js
     platform.js         # UA detection: isIOS, isInAppBrowser, isStandalone
     inner.js            # The Inner voice: I Ching hexagram from coordinates (docs/iching/)
-    filters.js          # ordered photo filter presets and Wobbletone translation
+    filters.js          # Filter Spec presets ({id,name,spec}) + Wobbletone translation
     filter-renderer.js  # ordered canvas pipeline for filtered share cards
     engine/             # wobbletone-engine git submodule — shared CPU renderer (do not edit here)
     kml.js              # KML route export (plan + trace + stop placemarks)

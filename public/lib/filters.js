@@ -1,3 +1,5 @@
+import { SPEC_FORMAT, SPEC_VERSION, validateSpec, specFromLegacy } from './engine/spec.js';
+
 const CSS_FILTER_EFFECTS = new Set([
   'brightness', 'contrast', 'saturate', 'hue', 'sepia', 'grayscale', 'invert',
   'blur', 'opacity', 'infrared', 'vintage', 'dropshadow', 'psychedelic',
@@ -5,7 +7,9 @@ const CSS_FILTER_EFFECTS = new Set([
 
 const PIXEL_EFFECTS = new Set(['duotone', 'tritone', 'posterize', 'heatmap', 'drama', 'chromatic', 'glitch']);
 const OVERLAY_EFFECTS = new Set(['colorwash', 'gradient', 'vignette', 'scanlines', 'prism']);
-const OPERATION_KINDS = new Set(['css-filter', 'pixel', 'overlay', 'grain', 'bloom']);
+
+// Legacy Wobbletone ids that migrate into current spec types.
+const LEGACY_ALIASES = new Set(['glow', 'halation']);
 
 const EFFECT_DEFAULTS = {
   brightness: { v: 110 }, contrast: { v: 110 }, saturate: { v: 120 }, hue: { v: 0 }, sepia: { v: 60 }, grayscale: { v: 100 }, invert: { v: 100 }, blur: { v: 1 }, opacity: { v: 80 },
@@ -130,56 +134,135 @@ export function translateWobbletoneEffect(effect) {
   throw new Error(`Unsupported Wobbletone effect: ${effect.defId}`);
 }
 
+// Bridge for the legacy markup path (photo preview + export) until A4/A5
+// replace it with pre-rendered pixels: spec effects → operation descriptors.
+// The generic 'overlay' spec type maps to the 'gradient' overlay op — the
+// kind/stops/angle/blend/opacity param names are identical, and
+// overlayStyle() renders from p.stops when present.
+export function specToOperations(filterSpec) {
+  const operations = [];
+  validateSpec(filterSpec).effects.forEach((effect) => {
+    const operation = effect.type === 'overlay'
+      ? { kind: 'overlay', effect: 'gradient', params: effect.params }
+      : translateWobbletoneEffect({ defId: effect.type, enabled: true, params: effect.params });
+    if (!operation) return;
+    // Consecutive css-filter ops join into one — the legacy representation
+    // kept a single filter string per contiguous run.
+    const previous = operations[operations.length - 1];
+    if (operation.kind === 'css-filter' && previous && previous.kind === 'css-filter' && !operation.animation && !previous.animation) {
+      previous.value = `${previous.value} ${operation.value}`;
+      return;
+    }
+    operations.push(operation);
+  });
+  return operations;
+}
+
 export function translateWobbletoneArchive(archive) {
-  if (!archive || archive.schema !== 'wobbletone-presets' || archive.version !== 1 || !Array.isArray(archive.presets)) throw new Error('Unsupported Wobbletone preset archive');
+  if (!archive || archive.schema !== 'wobbletone-presets' || ![1, 2].includes(archive.version) || !Array.isArray(archive.presets)) throw new Error('Unsupported Wobbletone preset archive');
   return archive.presets.map((preset) => translateWobbletonePreset(preset));
 }
 
-export function translateWobbletonePreset(preset, overrides = {}) {
-  if (!preset || !Array.isArray(preset.effects)) throw new Error('Invalid Wobbletone preset');
-  const operations = preset.effects.map((effect, index) => {
-    try {
-      return translateWobbletoneEffect(effect);
-    } catch (err) {
-      throw new Error(`Preset "${preset.name || 'Untitled'}" effect ${index + 1} (${effect?.defId || 'unknown'}): ${err.message}`);
+// Accepts a bare Filter Spec (Wobbletone Code tab output), a v2 preset
+// record { spec }, or a v1 record { effects: [{defId, params, enabled}] }.
+function wobbletoneSpecFrom(preset) {
+  if (!preset || typeof preset !== 'object') throw new Error('Invalid Wobbletone preset');
+  const label = `Preset "${preset.name || 'Untitled'}"`;
+  try {
+    if (preset.format === SPEC_FORMAT) return validateSpec(preset);
+    if (preset.spec && typeof preset.spec === 'object') return validateSpec(preset.spec);
+  } catch (err) {
+    throw new Error(`${label}: ${err.message}`);
+  }
+  if (!Array.isArray(preset.effects)) throw new Error('Invalid Wobbletone preset');
+  // specFromLegacy silently drops unknown types — check defIds first so a
+  // bad import fails loudly instead of quietly losing an effect.
+  preset.effects.forEach((effect, index) => {
+    if (!effect || effect.enabled === false) return;
+    const defId = effect.defId;
+    if (!EFFECT_DEFAULTS[defId] && !LEGACY_ALIASES.has(defId)) {
+      throw new Error(`${label} effect ${index + 1} (${defId || 'unknown'}): Unsupported Wobbletone effect: ${defId}`);
     }
-  }).filter(Boolean);
-  const translated = {
-    id: overrides.id || preset.id,
-    name: overrides.name || preset.name,
-    operations,
-  };
-  validateFilter(translated);
-  return translated;
+  });
+  return specFromLegacy(preset.effects, preset.name);
 }
 
+export function translateWobbletonePreset(preset, overrides = {}) {
+  const spec = wobbletoneSpecFrom(preset);
+  return validateFilter({
+    id: overrides.id || preset.id,
+    name: overrides.name || preset.name || spec.name,
+    spec,
+  });
+}
+
+// Filter Specification shorthand — entries are validated/normalised in
+// place by validateFilter at module load.
+const spec = (effects) => ({ format: SPEC_FORMAT, version: SPEC_VERSION, effects });
+
 export const FILTERS = [
-  { id: 'pop', name: 'Pop', operations: [{ kind: 'css-filter', value: 'contrast(118%) saturate(135%) brightness(102%)' }] },
-  {
-    id: 'old-film', name: 'Old film', operations: [
-      { kind: 'css-filter', value: 'sepia(35%) contrast(90%) brightness(105%) saturate(85%)' },
-      { kind: 'overlay', effect: 'gradient', params: { kind: 'radial', stops: [[0.6, 'transparent'], [1, 'rgba(40,20,0,0.4)']], blend: 'multiply', opacity: 100 } },
-    ],
-  },
-  { id: 'black-and-white', name: 'Black and white', operations: [{ kind: 'css-filter', value: 'grayscale(100%) contrast(110%) brightness(98%)' }] },
-  { id: 'original', name: 'Original', operations: [] },
-  {
-    id: 'noire', name: 'Noire', operations: [
-      { kind: 'css-filter', value: 'grayscale(100%) contrast(175%) brightness(85%)' },
-      { kind: 'overlay', effect: 'gradient', params: { kind: 'radial', stops: [[0.4, 'transparent'], [1, 'rgba(0,0,0,0.85)']], blend: 'normal', opacity: 100 } },
-    ],
-  },
-  { id: 'sepia', name: 'Sepia', operations: [{ kind: 'css-filter', value: 'sepia(90%) contrast(95%) brightness(90%) saturate(110%)' }] },
-  { id: 'muted', name: 'Muted', operations: [{ kind: 'css-filter', value: 'saturate(55%) contrast(85%) brightness(105%)' }] },
-  { id: 'cold', name: 'Cold', operations: [{ kind: 'css-filter', value: 'hue-rotate(180deg) sepia(45%) hue-rotate(-160deg) saturate(80%) contrast(105%) brightness(98%)' }] },
-  { id: 'trippy-1', name: 'Trippy 1', operations: [{ kind: 'css-filter', value: 'invert(100%) hue-rotate(180deg) saturate(200%) contrast(130%)' }] },
-  { id: 'trippy-2', name: 'Trippy 2', operations: [{ kind: 'css-filter', value: 'hue-rotate(290deg) saturate(350%) contrast(140%) brightness(110%)' }] },
-  {
-    id: 'trippy-3', name: 'Trippy 3', operations: [
-      { kind: 'css-filter', value: 'invert(30%) hue-rotate(90deg) saturate(250%) contrast(200%)' },
-      { kind: 'overlay', effect: 'gradient', params: { kind: 'linear', angle: 45, stops: [[0, 'rgba(255,0,128,0.5)'], [1, 'rgba(0,255,200,0.5)']], blend: 'color-dodge', opacity: 100 } },
-    ],
-  },
+  { id: 'pop', name: 'Pop', spec: spec([
+    { type: 'contrast', params: { v: 118 } },
+    { type: 'saturate', params: { v: 135 } },
+    { type: 'brightness', params: { v: 102 } },
+  ]) },
+  { id: 'old-film', name: 'Old film', spec: spec([
+    { type: 'sepia', params: { v: 35 } },
+    { type: 'contrast', params: { v: 90 } },
+    { type: 'brightness', params: { v: 105 } },
+    { type: 'saturate', params: { v: 85 } },
+    { type: 'overlay', params: { kind: 'radial', stops: [[0.6, 'transparent'], [1, 'rgba(40,20,0,0.4)']], blend: 'multiply', opacity: 100 } },
+  ]) },
+  { id: 'black-and-white', name: 'Black and white', spec: spec([
+    { type: 'grayscale', params: { v: 100 } },
+    { type: 'contrast', params: { v: 110 } },
+    { type: 'brightness', params: { v: 98 } },
+  ]) },
+  { id: 'original', name: 'Original', spec: spec([]) },
+  { id: 'noire', name: 'Noire', spec: spec([
+    { type: 'grayscale', params: { v: 100 } },
+    { type: 'contrast', params: { v: 175 } },
+    { type: 'brightness', params: { v: 85 } },
+    { type: 'overlay', params: { kind: 'radial', stops: [[0.4, 'transparent'], [1, 'rgba(0,0,0,0.85)']], blend: 'normal', opacity: 100 } },
+  ]) },
+  { id: 'sepia', name: 'Sepia', spec: spec([
+    { type: 'sepia', params: { v: 90 } },
+    { type: 'contrast', params: { v: 95 } },
+    { type: 'brightness', params: { v: 90 } },
+    { type: 'saturate', params: { v: 110 } },
+  ]) },
+  { id: 'muted', name: 'Muted', spec: spec([
+    { type: 'saturate', params: { v: 55 } },
+    { type: 'contrast', params: { v: 85 } },
+    { type: 'brightness', params: { v: 105 } },
+  ]) },
+  { id: 'cold', name: 'Cold', spec: spec([
+    { type: 'hue', params: { v: 180 } },
+    { type: 'sepia', params: { v: 45 } },
+    { type: 'hue', params: { v: 200 } }, // -160deg ≡ +200deg; registry clamps 0–360
+    { type: 'saturate', params: { v: 80 } },
+    { type: 'contrast', params: { v: 105 } },
+    { type: 'brightness', params: { v: 98 } },
+  ]) },
+  { id: 'trippy-1', name: 'Trippy 1', spec: spec([
+    { type: 'invert', params: { v: 100 } },
+    { type: 'hue', params: { v: 180 } },
+    { type: 'saturate', params: { v: 200 } },
+    { type: 'contrast', params: { v: 130 } },
+  ]) },
+  { id: 'trippy-2', name: 'Trippy 2', spec: spec([
+    { type: 'hue', params: { v: 290 } },
+    { type: 'saturate', params: { v: 350 } },
+    { type: 'contrast', params: { v: 140 } },
+    { type: 'brightness', params: { v: 110 } },
+  ]) },
+  { id: 'trippy-3', name: 'Trippy 3', spec: spec([
+    { type: 'invert', params: { v: 30 } },
+    { type: 'hue', params: { v: 90 } },
+    { type: 'saturate', params: { v: 250 } },
+    { type: 'contrast', params: { v: 200 } },
+    { type: 'overlay', params: { kind: 'linear', angle: 45, stops: [[0, 'rgba(255,0,128,0.5)'], [1, 'rgba(0,255,200,0.5)']], blend: 'color-dodge', opacity: 100 } },
+  ]) },
   translateWobbletonePreset({
     id: '01511ff0-3806-4525-8fa3-25e4112d8ece',
     name: 'psych-post-2',
@@ -194,14 +277,12 @@ export const FILTERS = [
   }, { id: 'psych-post-2', name: 'Psych post 2' }),
 ];
 
+// A filter preset is { id, name, spec } — the spec is the renderable form.
+// Validating normalises params (clamps, defaults) in place.
 export function validateFilter(filter) {
-  if (!filter || !/^[a-z0-9-]+$/.test(filter.id || '') || !String(filter.name || '').trim() || !Array.isArray(filter.operations)) throw new Error('Invalid Aimless filter preset');
-  filter.operations.forEach((operation, index) => {
-    if (!operation || !OPERATION_KINDS.has(operation.kind)) throw new Error(`Unsupported operation at position ${index + 1}: ${operation?.kind || 'missing'}`);
-    if (operation.kind === 'css-filter' && !String(operation.value || '').trim()) throw new Error(`Invalid CSS filter at position ${index + 1}`);
-    if (operation.kind === 'pixel' && !PIXEL_EFFECTS.has(operation.effect)) throw new Error(`Unsupported pixel effect at position ${index + 1}: ${operation.effect}`);
-    if (operation.kind === 'overlay' && !OVERLAY_EFFECTS.has(operation.effect)) throw new Error(`Unsupported overlay at position ${index + 1}: ${operation.effect}`);
-  });
+  if (!filter || !/^[a-z0-9-]+$/.test(filter.id || '') || !String(filter.name || '').trim()) throw new Error('Invalid Aimless filter preset');
+  if (!filter.spec || typeof filter.spec !== 'object') throw new Error('Invalid Aimless filter preset: missing spec');
+  filter.spec = validateSpec(filter.spec);
   return filter;
 }
 
@@ -290,7 +371,7 @@ function bloomSvgDef(operation, id) {
 
 export function buildFilterDefs(id) {
   const filter = getFilter(id);
-  const definitions = filter.operations.map((operation, index) => {
+  const definitions = specToOperations(filter.spec).map((operation, index) => {
     if (operation.kind === 'pixel') return pixelSvgDef(operation, operationId(filter.id, index));
     if (operation.kind === 'bloom') return bloomSvgDef(operation, operationId(filter.id, index));
     return '';
@@ -313,8 +394,9 @@ function overlayStyle(operation) {
 
 export function buildFilteredPhotoHTML(src, id, alt = '') {
   const filter = getFilter(id);
+  const operations = specToOperations(filter.spec);
   let markup = `<img class="filter-image" src="${esc(src)}" alt="${esc(alt)}">`;
-  filter.operations.forEach((operation, index) => {
+  operations.forEach((operation, index) => {
     if (operation.kind === 'css-filter') {
       markup = `<div class="filter-step" style="filter:${esc(operation.value)}">${markup}</div>`;
       if (operation.animation) markup = `<div class="filter-step filter-animated" style="animation-duration:${operation.animation.duration}s">${markup}</div>`;
@@ -327,16 +409,17 @@ export function buildFilteredPhotoHTML(src, id, alt = '') {
       markup = `<div class="filter-composite">${markup}<span class="filter-overlay" style="${esc(style)}"></span></div>`;
     }
   });
-  const clipped = filter.operations.some((operation) => operation.kind === 'overlay' || operation.kind === 'grain' || operation.kind === 'bloom' || operation.kind === 'pixel' && ['chromatic', 'glitch'].includes(operation.effect) || operation.kind === 'css-filter' && /\b(?:blur|drop-shadow)\(/.test(operation.value));
+  const clipped = operations.some((operation) => operation.kind === 'overlay' || operation.kind === 'grain' || operation.kind === 'bloom' || operation.kind === 'pixel' && ['chromatic', 'glitch'].includes(operation.effect) || operation.kind === 'css-filter' && /\b(?:blur|drop-shadow)\(/.test(operation.value));
   return `<div class="photo-frame${clipped ? ' filter-clipped' : ''}">${markup}</div>`;
 }
 
 export function buildFilterCSS(id, scope) {
   const filter = getFilter(id);
-  if (!filter.operations.length) return '';
+  const operations = specToOperations(filter.spec);
+  if (!operations.length) return '';
   const selector = `${scope}.filter-${filter.id}`;
-  const usesGrain = filter.operations.some((operation) => operation.kind === 'grain');
-  const usesAnimation = filter.operations.some((operation) => operation.animation);
+  const usesGrain = operations.some((operation) => operation.kind === 'grain');
+  const usesAnimation = operations.some((operation) => operation.animation);
   let css = usesGrain ? `${selector} { --aimless-grain: url('${grainDataUri()}'); }\n` : '';
   if (usesAnimation) css += `${selector} .filter-animated { animation-name: aimless-hue-cycle; animation-timing-function: linear; animation-iteration-count: infinite; }\n@keyframes aimless-hue-cycle { to { filter: hue-rotate(360deg); } }\n@media (prefers-reduced-motion: reduce), print { ${selector} .filter-animated { animation: none; } }`;
   return css;

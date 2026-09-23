@@ -1272,7 +1272,7 @@
     // showWalkDetail rebuilds each photo's ordered operation wrappers.
     function applyFilter() {
       const f = getFilter(currentFilter);
-      elDetailContent.className = f.operations.length ? `filter-${f.id}` : '';
+      elDetailContent.className = f.spec.effects.length ? `filter-${f.id}` : '';
       filterStyle.textContent = buildFilterCSS(f.id, '#detail-content');
     }
 

@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { validateSpec } from '../public/lib/engine/spec.js';
 import {
   FILTERS,
   buildFilterCSS,
@@ -8,6 +9,7 @@ import {
   getFilter,
   gradientCSS,
   grainDataUri,
+  specToOperations,
   translateWobbletoneArchive,
   translateWobbletonePreset,
   validateFilter,
@@ -43,48 +45,88 @@ const EFFECTS = [
   { defId: 'dropshadow', params: { x: 0, y: 8, blur: 16, color: '#7c5cff' } },
 ];
 
-test('FILTERS lists the 12 rail presets with unique ids and ordered operations', () => {
+test('FILTERS lists the 12 rail presets with unique ids and valid specs', () => {
   assert.equal(FILTERS.length, 12);
   assert.equal(new Set(FILTERS.map((filter) => filter.id)).size, 12);
   FILTERS.forEach((filter) => {
     assert.match(filter.id, /^[a-z0-9-]+$/);
     assert.ok(filter.name.length > 0);
-    assert.ok(Array.isArray(filter.operations));
+    assert.equal(filter.spec.format, 'wobbletone-filter');
+    assert.equal(filter.spec.version, 1);
+    assert.ok(Array.isArray(filter.spec.effects));
     assert.equal(validateFilter(filter), filter);
+    assert.deepEqual(validateSpec(filter.spec), filter.spec);
   });
 });
 
-test('Original is the only preset with an empty operation list', () => {
-  const empty = FILTERS.filter((filter) => filter.operations.length === 0);
+test('Original is the only preset with an empty effect list', () => {
+  const empty = FILTERS.filter((filter) => filter.spec.effects.length === 0);
   assert.deepEqual(empty.map((filter) => filter.id), ['original']);
 });
 
-test('existing overlay presets retain their operation order and values', () => {
-  const oldFilm = getFilter('old-film');
-  assert.deepEqual(oldFilm.operations.map((operation) => operation.kind), ['css-filter', 'overlay']);
-  assert.equal(oldFilm.operations[0].value, 'sepia(35%) contrast(90%) brightness(105%) saturate(85%)');
-  assert.equal(oldFilm.operations[1].params.blend, 'multiply');
-  assert.deepEqual(oldFilm.operations[1].params.stops, [[0.6, 'transparent'], [1, 'rgba(40,20,0,0.4)']]);
+test('built-in presets carry their spec effects in order', () => {
+  const types = (id) => getFilter(id).spec.effects.map((effect) => effect.type);
+  assert.deepEqual(types('pop'), ['contrast', 'saturate', 'brightness']);
+  assert.deepEqual(types('old-film'), ['sepia', 'contrast', 'brightness', 'saturate', 'overlay']);
+  assert.deepEqual(types('black-and-white'), ['grayscale', 'contrast', 'brightness']);
+  assert.deepEqual(types('noire'), ['grayscale', 'contrast', 'brightness', 'overlay']);
+  assert.deepEqual(types('sepia'), ['sepia', 'contrast', 'brightness', 'saturate']);
+  assert.deepEqual(types('muted'), ['saturate', 'contrast', 'brightness']);
+  assert.deepEqual(types('cold'), ['hue', 'sepia', 'hue', 'saturate', 'contrast', 'brightness']);
+  assert.deepEqual(types('trippy-1'), ['invert', 'hue', 'saturate', 'contrast']);
+  assert.deepEqual(types('trippy-2'), ['hue', 'saturate', 'contrast', 'brightness']);
+  assert.deepEqual(types('trippy-3'), ['invert', 'hue', 'saturate', 'contrast', 'overlay']);
+  assert.deepEqual(types('psych-post-2'), ['saturate', 'vignette', 'blur', 'posterize', 'grain', 'psychedelic']);
 });
 
-test('Psych post 2 preserves its source order, values, display name, and animation', () => {
+test('Cold writes its negative hue as the equivalent 0-360 rotation', () => {
+  const cold = getFilter('cold').spec.effects;
+  assert.equal(cold[0].params.v, 180);
+  assert.equal(cold[2].params.v, 200); // hue-rotate(-160deg) ≡ +200deg
+});
+
+test('overlay presets retain their gradient settings', () => {
+  const oldFilm = getFilter('old-film').spec.effects[4].params;
+  const noire = getFilter('noire').spec.effects[3].params;
+  const trippy = getFilter('trippy-3').spec.effects[4].params;
+  assert.equal(oldFilm.kind, 'radial');
+  assert.deepEqual(oldFilm.stops, [[0.6, 'transparent'], [1, 'rgba(40,20,0,0.4)']]);
+  assert.equal(oldFilm.blend, 'multiply');
+  assert.deepEqual(noire.stops, [[0.4, 'transparent'], [1, 'rgba(0,0,0,0.85)']]);
+  assert.equal(noire.blend, 'normal');
+  assert.equal(trippy.kind, 'linear');
+  assert.equal(trippy.angle, 45);
+  assert.deepEqual(trippy.stops, [[0, 'rgba(255,0,128,0.5)'], [1, 'rgba(0,255,200,0.5)']]);
+  assert.equal(trippy.blend, 'color-dodge');
+});
+
+test('Psych post 2 preserves its source order, values, and display name', () => {
   const filter = getFilter('psych-post-2');
   assert.equal(filter.name, 'Psych post 2');
-  assert.deepEqual(filter.operations.map((operation) => operation.kind), ['css-filter', 'overlay', 'css-filter', 'pixel', 'grain', 'css-filter']);
-  assert.equal(filter.operations[0].value, 'saturate(120%)');
-  assert.deepEqual(filter.operations[1], { kind: 'overlay', effect: 'vignette', params: { color: '#000000', size: 60, opacity: 56 } });
-  assert.equal(filter.operations[2].value, 'blur(8.7px)');
-  assert.deepEqual(filter.operations[3], { kind: 'pixel', effect: 'posterize', params: { steps: 10 } });
-  assert.deepEqual(filter.operations[4], { kind: 'grain', params: { size: 1.4, opacity: 44, blend: 'overlay' } });
-  assert.equal(filter.operations[5].value, 'saturate(280%) contrast(130%)');
-  assert.deepEqual(filter.operations[5].animation, { name: 'hue-cycle', duration: 20 });
+  const effects = filter.spec.effects;
+  assert.equal(effects[0].type, 'saturate');
+  assert.equal(effects[0].params.v, 120);
+  assert.deepEqual(effects[1].params, { color: '#000000', size: 60, opacity: 56 });
+  assert.equal(effects[2].type, 'blur');
+  assert.equal(effects[2].params.v, 8.7);
+  assert.equal(effects[3].type, 'posterize');
+  assert.equal(effects[3].params.steps, 10);
+  assert.equal(effects[4].type, 'grain');
+  assert.equal(effects[4].params.seed, 1);
+  assert.equal(effects[5].type, 'psychedelic');
+  assert.equal(effects[5].params.saturate, 280);
+  assert.equal(effects[5].params.animate, 'yes');
 });
 
-test('Noire and Trippy 3 retain their original overlay settings', () => {
-  const noire = getFilter('noire').operations[1].params;
-  const trippy = getFilter('trippy-3').operations[1].params;
-  assert.deepEqual(noire, { kind: 'radial', stops: [[0.4, 'transparent'], [1, 'rgba(0,0,0,0.85)']], blend: 'normal', opacity: 100 });
-  assert.deepEqual(trippy, { kind: 'linear', angle: 45, stops: [[0, 'rgba(255,0,128,0.5)'], [1, 'rgba(0,255,200,0.5)']], blend: 'color-dodge', opacity: 100 });
+test('specToOperations bridges spec effects to the legacy markup path', () => {
+  const ops = specToOperations(getFilter('old-film').spec);
+  assert.deepEqual(ops.map((operation) => operation.kind), ['css-filter', 'overlay']);
+  assert.equal(ops[0].value, 'sepia(35%) contrast(90%) brightness(105%) saturate(85%)');
+  assert.equal(ops[1].effect, 'gradient');
+  assert.equal(ops[1].params.blend, 'multiply');
+  const psych = specToOperations(getFilter('psych-post-2').spec);
+  assert.deepEqual(psych.map((operation) => operation.kind), ['css-filter', 'overlay', 'css-filter', 'pixel', 'grain', 'css-filter']);
+  assert.deepEqual(psych[5].animation, { name: 'hue-cycle', duration: 20 });
 });
 
 test('getFilter falls back to original for unknown ids', () => {
@@ -107,32 +149,48 @@ test('gradientCSS renders radial and linear CSS gradients', () => {
   );
 });
 
-test('all current Wobbletone effects translate in their original order', () => {
+test('all current Wobbletone effects translate into spec effects in order', () => {
   const filter = translateWobbletonePreset({ id: 'everything', name: 'Everything', effects: EFFECTS });
-  assert.equal(filter.operations.length, EFFECTS.length);
-  assert.deepEqual(filter.operations.map((operation) => operation.kind), [
-    ...Array(9).fill('css-filter'),
+  assert.equal(filter.spec.effects.length, EFFECTS.length);
+  assert.deepEqual(filter.spec.effects.map((effect) => effect.type), EFFECTS.map((effect) => effect.defId));
+  // specToOperations coalesces contiguous css-filter runs; the animated
+  // psychedelic op stays on its own op.
+  const ops = specToOperations(filter.spec);
+  assert.deepEqual(ops.map((operation) => operation.kind), [
+    'css-filter',
     ...Array(5).fill('pixel'),
     'bloom', 'pixel', 'overlay', 'overlay', 'grain',
     'overlay', 'overlay', 'overlay', 'pixel',
-    'css-filter', 'css-filter', 'css-filter', 'css-filter',
+    'css-filter', 'css-filter',
   ]);
+  assert.ok(ops[15].animation);
 });
 
 test('versioned Wobbletone archives translate and incompatible archives fail', () => {
   const archive = { schema: 'wobbletone-presets', version: 1, presets: [{ id: 'one', name: 'One', effects: [EFFECTS[1]] }] };
   assert.deepEqual(translateWobbletoneArchive(archive).map((filter) => filter.id), ['one']);
-  assert.throws(() => translateWobbletoneArchive({ ...archive, version: 2 }), /Unsupported Wobbletone preset archive/);
+  const v2 = { schema: 'wobbletone-presets', version: 2, presets: [{ id: 'two', name: 'Two', spec: { format: 'wobbletone-filter', version: 1, effects: [] } }] };
+  assert.deepEqual(translateWobbletoneArchive(v2).map((filter) => filter.id), ['two']);
+  assert.throws(() => translateWobbletoneArchive({ ...archive, version: 3 }), /Unsupported Wobbletone preset archive/);
 });
 
-test('partial preset effects receive the current Wobbletone defaults', () => {
+test('bare Filter Spec JSON translates and clamps out-of-range params', () => {
+  const spec = { format: 'wobbletone-filter', version: 1, name: 'From Wobbletone', effects: [{ type: 'contrast', params: { v: 999 } }] };
+  const filter = translateWobbletonePreset(spec, { id: 'imported' });
+  assert.equal(filter.id, 'imported');
+  assert.equal(filter.name, 'From Wobbletone');
+  assert.equal(filter.spec.effects[0].params.v, 200);
+  assert.throws(() => translateWobbletonePreset(spec), /Invalid Aimless filter preset/);
+});
+
+test('partial preset effects receive the engine defaults', () => {
   const filter = translateWobbletonePreset({
     id: 'defaults', name: 'Defaults',
     effects: [{ defId: 'brightness', params: {} }, { defId: 'gradient', params: {} }, { defId: 'bloom', params: {} }],
   });
-  assert.equal(filter.operations[0].value, 'brightness(110%)');
-  assert.deepEqual(filter.operations[1].params, { c1: '#ff5c8a', c2: '#7c5cff', angle: 135, blend: 'soft-light', opacity: 50 });
-  assert.equal(filter.operations[2].params.threshold, 140);
+  assert.equal(filter.spec.effects[0].params.v, 110);
+  assert.deepEqual(filter.spec.effects[1].params, { c1: '#ff5c8a', c2: '#7c5cff', angle: 135, blend: 'soft-light', opacity: 50 });
+  assert.equal(filter.spec.effects[2].params.threshold, 140);
 });
 
 test('disabled effects are omitted and unknown effects identify their position', () => {
@@ -140,16 +198,20 @@ test('disabled effects are omitted and unknown effects identify their position',
     id: 'mixed', name: 'Mixed',
     effects: [{ defId: 'contrast', enabled: false, params: { v: 120 } }, { defId: 'grain', enabled: true, params: { size: 1, opacity: 20, blend: 'overlay' } }],
   });
-  assert.deepEqual(filter.operations.map((operation) => operation.kind), ['grain']);
+  assert.deepEqual(filter.spec.effects.map((effect) => effect.type), ['grain']);
   assert.throws(
     () => translateWobbletonePreset({ id: 'broken', name: 'Broken', effects: [{ defId: 'contrast', params: { v: 120 } }, { defId: 'future-effect', params: {} }] }),
     /Preset "Broken" effect 2 \(future-effect\)/
   );
 });
 
-test('validation rejects unknown operation kinds and effect names', () => {
-  assert.throws(() => validateFilter({ id: 'bad', name: 'Bad', operations: [{ kind: 'future' }] }), /position 1/);
-  assert.throws(() => validateFilter({ id: 'bad', name: 'Bad', operations: [{ kind: 'pixel', effect: 'future', params: {} }] }), /pixel effect.*future/);
+test('validateFilter requires a valid id, name, and spec', () => {
+  assert.throws(() => validateFilter({ id: 'bad', name: 'Bad' }), /missing spec/);
+  assert.throws(() => validateFilter({ id: 'Bad ID', name: 'Bad', spec: { format: 'wobbletone-filter', version: 1, effects: [] } }), /Invalid Aimless filter/);
+  assert.throws(
+    () => validateFilter({ id: 'bad', name: 'Bad', spec: { format: 'wobbletone-filter', version: 1, effects: [{ type: 'future-effect', params: {} }] } }),
+    /future-effect/
+  );
 });
 
 test('photo markup preserves arbitrary operation ordering and the source once', () => {

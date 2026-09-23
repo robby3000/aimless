@@ -154,7 +154,7 @@ ${PRINT_CSS}
 ${skinCss ? `<style id="skin">\n${skinCss}\n</style>` : ''}
 ${filterCss ? `<style id="filter">\n${filterCss}\n</style>` : ''}
 </head>
-<body${filter.operations.length ? ` class="filter-${filter.id}"` : ''}>
+<body${filter.spec.effects.length ? ` class="filter-${filter.id}"` : ''}>
   ${filterDefs}
   <h1><a class="app-link" href="https://aimless.earth"><img class="app-icon" src="${logoDataUri(icon)}" alt="">Aimless</a></h1>
   <div class="seed">${walk.seed}</div>

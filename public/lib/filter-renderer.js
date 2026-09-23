@@ -1,4 +1,4 @@
-import { dramaSettings, getFilter, glitchSettings, grainDataUri } from './filters.js';
+import { dramaSettings, getFilter, glitchSettings, grainDataUri, specToOperations } from './filters.js';
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 const number = (value, fallback = 0) => value != null && String(value).trim() !== '' && Number.isFinite(Number(value)) ? Number(value) : fallback;
@@ -356,7 +356,10 @@ function loadGrainImage() {
 
 export async function renderPhotoToCanvas(image, filterOrId, width, height, createCanvas = defaultCanvas, loadGrain = loadGrainImage) {
   const filter = typeof filterOrId === 'string' ? getFilter(filterOrId) : filterOrId;
-  if (!filter || !Array.isArray(filter.operations)) throw new Error('Invalid filter preset');
+  // Spec-form filters bridge through specToOperations until A3 replaces this
+  // canvas pipeline with the engine renderer.
+  const operations = filter && (filter.spec ? specToOperations(filter.spec) : filter.operations);
+  if (!Array.isArray(operations)) throw new Error('Invalid filter preset');
   let source = createCanvas(width, height);
   let destination = createCanvas(width, height);
   let scratch = null;
@@ -368,11 +371,11 @@ export async function renderPhotoToCanvas(image, filterOrId, width, height, crea
   const drawHeight = imageHeight * scale;
   sourceCtx.drawImage(image, (width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight);
 
-  for (let index = 0; index < filter.operations.length;) {
-    const operation = filter.operations[index];
+  for (let index = 0; index < operations.length;) {
+    const operation = operations[index];
     if (operation.kind === 'css-filter') {
       const values = [];
-      while (index < filter.operations.length && filter.operations[index].kind === 'css-filter') values.push(filter.operations[index++].value);
+      while (index < operations.length && operations[index].kind === 'css-filter') values.push(operations[index++].value);
       applyCssFilter(source, destination, values.join(' '), width, height);
     } else if (operation.kind === 'pixel') {
       const imageData = source.getContext('2d').getImageData(0, 0, width, height);
