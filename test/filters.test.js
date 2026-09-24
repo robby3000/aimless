@@ -36,7 +36,9 @@ const EFFECTS = [
   { defId: 'scanlines', params: { size: 3, color: '#000000', opacity: 30, blend: 'multiply' } },
   { defId: 'prism', params: { c1: '#ff2e88', c2: '#2effd5', angle: 45, width: 20, opacity: 35 } },
   { defId: 'glitch', params: { style: 'CCD Failure', amount: 42, bandSize: 28, split: 6, seed: 317 } },
-  { defId: 'psychedelic', params: { saturate: 280, contrast: 130, speed: 8, animate: 'yes' } },
+  { defId: 'solarize', params: { amount: 60, threshold: 50 } },
+  { defId: 'hueband', params: { bands: 6, spread: 0 } },
+  { defId: 'psychedelic', params: { saturate: 280, contrast: 130, bands: 6, solarize: 50 } },
   { defId: 'infrared', params: { intensity: 70 } },
   { defId: 'vintage', params: { sepia: 45, contrast: 95, saturate: 80, brightness: 105 } },
   { defId: 'dropshadow', params: { x: 0, y: 8, blur: 16, color: '#7c5cff' } },
@@ -112,7 +114,8 @@ test('Psych post 2 preserves its source order, values, and display name', () => 
   assert.equal(effects[4].params.seed, 1);
   assert.equal(effects[5].type, 'psychedelic');
   assert.equal(effects[5].params.saturate, 280);
-  assert.equal(effects[5].params.animate, 'yes');
+  assert.equal(effects[5].params.bands, 8);
+  assert.equal(effects[5].params.solarize, 60);
 });
 
 test('getFilter falls back to original for unknown ids', () => {

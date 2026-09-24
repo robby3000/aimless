@@ -15,7 +15,8 @@ const EFFECT_DEFAULTS = {
   grain: { size: 0.9, opacity: 25, blend: 'overlay' }, vignette: { color: '#000000', size: 60, opacity: 50 },
   scanlines: { size: 3, color: '#000000', opacity: 30, blend: 'multiply' }, prism: { c1: '#ff2e88', c2: '#2effd5', angle: 45, width: 20, opacity: 35 },
   glitch: { style: 'CCD Failure', amount: 42, bandSize: 28, split: 6, seed: 317 },
-  psychedelic: { saturate: 280, contrast: 130, speed: 8, animate: 'yes' }, infrared: { intensity: 70 },
+  solarize: { amount: 60, threshold: 50 }, hueband: { bands: 6, spread: 0 },
+  psychedelic: { saturate: 280, contrast: 130, bands: 6, solarize: 50 }, infrared: { intensity: 70 },
   vintage: { sepia: 45, contrast: 95, saturate: 80, brightness: 105 }, dropshadow: { x: 0, y: 8, blur: 16, color: '#7c5cff' },
 };
 
@@ -133,7 +134,7 @@ export const FILTERS = [
       { defId: 'blur', enabled: true, params: { v: 8.7 } },
       { defId: 'posterize', enabled: true, params: { steps: 10 } },
       { defId: 'grain', enabled: true, params: { size: 1.4, opacity: 44, blend: 'overlay' } },
-      { defId: 'psychedelic', enabled: true, params: { saturate: 280, contrast: 130, speed: 20, animate: 'yes' } },
+      { defId: 'psychedelic', enabled: true, params: { saturate: 280, contrast: 130, bands: 8, solarize: 60 } },
     ],
   }, { id: 'psych-post-2', name: 'Psych post 2' }),
 ];
