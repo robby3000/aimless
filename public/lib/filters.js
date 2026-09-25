@@ -9,6 +9,7 @@ const EFFECT_DEFAULTS = {
   duotone: { shadow: '#1a0d3d', highlight: '#ff5c8a', contrast: 20 },
   tritone: { shadow: '#0b1d3a', mid: '#c44d4d', highlight: '#ffe8a3' }, posterize: { steps: 5 }, heatmap: { intensity: 100 },
   drama: { style: 'Cinematic', strength: 70, shadows: 0, highlights: 0, saturation: 100 },
+  shadowshighlights: { shadows: 40, highlights: -20 },
   bloom: { blur: 12, threshold: 140, contrast: 180, saturate: 100, opacity: 50, color: '#ffffff', tint: 0, blend: 'screen' },
   chromatic: { offset: 4, strength: 70 }, colorwash: { color: '#7c5cff', blend: 'overlay', opacity: 40 },
   gradient: { c1: '#ff5c8a', c2: '#7c5cff', angle: 135, blend: 'soft-light', opacity: 50 },
