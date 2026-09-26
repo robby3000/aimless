@@ -22,5 +22,7 @@ export async function renderPhotoToCanvas(image, filterOrId, width, height, crea
   const drawHeight = imageHeight * scale;
   const fitted = createCanvas(width, height);
   fitted.getContext('2d').drawImage(image, (width - drawWidth) / 2, (height - drawHeight) / 2, drawWidth, drawHeight);
-  return render(fitted, filter.spec);
+  // Auto uses WebGL2 when the device supports it; artifacts stay baked
+  // pixels either way — the renderer choice never enters the export.
+  return render(fitted, filter.spec, { renderer: 'auto' });
 }

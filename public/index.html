@@ -2679,7 +2679,7 @@
       if (!src) return null;
       try {
         const img = await loadImage(src);
-        const canvas = renderToCanvas(img, getFilter(filterId).spec, { maxDim: PREVIEW_MAX_DIM });
+        const canvas = renderToCanvas(img, getFilter(filterId).spec, { maxDim: PREVIEW_MAX_DIM, renderer: 'auto' });
         const url = canvas.toDataURL('image/jpeg', 0.85);
         photoRenderCache.set(key, url);
         if (photoRenderCache.size > 40) photoRenderCache.delete(photoRenderCache.keys().next().value);
