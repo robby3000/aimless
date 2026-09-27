@@ -459,6 +459,13 @@
       color: var(--fg-dim);
       flex-shrink: 0;
     }
+    .filter-busy {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--accent);
+      flex-shrink: 0;
+    }
     .rail {
       flex: 1;
       min-width: 0;
@@ -1155,6 +1162,7 @@
       <div class="rail-row">
         <span class="rail-label">Filter</span>
         <div class="rail" id="rail-filter"></div>
+        <span id="filter-busy" class="filter-busy" hidden></span>
       </div>
       <div class="detail-actions">
         <button id="btn-filters" class="btn-export"><span>filters</span></button>
@@ -2875,7 +2883,20 @@
       const token = ++detailRenderToken;
       if (detailObserver) detailObserver.disconnect();
       const bySeq = new Map(photos.map((p) => [p.stopSeq, p]));
-      const renderOne = (p) => photoSource(p).then(({ img, rawSrc }) => {
+      // Progress indicator: "rendering n/m" beside the Filter label while
+      // any of this walk's renders are in flight.
+      const busy = document.getElementById('filter-busy');
+      let pending = 0;
+      const renderedCount = () => photos.length - pending;
+      const tick = () => {
+        if (token !== detailRenderToken || pending === 0) { busy.hidden = true; return; }
+        busy.hidden = false;
+        busy.textContent = `rendering ${renderedCount() + 1}/${photos.length}`;
+      };
+      const renderOne = (p) => {
+        pending++;
+        tick();
+        return photoSource(p).then(({ img, rawSrc }) => {
         const frame = token === detailRenderToken &&
           currentDetailWalk?.id === walkId && currentFilter === filterId &&
           document.querySelector(`.photo-frame[data-stopseq="${p.stopSeq}"]`);
@@ -2892,7 +2913,8 @@
           canvas.getContext('2d').drawImage(rendered, 0, 0);
         } catch { canvas.width = canvas.height = 0; }
         frame.replaceChildren(canvas);
-      }).catch(() => {});
+        }).catch(() => {}).finally(() => { pending--; tick(); });
+      };
       // No IntersectionObserver (ancient WebView): render everything.
       if (typeof IntersectionObserver === 'undefined') {
         photos.forEach(renderOne);
