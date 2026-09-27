@@ -717,6 +717,35 @@
       font-size: 0.9rem;
       padding: 8px;
     }
+
+    /* --- Toast (update notification etc.) --- */
+    #toast {
+      position: fixed;
+      left: 50%;
+      bottom: calc(64px + var(--safe-bottom));
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--surface);
+      border: 1px solid var(--surface-2);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 0.85rem;
+      box-shadow: 0 6px 24px rgba(0,0,0,0.45);
+      z-index: 60;
+      max-width: calc(100vw - 32px);
+    }
+    #toast .toast-action {
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      border-radius: 7px;
+      padding: 5px 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
     .approx-btn {
       background: none;
       border: 1px solid var(--accent-dim);
@@ -1182,6 +1211,8 @@
 
   <div id="arrival-flash"></div>
 
+  <div id="toast" hidden role="status" aria-live="polite"></div>
+
   <script type="module">
     import { planWalk, estimate, nextStopIndex } from './lib/walk.js';
     import { randomSeed } from './lib/rng.js';
@@ -1237,9 +1268,55 @@
     navButtons.archive.addEventListener('click', () => { renderArchive(); showScreen('archive'); });
     navButtons.info.addEventListener('click', () => showScreen('info'));
 
-    // --- Service worker registration ---
+    // --- Toast ---
+    const elToast = document.getElementById('toast');
+    let toastTimer = null;
+    function showToast(msg, action = null) {
+      elToast.replaceChildren();
+      const message = document.createElement('span');
+      message.textContent = msg;
+      elToast.appendChild(message);
+      if (action) {
+        const btn = document.createElement('button');
+        btn.className = 'toast-action';
+        btn.textContent = action.label;
+        btn.onclick = () => { clearTimeout(toastTimer); elToast.hidden = true; action.run(); };
+        elToast.appendChild(btn);
+      }
+      elToast.hidden = false;
+      clearTimeout(toastTimer);
+      if (!action || !action.sticky) toastTimer = setTimeout(() => { elToast.hidden = true; }, action ? 5000 : 2200);
+    }
+
+    // --- Service worker registration + update detection ---
+    // Three overlapping signals — a fast network can complete install→activate
+    // →claim before register()'s promise resolves, so no single one suffices.
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js').catch((err) => {
+      let notified = false;
+      const notifyUpdate = () => {
+        if (notified) return;
+        notified = true;
+        showToast('New version available', { label: 'Reload', sticky: true, run: () => location.reload() });
+      };
+      // controllerchange only counts as an update if the page already had a
+      // controller at load (first-ever install also fires it via claim()).
+      const hadController = Boolean(navigator.serviceWorker.controller);
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (hadController) notifyUpdate();
+      });
+      const watchInstalling = (sw) => sw && sw.addEventListener('statechange', () => {
+        if (sw.state === 'installed' && navigator.serviceWorker.controller) notifyUpdate();
+      });
+      navigator.serviceWorker.register('./sw.js').then((reg) => {
+        if (reg.waiting) notifyUpdate();
+        watchInstalling(reg.installing);
+        reg.addEventListener('updatefound', () => watchInstalling(reg.installing));
+        // A PWA never navigates, so the browser's own update check never
+        // fires — check whenever the app returns to the foreground.
+        document.addEventListener('visibilitychange', () => {
+          if (!document.hidden) reg.update().catch(() => {});
+        });
+      }).catch((err) => {
         console.warn('SW registration failed:', err);
       });
     }
