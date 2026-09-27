@@ -19,6 +19,7 @@ const EFFECT_DEFAULTS = {
   glitch: { style: 'CCD Failure', amount: 42, bandSize: 28, split: 6, corrupt: 40, seed: 317 },
   liquid: { intensity: 30, waveX: 20, waveY: 20, flow: 'organic', noise: 'fractal', octaves: 2, seed: 1, softness: 0, highlight: 0, mix: 0 },
   specular: { surfaceScale: 2, strength: 40, shininess: 25, color: '#ffffff', azimuth: 315, elevation: 45, bumpBlur: 0, source: 'luminance', blend: 'screen', opacity: 100 },
+  morphology: { op: 'dilate', radiusX: 4, radiusY: 4 },
   solarize: { amount: 60, threshold: 50 }, hueband: { bands: 6, spread: 0 },
   psychedelic: { saturate: 280, contrast: 130, bands: 6, solarize: 50 }, infrared: { intensity: 70 },
   vintage: { sepia: 45, contrast: 95, saturate: 80, brightness: 105 }, dropshadow: { x: 0, y: 8, blur: 16, color: '#7c5cff' },
