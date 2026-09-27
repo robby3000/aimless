@@ -745,8 +745,8 @@
     }
     #toast[hidden] { display: none; }
 
-    /* --- Confirm dialog (destructive actions) --- */
-    #confirm-overlay {
+    /* --- Confirm dialog (destructive actions) + filename dialog --- */
+    #confirm-overlay, #filename-overlay {
       position: fixed;
       inset: 0;
       background: rgba(0, 0, 0, 0.55);
@@ -756,8 +756,8 @@
       z-index: 70;   /* above bottom sheets (51) and toast (60) */
       padding: 24px;
     }
-    #confirm-overlay[hidden] { display: none; }
-    #confirm-box {
+    #confirm-overlay[hidden], #filename-overlay[hidden] { display: none; }
+    #confirm-box, #filename-box {
       background: var(--surface);
       border: 1px solid var(--surface-2);
       border-radius: 12px;
@@ -767,6 +767,19 @@
       box-shadow: 0 8px 32px rgba(0,0,0,0.5);
     }
     #confirm-text { margin-bottom: 16px; font-size: 0.95rem; }
+    #filename-label { margin-bottom: 10px; font-size: 0.95rem; }
+    #filename-input {
+      width: 100%;
+      box-sizing: border-box;
+      margin-bottom: 16px;
+      padding: 10px 12px;
+      background: var(--bg);
+      color: var(--fg);
+      border: 1px solid var(--surface-2);
+      border-radius: var(--radius);
+      font: inherit;
+    }
+    #filename-input:focus { border-color: var(--accent); outline: none; }
     .confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
     .confirm-actions button { min-width: 76px; }
     #toast .toast-action {
@@ -1258,6 +1271,18 @@
     </div>
   </div>
 
+  <!-- Filename dialog (HTML artifact export) -->
+  <div id="filename-overlay" hidden>
+    <div id="filename-box" role="dialog" aria-labelledby="filename-label" aria-modal="true">
+      <div id="filename-label">File name</div>
+      <input id="filename-input" type="text" autocomplete="off" spellcheck="false" />
+      <div class="confirm-actions">
+        <button id="btn-filename-cancel">Cancel</button>
+        <button id="btn-filename-save" class="btn-primary">Save</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     import { planWalk, estimate, nextStopIndex } from './lib/walk.js';
     import { randomSeed } from './lib/rng.js';
@@ -1644,6 +1669,40 @@
     });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape' && !confirmOverlay.hidden) settleConfirm(false);
+    });
+
+    // Filename dialog for the HTML artifact export — same overlay pattern as
+    // askConfirm, resolves to a sanitized name (extension appended) or null.
+    const filenameOverlay = document.getElementById('filename-overlay');
+    const filenameInput = document.getElementById('filename-input');
+    let filenameResolve = null;
+    function askFilename(defaultName) {
+      return new Promise((resolve) => {
+        filenameResolve = resolve;
+        filenameInput.value = defaultName;
+        filenameOverlay.hidden = false;
+        filenameInput.focus();
+        filenameInput.select();
+      });
+    }
+    const settleFilename = (name) => {
+      filenameOverlay.hidden = true;
+      if (filenameResolve) { filenameResolve(name); filenameResolve = null; }
+    };
+    const confirmFilename = () => {
+      const clean = filenameInput.value.trim().replace(/[\\/:*?"<>|]/g, '').replace(/\.html?$/i, '');
+      settleFilename(clean ? `${clean}.html` : null);
+    };
+    document.getElementById('btn-filename-save').addEventListener('click', confirmFilename);
+    document.getElementById('btn-filename-cancel').addEventListener('click', () => settleFilename(null));
+    filenameOverlay.addEventListener('click', (e) => {
+      if (e.target === filenameOverlay) settleFilename(null);  // backdrop cancels
+    });
+    filenameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') confirmFilename();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !filenameOverlay.hidden) settleFilename(null);
     });
 
     elManageList.addEventListener('click', async (e) => {
@@ -3123,6 +3182,23 @@
       return buildHTMLExport(currentDetailWalk, rendered, svg, skin.css, skin.icon);
     }
 
+    // The artifact build renders every photo through the engine — a slow,
+    // synchronous-feeling wait. Show a persistent "rendering…" toast for the
+    // duration; the rAF gap lets it paint before the work hogs the thread.
+    async function buildDetailHTMLWithFeedback() {
+      clearTimeout(toastTimer);
+      const msg = document.createElement('span');
+      msg.textContent = 'rendering…';
+      elToast.replaceChildren(msg);
+      elToast.hidden = false;
+      await new Promise((r) => requestAnimationFrame(r));
+      try {
+        return await buildCurrentDetailHTML();
+      } finally {
+        elToast.hidden = true;
+      }
+    }
+
     // --- Share card ---
     // A square PNG shared on its own (mixed-type multi-share is dropped by
     // Signal and rejected by WhatsApp): the walk's first photo cover-cropped
@@ -3289,8 +3365,10 @@
           downloadFile(filename, html, 'text/html');
         }
       } else if (action === 'download-html') {
-        const html = await buildCurrentDetailHTML();
-        downloadFile(`aimless-${currentDetailWalk.seed}.html`, html, 'text/html');
+        const filename = await askFilename(`aimless-${currentDetailWalk.seed}`);
+        if (!filename) return;
+        const html = await buildDetailHTMLWithFeedback();
+        downloadFile(filename, html, 'text/html');
       } else if (action === 'card') {
         // Send card: single image + text, the best-supported share payload.
         const db = await dbPromise;
