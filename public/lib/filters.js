@@ -165,6 +165,19 @@ export function allFilters() {
   return [...FILTERS, ...importedFilters];
 }
 
+// Built-ins can't be deleted (they're code), only hidden — the picker rail
+// and management sheet show visibleFilters(); getFilter still resolves a
+// hidden id so saved walks render whatever they referenced.
+let hiddenFilterIds = new Set();
+export function setHiddenFilters(ids) { hiddenFilterIds = new Set(ids || []); }
+export function hiddenFilters() { return [...hiddenFilterIds]; }
+export function hideFilter(id) { hiddenFilterIds.add(id); }
+export function unhideFilter(id) { hiddenFilterIds.delete(id); }
+export function isFilterHidden(id) { return hiddenFilterIds.has(id); }
+export function visibleFilters() {
+  return allFilters().filter((filter) => !hiddenFilterIds.has(filter.id));
+}
+
 export function getFilter(id) {
   return allFilters().find((filter) => filter.id === id) || FILTERS.find((filter) => filter.id === 'original');
 }
