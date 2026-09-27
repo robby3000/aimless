@@ -2765,7 +2765,7 @@
       }).join(' ');
 
       const animStyle = animate && trace.length > 1 ? `<style>
-        .tr-line{stroke-dasharray:1;stroke-dashoffset:1;animation:tr-draw ${drawDur.toFixed(2)}s ease-in-out forwards}
+        .tr-line{stroke-dasharray:1;stroke-dashoffset:1;animation:tr-draw ${drawDur.toFixed(2)}s ease-in-out 0.25s forwards}
         .tr-dot{opacity:0;animation:tr-pop .35s ease-out forwards}
         @keyframes tr-draw{to{stroke-dashoffset:0}}
         @keyframes tr-pop{to{opacity:var(--o,1)}}
