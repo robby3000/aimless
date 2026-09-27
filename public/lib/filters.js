@@ -21,6 +21,7 @@ const EFFECT_DEFAULTS = {
   specular: { surfaceScale: 2, strength: 40, shininess: 25, color: '#ffffff', azimuth: 315, elevation: 45, bumpBlur: 0, source: 'luminance', blend: 'screen', opacity: 100 },
   morphology: { op: 'dilate', radiusX: 4, radiusY: 4 },
   outline: { threshold: 15, width: 1, color: '#101010', detail: 0, softness: 0, surface: 'original', opacity: 100 },
+  echo: { count: 2, distance: 30, direction: 0, decay: 55, blur: 0, blend: 'normal', opacity: 60 },
   solarize: { amount: 60, threshold: 50 }, hueband: { bands: 6, spread: 0 },
   psychedelic: { saturate: 280, contrast: 130, bands: 6, solarize: 50 }, infrared: { intensity: 70 },
   vintage: { sepia: 45, contrast: 95, saturate: 80, brightness: 105 }, dropshadow: { x: 0, y: 8, blur: 16, color: '#7c5cff' },
