@@ -17,6 +17,7 @@ const EFFECT_DEFAULTS = {
   grain: { size: 0.9, opacity: 25, blend: 'overlay' }, vignette: { color: '#000000', size: 60, opacity: 50 },
   scanlines: { size: 3, color: '#000000', opacity: 30, blend: 'multiply' }, prism: { c1: '#ff2e88', c2: '#2effd5', angle: 45, width: 20, opacity: 35 },
   glitch: { style: 'CCD Failure', amount: 42, bandSize: 28, split: 6, corrupt: 40, seed: 317 },
+  liquid: { intensity: 30, waveX: 20, waveY: 20, flow: 'organic', noise: 'fractal', octaves: 2, seed: 1, softness: 0, highlight: 0, mix: 0 },
   solarize: { amount: 60, threshold: 50 }, hueband: { bands: 6, spread: 0 },
   psychedelic: { saturate: 280, contrast: 130, bands: 6, solarize: 50 }, infrared: { intensity: 70 },
   vintage: { sepia: 45, contrast: 95, saturate: 80, brightness: 105 }, dropshadow: { x: 0, y: 8, blur: 16, color: '#7c5cff' },
