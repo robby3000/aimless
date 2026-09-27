@@ -2884,36 +2884,45 @@
       if (detailObserver) detailObserver.disconnect();
       const bySeq = new Map(photos.map((p) => [p.stopSeq, p]));
       // Progress indicator: "rendering n/m" beside the Filter label while
-      // any of this walk's renders are in flight.
+      // queued renders are in flight. m is the observed queue size, not the
+      // photo count — off-screen photos are never queued.
       const busy = document.getElementById('filter-busy');
-      let pending = 0;
-      const renderedCount = () => photos.length - pending;
+      busy.dataset.token = token; // a superseded fill's tick must not hide a newer fill's indicator
+      let queued = 0;
+      let finished = 0;
       const tick = () => {
-        if (token !== detailRenderToken || pending === 0) { busy.hidden = true; return; }
+        if (busy.dataset.token !== String(token)) return;
+        if (finished >= queued) { busy.hidden = true; return; }
         busy.hidden = false;
-        busy.textContent = `rendering ${renderedCount() + 1}/${photos.length}`;
+        busy.textContent = `rendering ${finished + 1}/${queued}`;
       };
-      const renderOne = (p) => {
-        pending++;
+      const renderOne = async (p) => {
+        queued++;
         tick();
-        return photoSource(p).then(({ img, rawSrc }) => {
-        const frame = token === detailRenderToken &&
-          currentDetailWalk?.id === walkId && currentFilter === filterId &&
-          document.querySelector(`.photo-frame[data-stopseq="${p.stopSeq}"]`);
-        if (!frame) return;
-        if (!img) {
-          if (rawSrc) frame.innerHTML = `<img src="${rawSrc}" alt="photo">`;
-          return;
-        }
-        const canvas = document.createElement('canvas');
+        // Let the indicator paint before the synchronous render blocks the
+        // main thread — without this the label toggles off again before the
+        // browser ever draws it.
+        await new Promise((r) => requestAnimationFrame(r));
         try {
-          const rendered = renderDetailCanvas(img, p, filterId, PREVIEW_MAX_DIM);
-          canvas.width = rendered.width;
-          canvas.height = rendered.height;
-          canvas.getContext('2d').drawImage(rendered, 0, 0);
-        } catch { canvas.width = canvas.height = 0; }
-        frame.replaceChildren(canvas);
-        }).catch(() => {}).finally(() => { pending--; tick(); });
+          const { img, rawSrc } = await photoSource(p);
+          const frame = token === detailRenderToken &&
+            currentDetailWalk?.id === walkId && currentFilter === filterId &&
+            document.querySelector(`.photo-frame[data-stopseq="${p.stopSeq}"]`);
+          if (!frame) return;
+          if (!img) {
+            if (rawSrc) frame.innerHTML = `<img src="${rawSrc}" alt="photo">`;
+            return;
+          }
+          const canvas = document.createElement('canvas');
+          try {
+            const rendered = renderDetailCanvas(img, p, filterId, PREVIEW_MAX_DIM);
+            canvas.width = rendered.width;
+            canvas.height = rendered.height;
+            canvas.getContext('2d').drawImage(rendered, 0, 0);
+          } catch { canvas.width = canvas.height = 0; }
+          frame.replaceChildren(canvas);
+        } catch { /* unreadable photo — leave shimmer */ }
+        finally { finished++; tick(); }
       };
       // No IntersectionObserver (ancient WebView): render everything.
       if (typeof IntersectionObserver === 'undefined') {
