@@ -1497,8 +1497,17 @@
     const filterRail = makeRail(railFilter, (value) => {
       currentFilter = value;
       savePrefs();
-      // Photos are baked pixels, so a filter change rebuilds the detail view.
-      if (currentDetailWalk) showWalkDetail(currentDetailWalk.id);
+      // Show the busy indicator at tap time — the DB fetch + DOM rebuild in
+      // showWalkDetail is itself part of the perceived wait. The 'busy'
+      // sentinel claims the element so a superseded fill's finally can't
+      // hide it; fillDetailPhotos takes ownership once it runs.
+      if (currentDetailWalk) {
+        const busy = document.getElementById('filter-busy');
+        busy.dataset.token = 'busy';
+        busy.textContent = 'rendering…';
+        busy.hidden = false;
+        showWalkDetail(currentDetailWalk.id);
+      }
     });
 
     // --- Filter management ---
@@ -2888,6 +2897,7 @@
       // photo count — off-screen photos are never queued.
       const busy = document.getElementById('filter-busy');
       busy.dataset.token = token; // a superseded fill's tick must not hide a newer fill's indicator
+      if (!photos.length) { busy.hidden = true; return; }
       let queued = 0;
       let finished = 0;
       const tick = () => {
@@ -3023,7 +3033,12 @@
       // Sync the rails after the screen is visible so their geometry exists.
       skinRail.setValue(currentSkin);
       filterRail.setValue(currentFilter);
-      if (photos.length) fillDetailPhotos(photos, walk.id, currentFilter);
+      if (photos.length) {
+        fillDetailPhotos(photos, walk.id, currentFilter);
+      } else {
+        // Filter tap showed the indicator but there's nothing to render.
+        document.getElementById('filter-busy').hidden = true;
+      }
     }
 
     // Build the current walk's self-contained HTML export (shared by the
