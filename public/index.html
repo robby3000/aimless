@@ -835,7 +835,15 @@
     #detail-content img { max-width: 100%; }
     /* Same .photo-frame rules the export embeds — baked pixels, no filter markup. */
     .photo-frame { margin-top: 8px; border-radius: 8px; overflow: hidden; }
-    .photo-frame img { display: block; width: 100%; height: auto; }
+    .photo-frame img, .photo-frame canvas { display: block; width: 100%; height: auto; }
+    .photo-loading {
+      height: 120px;
+      border-radius: 8px;
+      background: linear-gradient(100deg, rgba(255,255,255,0.04) 40%, rgba(255,255,255,0.10) 50%, rgba(255,255,255,0.04) 60%);
+      background-size: 200% 100%;
+      animation: photoShimmer 1.2s linear infinite;
+    }
+    @keyframes photoShimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
 
     /* --- Portrait nudge overlay --- */
     /* iOS Safari does not implement the manifest "orientation" field or
@@ -2666,30 +2674,84 @@
     // --- Walk detail ---
     let currentDetailWalk = null;
 
-    // Detail photos render through the engine at a preview cap, then cache
-    // as data URLs keyed by photo + filter — the same pixels A5 embeds.
+    // Detail photos render through the engine into <canvas> elements — no
+    // JPEG/base64 encode in the preview path (that happens once, at export).
+    // Two caches: decoded source bitmaps (survive filter changes) and
+    // rendered canvases keyed by photo+filter+dim.
     const PREVIEW_MAX_DIM = 1200;
-    const photoRenderCache = new Map();
+    const PREVIEW_WARMUP_DIM = 480;
+    const photoImgCache = new Map();      // photo.id → Promise<Image> (decoded source)
+    const photoCanvasCache = new Map();   // `${id}:${filter}:${dim}` → canvas
 
-    async function renderDetailPhoto(photo, filterId) {
-      const key = `${photo.id}:${filterId}`;
-      if (photoRenderCache.has(key)) return photoRenderCache.get(key);
-      const objectUrl = !photo.dataUrl && photo.blob;
-      const src = photo.dataUrl || (photo.blob ? URL.createObjectURL(photo.blob) : null);
-      if (!src) return null;
-      try {
-        const img = await loadImage(src);
-        const canvas = renderToCanvas(img, getFilter(filterId).spec, { maxDim: PREVIEW_MAX_DIM, renderer: 'auto' });
-        const url = canvas.toDataURL('image/jpeg', 0.85);
-        photoRenderCache.set(key, url);
-        if (photoRenderCache.size > 40) photoRenderCache.delete(photoRenderCache.keys().next().value);
-        if (objectUrl) URL.revokeObjectURL(src);
-        return url;
-      } catch {
-        // A legacy IndexedDB blob may be unreadable on iOS — show the raw
-        // source rather than dropping the photo.
-        return src;
+    function lruSet(map, key, value, cap) {
+      map.delete(key);
+      map.set(key, value);
+      while (map.size > cap) map.delete(map.keys().next().value);
+    }
+
+    function photoSource(photo) {
+      let p = photoImgCache.get(photo.id);
+      if (!p) {
+        const src = photo.dataUrl || (photo.blob ? URL.createObjectURL(photo.blob) : null);
+        p = src ? loadImage(src).then((img) => ({ img, revoke: !photo.dataUrl ? src : null }))
+                .catch(() => ({ img: null, rawSrc: src }))  // unreadable legacy blob → raw src fallback
+                : Promise.resolve({ img: null, rawSrc: null });
+        lruSet(photoImgCache, photo.id, p, 12);
       }
+      return p;
+    }
+
+    function renderDetailCanvas(img, photo, filterId, maxDim) {
+      const key = `${photo.id}:${filterId}:${maxDim}`;
+      let canvas = photoCanvasCache.get(key);
+      if (!canvas) {
+        canvas = renderToCanvas(img, getFilter(filterId).spec, { maxDim, renderer: 'auto' });
+        lruSet(photoCanvasCache, key, canvas, 16);
+      }
+      return canvas;
+    }
+
+    // Data URL for the export artifact — render may be cached, encode is not.
+    async function renderDetailPhoto(photo, filterId) {
+      const { img, rawSrc } = await photoSource(photo);
+      if (!img) return rawSrc;
+      try {
+        return renderDetailCanvas(img, photo, filterId, PREVIEW_MAX_DIM).toDataURL('image/jpeg', 0.85);
+      } catch {
+        return rawSrc;
+      }
+    }
+
+    // Progressive fill: empty frames mount instantly, a quick 480px pass
+    // lands first, then each card upgrades to full preview res. A render
+    // token discards results from superseded filter/selection states.
+    let detailRenderToken = 0;
+    function fillDetailPhotos(photos, walkId, filterId) {
+      const token = ++detailRenderToken;
+      const live = (seq) => token === detailRenderToken &&
+        currentDetailWalk?.id === walkId && currentFilter === filterId &&
+        document.querySelector(`.photo-frame[data-stopseq="${seq}"]`);
+      const fill = (p, dim) => photoSource(p).then(({ img, rawSrc }) => {
+        const frame = live(p.stopSeq);
+        if (!frame) return;
+        if (!img) {
+          if (rawSrc) frame.innerHTML = `<img src="${rawSrc}" alt="photo">`;
+          return;
+        }
+        const canvas = document.createElement('canvas');
+        try {
+          const rendered = renderDetailCanvas(img, p, filterId, dim);
+          canvas.width = rendered.width;
+          canvas.height = rendered.height;
+          canvas.getContext('2d').drawImage(rendered, 0, 0);
+        } catch { canvas.width = canvas.height = 0; }
+        frame.replaceChildren(canvas);
+      }).catch(() => {});
+      // Cheap pass for every photo first, then upgrade in place.
+      Promise.all(photos.map((p) => fill(p, PREVIEW_WARMUP_DIM))).then(() => {
+        if (token !== detailRenderToken) return;
+        Promise.all(photos.map((p) => fill(p, PREVIEW_MAX_DIM)));
+      });
     }
 
     async function showWalkDetail(walkId) {
@@ -2714,21 +2776,16 @@
       const trace = walk.trace || [];
       const svg = traceSVG({ origin: walk.origin, stops: walk.stops }, trace, getSkin(currentSkin).trace);
 
-      // Build stop cards with photos. Photos are baked pixels: each renders
-      // through the engine once per filter and caches as a data URL.
+      // Photo frames mount empty and fill asynchronously — the screen
+      // appears instantly; a 480px pass lands fast, then upgrades to full
+      // preview res in the background (fillDetailPhotos).
       const photoMap = new Map();
       for (const p of photos) photoMap.set(p.stopSeq, p);
-      const renderedPhotos = new Map();
-      await Promise.all(photos.map(async (p) => {
-        const url = await renderDetailPhoto(p, currentFilter);
-        if (url) renderedPhotos.set(p.stopSeq, url);
-      }));
       // Same markup vocabulary as the HTML export, so the shared base styles
       // and skins behave identically here and in the exported file.
       const stopHtml = walk.stops.map((s, i) => {
-        const photoUrl = renderedPhotos.get(s.seq);
-        const photoHtml = photoUrl
-          ? `<div class="photo-frame"><img src="${photoUrl}" alt="photo"></div>`
+        const photoHtml = photoMap.has(s.seq)
+          ? `<div class="photo-frame" data-stopseq="${s.seq}"><div class="photo-loading"></div></div>`
           : '';
         const status = s.approached
           ? '<span class="status approached">close as I can get</span>'
@@ -2773,6 +2830,7 @@
       // Sync the rails after the screen is visible so their geometry exists.
       skinRail.setValue(currentSkin);
       filterRail.setValue(currentFilter);
+      if (photos.length) fillDetailPhotos(photos, walk.id, currentFilter);
     }
 
     // Build the current walk's self-contained HTML export (shared by the
