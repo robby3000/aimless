@@ -2823,7 +2823,6 @@
     // Two caches: decoded source bitmaps (survive filter changes) and
     // rendered canvases keyed by photo+filter+dim.
     const PREVIEW_MAX_DIM = 1200;
-    const PREVIEW_WARMUP_DIM = 480;
     const photoImgCache = new Map();      // photo.id → Promise<Image> (decoded source)
     const photoCanvasCache = new Map();   // `${id}:${filter}:${dim}` → canvas
 
@@ -2866,17 +2865,20 @@
       }
     }
 
-    // Progressive fill: empty frames mount instantly, a quick 480px pass
-    // lands first, then each card upgrades to full preview res. A render
-    // token discards results from superseded filter/selection states.
+    // Lazy fill: empty frames mount instantly; each photo renders only as
+    // its card scrolls into (or near) view, at full preview res in one
+    // pass. Filter switches therefore cost ~the visible frames, not the
+    // whole set, and rendered canvases are shared with the export path.
     let detailRenderToken = 0;
+    let detailObserver = null;
     function fillDetailPhotos(photos, walkId, filterId) {
       const token = ++detailRenderToken;
-      const live = (seq) => token === detailRenderToken &&
-        currentDetailWalk?.id === walkId && currentFilter === filterId &&
-        document.querySelector(`.photo-frame[data-stopseq="${seq}"]`);
-      const fill = (p, dim) => photoSource(p).then(({ img, rawSrc }) => {
-        const frame = live(p.stopSeq);
+      if (detailObserver) detailObserver.disconnect();
+      const bySeq = new Map(photos.map((p) => [p.stopSeq, p]));
+      const renderOne = (p) => photoSource(p).then(({ img, rawSrc }) => {
+        const frame = token === detailRenderToken &&
+          currentDetailWalk?.id === walkId && currentFilter === filterId &&
+          document.querySelector(`.photo-frame[data-stopseq="${p.stopSeq}"]`);
         if (!frame) return;
         if (!img) {
           if (rawSrc) frame.innerHTML = `<img src="${rawSrc}" alt="photo">`;
@@ -2884,18 +2886,30 @@
         }
         const canvas = document.createElement('canvas');
         try {
-          const rendered = renderDetailCanvas(img, p, filterId, dim);
+          const rendered = renderDetailCanvas(img, p, filterId, PREVIEW_MAX_DIM);
           canvas.width = rendered.width;
           canvas.height = rendered.height;
           canvas.getContext('2d').drawImage(rendered, 0, 0);
         } catch { canvas.width = canvas.height = 0; }
         frame.replaceChildren(canvas);
       }).catch(() => {});
-      // Cheap pass for every photo first, then upgrade in place.
-      Promise.all(photos.map((p) => fill(p, PREVIEW_WARMUP_DIM))).then(() => {
-        if (token !== detailRenderToken) return;
-        Promise.all(photos.map((p) => fill(p, PREVIEW_MAX_DIM)));
+      // No IntersectionObserver (ancient WebView): render everything.
+      if (typeof IntersectionObserver === 'undefined') {
+        photos.forEach(renderOne);
+        return;
+      }
+      detailObserver = new IntersectionObserver((entries) => {
+        for (const e of entries) {
+          if (!e.isIntersecting) continue;
+          detailObserver.unobserve(e.target);
+          const p = bySeq.get(Number(e.target.dataset.stopseq));
+          if (p) renderOne(p);
+        }
+      }, {
+        root: document.getElementById('detail-content'),
+        rootMargin: '600px 0px',   // pre-render just below the fold too
       });
+      document.querySelectorAll('#detail-content .photo-frame').forEach((f) => detailObserver.observe(f));
     }
 
     async function showWalkDetail(walkId) {
