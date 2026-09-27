@@ -744,6 +744,31 @@
       max-width: calc(100vw - 32px);
     }
     #toast[hidden] { display: none; }
+
+    /* --- Confirm dialog (destructive actions) --- */
+    #confirm-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.55);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 70;   /* above bottom sheets (51) and toast (60) */
+      padding: 24px;
+    }
+    #confirm-overlay[hidden] { display: none; }
+    #confirm-box {
+      background: var(--surface);
+      border: 1px solid var(--surface-2);
+      border-radius: 12px;
+      padding: 18px;
+      max-width: 340px;
+      width: 100%;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+    #confirm-text { margin-bottom: 16px; font-size: 0.95rem; }
+    .confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
+    .confirm-actions button { min-width: 76px; }
     #toast .toast-action {
       background: var(--accent);
       color: var(--bg);
@@ -1222,6 +1247,17 @@
 
   <div id="toast" hidden role="status" aria-live="polite"></div>
 
+  <!-- Confirm dialog (destructive actions) -->
+  <div id="confirm-overlay" hidden>
+    <div id="confirm-box" role="alertdialog" aria-labelledby="confirm-text" aria-modal="true">
+      <div id="confirm-text"></div>
+      <div class="confirm-actions">
+        <button id="btn-confirm-cancel">Cancel</button>
+        <button id="btn-confirm-yes" class="btn-danger">Delete</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     import { planWalk, estimate, nextStopIndex } from './lib/walk.js';
     import { randomSeed } from './lib/rng.js';
@@ -1584,11 +1620,39 @@
       if (!file) return;
       applyFilterImport(await file.text());
     });
+    // --- Confirm dialog ---
+    // Promise-based modal for destructive actions; resolves true/false.
+    const confirmOverlay = document.getElementById('confirm-overlay');
+    const confirmText = document.getElementById('confirm-text');
+    let confirmResolve = null;
+    function askConfirm(message) {
+      return new Promise((resolve) => {
+        confirmResolve = resolve;
+        confirmText.textContent = message;
+        confirmOverlay.hidden = false;
+        document.getElementById('btn-confirm-yes').focus();
+      });
+    }
+    const settleConfirm = (answer) => {
+      confirmOverlay.hidden = true;
+      if (confirmResolve) { confirmResolve(answer); confirmResolve = null; }
+    };
+    document.getElementById('btn-confirm-yes').addEventListener('click', () => settleConfirm(true));
+    document.getElementById('btn-confirm-cancel').addEventListener('click', () => settleConfirm(false));
+    confirmOverlay.addEventListener('click', (e) => {
+      if (e.target === confirmOverlay) settleConfirm(false);  // backdrop cancels
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !confirmOverlay.hidden) settleConfirm(false);
+    });
+
     elManageList.addEventListener('click', async (e) => {
       const t = e.target.closest('.filter-action');
       if (!t) return;
       if (t.dataset.delete) {
         const id = t.dataset.delete;
+        const name = getFilter(id)?.name || id;
+        if (!await askConfirm(`Delete ${name} filter?`)) return;
         const db = await dbPromise;
         if (db) await del(db, 'filters', id);
         if (currentFilter === id) currentFilter = 'original';
