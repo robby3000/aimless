@@ -16,7 +16,7 @@ const EFFECT_DEFAULTS = {
   gradient: { c1: '#ff5c8a', c2: '#7c5cff', angle: 135, blend: 'soft-light', opacity: 50 },
   grain: { size: 0.9, opacity: 25, blend: 'overlay' }, vignette: { color: '#000000', size: 60, opacity: 50 },
   scanlines: { size: 3, color: '#000000', opacity: 30, blend: 'multiply' }, prism: { c1: '#ff2e88', c2: '#2effd5', angle: 45, width: 20, opacity: 35 },
-  glitch: { style: 'CCD Failure', amount: 42, bandSize: 28, split: 6, corrupt: 40, seed: 317 },
+  glitch: { style: 'CCD Failure', amount: 42, bandSize: 28, split: 6, corrupt: 40, blocks: 0, seed: 317 },
   liquid: { intensity: 30, waveX: 20, waveY: 20, flow: 'organic', noise: 'fractal', octaves: 2, seed: 1, softness: 0, highlight: 0, mix: 0 },
   specular: { surfaceScale: 2, strength: 40, shininess: 25, color: '#ffffff', azimuth: 315, elevation: 45, bumpBlur: 0, source: 'luminance', blend: 'screen', opacity: 100 },
   morphology: { op: 'dilate', radiusX: 4, radiusY: 4 },
