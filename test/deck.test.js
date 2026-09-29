@@ -13,43 +13,39 @@ import {
   PROBABILITIES,
   RECENT_WALKS,
 } from '../public/lib/deck.js';
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, join } from 'node:path';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const DATA = join(__dirname, '..', 'public', 'data');
-
-function loadVoice(slug) {
-  return JSON.parse(readFileSync(join(DATA, `${slug}.json`), 'utf8'));
-}
-
-const CROW = loadVoice('crow');
-const THRESHOLD = loadVoice('threshold');
-const LATTICE = loadVoice('lattice');
-
-test('all three voice files have the required fields', () => {
-  for (const v of [CROW, THRESHOLD, LATTICE]) {
-    assert.ok(v.slug, 'missing slug');
-    assert.ok(v.name, 'missing name');
-    assert.ok(v.epithet, 'missing epithet');
-    assert.ok(v.lore, 'missing lore');
-    assert.ok(Array.isArray(v.directives) && v.directives.length === 12, `${v.slug} directives`);
-    assert.ok(Array.isArray(v.targets) && v.targets.length === 14, `${v.slug} targets`);
-  }
+// Legacy fixture voices: the shipped voices moved to oracle pools
+// (public/data/{slug}.json, tested by oracle.test.js), but deck.js remains
+// in-tree during the transition and stays tested against this stand-in data.
+const FIXTURE = (slug) => ({
+  slug,
+  name: slug[0].toUpperCase() + slug.slice(1),
+  epithet: 'fixture',
+  lore: 'fixture lore',
+  directives: [
+    'Find', 'Appraise', 'Photograph', 'Count', 'Stand beside', 'Go back for',
+    'Ignore', 'Look under', 'Wait beside', 'Price', 'Judge', 'Take an interest in',
+  ],
+  targets: [
+    'the brightest thing at ground level',
+    'something dropped rather than placed',
+    'the most recently disturbed surface here',
+    'a repair someone hoped you would not notice',
+    'the thing nobody else has taken',
+    'an arrangement made entirely by accident',
+    'whatever a bird would land on first',
+    'the shiniest object within twenty paces',
+    'something that has been moved and not put back',
+    'the smallest thing here that was once expensive',
+    'a thing that is pretending to be another thing',
+    'whatever is directly beneath your feet',
+    'the object here with the least dignity',
+    'something that has outlasted its purpose',
+  ],
 });
 
-test('no directive or target contains an exclamation mark or emoji', () => {
-  for (const v of [CROW, THRESHOLD, LATTICE]) {
-    for (const d of v.directives) {
-      assert.ok(!d.includes('!'), `${v.slug} directive has !: ${d}`);
-      assert.ok(!d.match(/[\u{1F000}-\u{1FFFF}]/u), `${v.slug} directive has emoji: ${d}`);
-    }
-    for (const t of v.targets) {
-      assert.ok(!t.includes('!'), `${v.slug} target has !: ${t}`);
-    }
-  }
-});
+const CROW = FIXTURE('crow');
+const THRESHOLD = FIXTURE('threshold');
+const LATTICE = FIXTURE('lattice');
 
 test('no shared slot contains an exclamation mark or emoji', () => {
   for (const s of [...OPENERS, ...CONSTRAINTS, ...CODAS]) {

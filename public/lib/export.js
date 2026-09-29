@@ -44,6 +44,12 @@ export const VOICE_NAMES = {
   threshold: 'The Threshold',
   lattice: 'The Lattice',
   inner: 'The Inner',
+  stray: 'The Stray',
+  small: 'The Small',
+  slow: 'The Slow',
+  echo: 'The Echo',
+  myvoice: 'My Voice',
+  none: 'No Voice',
 };
 
 export function voiceName(slug) {
@@ -111,14 +117,19 @@ export async function buildHTMLExport(walk, photos, svgTrace, skinCss = '', icon
         : '<span class="status missed">not reached</span>';
     // Inner stops carry the hexagram resolved from their coordinates: the
     // glyph beside its title, then the haiku with one element per line so
-    // the breaks are structural rather than white-space dependent.
+    // the breaks are structural rather than white-space dependent. Oracle
+    // stops reuse the same block for the drawn title, no glyph.
     const hex = s.hexagram;
     const hexHtml = hex
       ? `<div class="card-hex"><span class="glyph">${hex.glyph}</span><span class="hex-title">${hex.title}</span></div>`
-      : '';
-    const cardHtml = hex
-      ? `<div class="card-text card-haiku">${(s.cardText || '').split('\n').map((l) => `<span class="haiku-line">${l}</span>`).join('')}</div>`
-      : `<div class="card-text">${s.cardText || ''}</div>`;
+      : s.oracle
+        ? `<div class="card-hex"><span class="hex-title">${esc(s.oracle.title)}</span></div>`
+        : '';
+    const cardHtml = (hex || s.oracle)
+      ? `<div class="card-text card-haiku">${(s.cardText || '').split('\n').map((l) => `<span class="haiku-line">${esc(l)}</span>`).join('')}</div>`
+      : s.cardText
+        ? `<div class="card-text">${esc(s.cardText)}</div>`
+        : '';
     return `<div class="stop">
       <div class="stop-num">${i + 1}</div>
       <div class="stop-body">

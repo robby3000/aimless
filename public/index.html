@@ -1046,6 +1046,12 @@
             <div class="wheel-item" data-value="threshold">The Threshold</div>
             <div class="wheel-item" data-value="lattice">The Lattice</div>
             <div class="wheel-item" data-value="inner">The Inner</div>
+            <div class="wheel-item" data-value="stray">The Stray</div>
+            <div class="wheel-item" data-value="small">The Small</div>
+            <div class="wheel-item" data-value="slow">The Slow</div>
+            <div class="wheel-item" data-value="echo">The Echo</div>
+            <div class="wheel-item" data-value="myvoice">My Voice</div>
+            <div class="wheel-item" data-value="none">No Voice</div>
           </div>
         </div>
       </div>
@@ -1302,6 +1308,7 @@
     import { SKINS, getSkin, scopeCSS, BASE_CSS } from './lib/skins.js';
     import { isIOS, isInAppBrowser, isStandalone } from './lib/platform.js';
     import { buildHexIndex, innerCard } from './lib/inner.js';
+    import { oracleCard, echoOpener } from './lib/oracle.js';
     import { FILTERS, getFilter, allFilters, visibleFilters, setImportedFilters, importFilterSpec,
              setHiddenFilters, hiddenFilters, hideFilter, unhideFilter, isFilterHidden } from './lib/filters.js';
     import { renderToCanvas } from './lib/engine/canvas.js';
@@ -1830,7 +1837,14 @@
     loadPrefs();
 
     // --- Voice loading ---
+    // No Voice and My Voice carry no card content at all — the walker's own
+    // words (My Voice) are attached later, at export time.
+    const SILENT_VOICES = {
+      none:    { slug: 'none',    name: 'No Voice',  epithet: 'just the walking' },
+      myvoice: { slug: 'myvoice', name: 'My Voice',  epithet: 'your own words' },
+    };
     async function loadVoice(slug) {
+      if (SILENT_VOICES[slug]) return SILENT_VOICES[slug];
       const res = await fetch(`./data/${slug}.json`);
       const data = await res.json();
       // The Inner ships as a bare hexagram array, not a deck voice; wrap it
@@ -2403,6 +2417,15 @@
         let recentBuffer = [];
         if (voice.slug === 'inner') {
           cards = plan.stops.map((s) => innerCard(s, voice.hexIndex));
+        } else if (SILENT_VOICES[voice.slug]) {
+          // Silent voices draw nothing: arrival goes straight to the photo
+          // panel, and no card text lands on the walk record.
+          cards = plan.stops.map(() => null);
+        } else if (voice.titles) {
+          // Oracle voices: each waypoint's own coordinates draw title + three
+          // lines from the voice's pools. No seeded deck, no dedup buffer —
+          // the same coordinates always read the same way in this voice.
+          cards = plan.stops.map((s) => oracleCard(s, voice));
         } else {
           // Load recent pairs for cross-walk dedup.
           if (db) {
@@ -2521,8 +2544,22 @@
       resetFocusTimer();
       saveActiveWalk();
 
-      // Show the card.
-      showCard(stop.card, walk.voice);
+      // The Echo prepends a line about the previous stop's outcome — chosen
+      // here, not at plan time, because the outcome isn't known until it
+      // happens. Written back to stop.card so the walk record keeps the card
+      // the user actually saw.
+      if (walk.voice.echo && stop.card && !stop.card.echoApplied) {
+        const prev = stop.seq > 0 ? walk.plan.stops[stop.seq - 1] : null;
+        const opener = echoOpener(walk.voice, walk.plan.seed, stop.seq, prev && {
+          approached: !!prev.approached,
+          photo: !!walk.photos[stop.seq - 1],
+        });
+        if (opener) stop.card.text = `${opener}\n${stop.card.text}`;
+        stop.card.echoApplied = true;
+      }
+
+      // Show the card (silent voices carry none — straight to the panel).
+      if (stop.card) showCard(stop.card, walk.voice);
 
       // Replace the compass readout with the arrival panel. The panel starts
       // in the "photo" state (big round Photograph button + skip link). After
@@ -2539,15 +2576,20 @@
     function showCard(card, voice) {
       cardVoice.textContent = `${voice.name} — ${voice.epithet}`;
       // Inner cards carry the hexagram the waypoint's coordinates resolved
-      // to: glyph above, number and title beneath, then the haiku.
+      // to: glyph above, number and title beneath, then the haiku. Oracle
+      // cards reuse the same block for their drawn title, minus the glyph.
       const hex = card.hexagram || null;
-      cardHex.hidden = !hex;
+      const oracle = card.oracle || null;
+      cardHex.hidden = !(hex || oracle);
+      cardHexGlyph.hidden = !hex;
       if (hex) {
         cardHexGlyph.textContent = hex.glyph;
         cardHexTitle.textContent = `${hex.number} · ${hex.title}`;
+      } else if (oracle) {
+        cardHexTitle.textContent = oracle.title;
       }
       cardText.textContent = card.text;
-      cardText.classList.toggle('haiku', !!hex);
+      cardText.classList.toggle('haiku', !!(hex || oracle));
       cardDisplay.classList.add('visible');
     }
 
@@ -2726,7 +2768,8 @@
           approached: s.approached,
           cardText: s.card?.text,
           cardVoice: s.card?.voice,
-          hexagram: s.card?.hexagram,   // The Inner only; absent on deck voices
+          hexagram: s.card?.hexagram,   // The Inner only; absent elsewhere
+          oracle: s.card?.oracle,       // oracle voices: the drawn title
         })),
         trace,
         gaveUp,
@@ -3130,13 +3173,18 @@
         // Inner stops carry the hexagram resolved from their coordinates:
         // the glyph beside its title, then the haiku with one element per
         // line so the breaks are structural rather than white-space dependent.
+        // Oracle stops reuse the same block for the drawn title, no glyph.
         const hex = s.hexagram;
         const hexHtml = hex
           ? `<div class="card-hex"><span class="glyph">${hex.glyph}</span><span class="hex-title">${hex.title}</span></div>`
-          : '';
-        const cardHtml = hex
+          : s.oracle
+            ? `<div class="card-hex"><span class="hex-title">${s.oracle.title}</span></div>`
+            : '';
+        const cardHtml = (hex || s.oracle)
           ? `<div class="card-text card-haiku">${(s.cardText || '').split('\n').map((l) => `<span class="haiku-line">${l}</span>`).join('')}</div>`
-          : `<div class="card-text">${s.cardText || ''}</div>`;
+          : s.cardText
+            ? `<div class="card-text">${s.cardText}</div>`
+            : '';
         return `<div class="stop">
           <div class="stop-num">${i + 1}</div>
           <div class="stop-body">

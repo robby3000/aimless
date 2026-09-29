@@ -53,8 +53,10 @@ public/
     engine/             # wobbletone-engine git submodule — shared CPU renderer (do not edit here)
     kml.js              # KML route export (plan + trace + stop placemarks)
     walk-nav.js         # navigation guard: prevents bottom-nav taps from canceling a walk
+    oracle.js           # oracle voices: coordinate -> 4 pool indices (titles/l1/l2/l3)
   data/
-    crow.json  threshold.json  lattice.json
+    crow.json  threshold.json  lattice.json    # oracle pools (deck format replaced)
+    stray.json small.json slow.json echo.json  # oracle pools; echo adds opener banks
     inner.json          # 64 hexagrams: number, hex_font, binary, title, haiku
 test/
   geo.test.js  rng.test.js  walk.test.js  deck.test.js  proximity.test.js  skins.test.js
