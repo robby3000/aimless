@@ -10,6 +10,7 @@ import {
   translateWobbletoneArchive,
   translateWobbletonePreset,
   validateFilter,
+  effectiveFilterId,
 } from '../public/lib/filters.js';
 
 const EFFECTS = [
@@ -215,4 +216,13 @@ test('imported filters resolve through getFilter and allFilters', () => {
   } finally {
     setImportedFilters([]);
   }
+});
+
+test('effectiveFilterId: per-photo override wins, absent falls back', () => {
+  assert.equal(effectiveFilterId({ filterId: 'vivid' }, 'original'), 'vivid');
+  assert.equal(effectiveFilterId({}, 'original'), 'original');
+  assert.equal(effectiveFilterId({ filterId: null }, 'sepia'), 'sepia');
+  assert.equal(effectiveFilterId({ filterId: 'original' }, 'vivid'), 'original');
+  // A photo's pinned filter survives a different walk-wide choice.
+  assert.equal(effectiveFilterId({ filterId: 'ghost' }, 'vivid'), 'ghost');
 });

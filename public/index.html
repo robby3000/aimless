@@ -466,6 +466,21 @@
       color: var(--accent);
       flex-shrink: 0;
     }
+    /* Selection chip: appears in the Filter row while photos are selected. */
+    .select-chip {
+      flex-shrink: 0;
+      background: var(--accent);
+      color: var(--bg);
+      border: none;
+      border-radius: 7px;
+      padding: 5px 10px;
+      font: inherit;
+      font-size: 0.72rem;
+      font-weight: 600;
+      white-space: nowrap;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .select-chip:active { opacity: 0.8; }
     .rail {
       flex: 1;
       min-width: 0;
@@ -748,7 +763,7 @@
     #toast[hidden] { display: none; }
 
     /* --- Confirm dialog (destructive actions) + filename dialog --- */
-    #confirm-overlay, #filename-overlay {
+    #confirm-overlay, #filename-overlay, #photo-hint-overlay {
       position: fixed;
       inset: 0;
       background: rgba(0, 0, 0, 0.55);
@@ -758,8 +773,8 @@
       z-index: 70;   /* above bottom sheets (51) and toast (60) */
       padding: 24px;
     }
-    #confirm-overlay[hidden], #filename-overlay[hidden] { display: none; }
-    #confirm-box, #filename-box {
+    #confirm-overlay[hidden], #filename-overlay[hidden], #photo-hint-overlay[hidden] { display: none; }
+    #confirm-box, #filename-box, #photo-hint-box {
       background: var(--surface);
       border: 1px solid var(--surface-2);
       border-radius: 12px;
@@ -768,7 +783,7 @@
       width: 100%;
       box-shadow: 0 8px 32px rgba(0,0,0,0.5);
     }
-    #confirm-text { margin-bottom: 16px; font-size: 0.95rem; }
+    #confirm-text, #photo-hint-text { margin-bottom: 16px; font-size: 0.95rem; }
     #filename-label { margin-bottom: 10px; font-size: 0.95rem; }
     #filename-input {
       width: 100%;
@@ -916,8 +931,17 @@
     #detail-content { flex: 1; min-height: 0; overflow-y: auto; }
     #detail-content img { max-width: 100%; }
     /* Same .photo-frame rules the export embeds — baked pixels, no filter markup. */
-    .photo-frame { margin-top: 8px; border-radius: 8px; overflow: hidden; }
+    .photo-frame {
+      margin-top: 8px;
+      border-radius: 8px;
+      overflow: hidden;
+      /* Long-press selects photos; suppress the OS image sheet/callout. */
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
     .photo-frame img, .photo-frame canvas { display: block; width: 100%; height: auto; }
+    .photo-frame.selected { box-shadow: inset 0 0 0 3px var(--accent); }
     .photo-loading {
       height: 120px;
       border-radius: 8px;
@@ -1208,6 +1232,7 @@
       <div class="rail-row">
         <span class="rail-label">Filter</span>
         <div class="rail" id="rail-filter"></div>
+        <button id="select-chip" class="select-chip" hidden></button>
         <span id="filter-busy" class="filter-busy" hidden></span>
       </div>
       <div class="detail-actions">
@@ -1305,6 +1330,16 @@
     </div>
   </div>
 
+  <!-- One-time hint: long-press selects photos for per-photo filters -->
+  <div id="photo-hint-overlay" hidden>
+    <div id="photo-hint-box" role="dialog" aria-modal="true">
+      <div id="photo-hint-text">Long press on an image to select it and change its filter. Tap more images to select them too.</div>
+      <div class="confirm-actions">
+        <button id="btn-photo-hint-ok" class="btn-primary">Got it</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     import { planWalk, estimate, nextStopIndex } from './lib/walk.js';
     import { randomSeed } from './lib/rng.js';
@@ -1319,7 +1354,8 @@
     import { buildHexIndex, innerCard } from './lib/inner.js';
     import { oracleCard, echoOpener } from './lib/oracle.js';
     import { FILTERS, getFilter, allFilters, visibleFilters, setImportedFilters, importFilterSpec,
-             setHiddenFilters, hiddenFilters, hideFilter, unhideFilter, isFilterHidden } from './lib/filters.js';
+             setHiddenFilters, hiddenFilters, hideFilter, unhideFilter, isFilterHidden,
+             effectiveFilterId } from './lib/filters.js';
     import { renderToCanvas } from './lib/engine/canvas.js';
     import { renderPhotoToCanvas } from './lib/filter-renderer.js';
     import { resolveNavTarget, canStartNewWalk } from './lib/walk-nav.js';
@@ -1503,6 +1539,7 @@
     document.head.appendChild(skinStyle);
     let currentSkin = 'default';
     let currentFilter = 'original';
+    let seenPhotoSelectHint = false;
 
     function applySkin() {
       skinStyle.textContent = scopeCSS(getSkin(currentSkin).css, '#detail-content');
@@ -1579,6 +1616,12 @@
       if (currentDetailWalk) showWalkDetail(currentDetailWalk.id);
     });
     const filterRail = makeRail(railFilter, (value) => {
+      // With photos selected the rail is scoped to them: it writes filterId
+      // onto those photo records instead of changing the walk-wide pref.
+      if (selectedPhotoSeqs.size && currentDetailWalk) {
+        assignFilterToSelection(value);
+        return;
+      }
       currentFilter = value;
       savePrefs();
       // Show the busy indicator at tap time — the DB fetch + DOM rebuild in
@@ -1761,7 +1804,7 @@
     const elStops = document.getElementById('setting-stops');
     const elBudget = document.getElementById('setting-budget');
     const elVoice = document.getElementById('setting-voice');
-    const DEFAULT_PREFS = { stops: 5, budgetMin: 45, voice: 'crow', skin: 'default', filter: 'original', hiddenFilters: [], kmlLink: false };
+    const DEFAULT_PREFS = { stops: 5, budgetMin: 45, voice: 'crow', skin: 'default', filter: 'original', hiddenFilters: [], kmlLink: false, seenPhotoSelectHint: false };
 
     // Scroll-snap wheel: keeps `input` (a hidden input carrying the setting's
     // value) in sync with the centred item, and saves prefs on user scrolls.
@@ -1820,6 +1863,7 @@
       currentSkin = prefs.skin ?? DEFAULT_PREFS.skin;
       currentFilter = prefs.filter ?? DEFAULT_PREFS.filter;
       document.getElementById('opt-kml-link').checked = prefs.kmlLink ?? DEFAULT_PREFS.kmlLink;
+      seenPhotoSelectHint = prefs.seenPhotoSelectHint ?? DEFAULT_PREFS.seenPhotoSelectHint;
       setHiddenFilters(prefs.hiddenFilters);
       if (isFilterHidden(currentFilter)) currentFilter = visibleFilters()[0]?.id || 'original';
       renderManageList();
@@ -1840,6 +1884,7 @@
         filter: currentFilter,
         hiddenFilters: hiddenFilters(),
         kmlLink: document.getElementById('opt-kml-link').checked,
+        seenPhotoSelectHint,
       });
     }
 
@@ -3056,11 +3101,13 @@
     }
 
     // Data URL for the export artifact — render may be cached, encode is not.
+    // A photo's own filterId (set via Walk Detail selection) wins over the
+    // walk-wide choice passed as filterId.
     async function renderDetailPhoto(photo, filterId) {
       const { img, rawSrc } = await photoSource(photo);
       if (!img) return rawSrc;
       try {
-        return renderDetailCanvas(img, photo, filterId, PREVIEW_MAX_DIM).toDataURL('image/jpeg', 0.85);
+        return renderDetailCanvas(img, photo, effectiveFilterId(photo, filterId), PREVIEW_MAX_DIM).toDataURL('image/jpeg', 0.85);
       } catch {
         return rawSrc;
       }
@@ -3109,7 +3156,7 @@
           }
           const canvas = document.createElement('canvas');
           try {
-            const rendered = renderDetailCanvas(img, p, filterId, PREVIEW_MAX_DIM);
+            const rendered = renderDetailCanvas(img, p, effectiveFilterId(p, filterId), PREVIEW_MAX_DIM);
             canvas.width = rendered.width;
             canvas.height = rendered.height;
             canvas.getContext('2d').drawImage(rendered, 0, 0);
@@ -3137,15 +3184,126 @@
       document.querySelectorAll('#detail-content .photo-frame').forEach((f) => detailObserver.observe(f));
     }
 
+    // --- Per-photo filter selection ---
+    // Long-press on a photo selects it (coral border); while any photos are
+    // selected, taps toggle others and the Filter rail writes filterId onto
+    // just the selected photo records. Clearing the last selection exits
+    // selection mode and the rail goes back to the walk-wide pref.
+    const detailContent = document.getElementById('detail-content');
+    const selectChip = document.getElementById('select-chip');
+    const selectedPhotoSeqs = new Set();
+    let currentDetailPhotos = [];
+    let pressTimer = null;
+    let pressSeq = -1;
+    let pressX = 0;
+    let pressY = 0;
+    let suppressClick = false;
+
+    function updateSelectChip() {
+      selectChip.hidden = selectedPhotoSeqs.size === 0;
+      if (selectedPhotoSeqs.size) {
+        selectChip.textContent = `${selectedPhotoSeqs.size} selected · clear`;
+      }
+    }
+
+    function togglePhotoSelected(seq) {
+      const selected = !selectedPhotoSeqs.has(seq);
+      if (selected) selectedPhotoSeqs.add(seq); else selectedPhotoSeqs.delete(seq);
+      detailContent.querySelector(`.photo-frame[data-stopseq="${seq}"]`)
+        ?.classList.toggle('selected', selected);
+      updateSelectChip();
+      // Empty selection = normal mode again: re-point the rail at the
+      // walk-wide filter it temporarily stopped reflecting.
+      if (!selectedPhotoSeqs.size) filterRail.setValue(currentFilter);
+    }
+
+    function clearPhotoSelection() {
+      selectedPhotoSeqs.clear();
+      detailContent.querySelectorAll('.photo-frame.selected')
+        .forEach((f) => f.classList.remove('selected'));
+      updateSelectChip();
+      filterRail.setValue(currentFilter);
+    }
+
+    selectChip.addEventListener('click', clearPhotoSelection);
+
+    // Long-press on an image invites the OS save/share sheet — suppress it.
+    detailContent.addEventListener('contextmenu', (e) => {
+      if (e.target.closest('.photo-frame')) e.preventDefault();
+    });
+
+    detailContent.addEventListener('pointerdown', (e) => {
+      const frame = e.target.closest('.photo-frame');
+      if (!frame) return;
+      pressSeq = Number(frame.dataset.stopseq);
+      pressX = e.clientX;
+      pressY = e.clientY;
+      clearTimeout(pressTimer);
+      pressTimer = setTimeout(() => {
+        pressTimer = null;
+        suppressClick = true;   // the release after a long-press still fires click
+        togglePhotoSelected(pressSeq);
+      }, 500);
+    });
+    detailContent.addEventListener('pointermove', (e) => {
+      // A moved finger is a scroll, not a long-press.
+      if (pressTimer && Math.hypot(e.clientX - pressX, e.clientY - pressY) > 10) {
+        clearTimeout(pressTimer);
+        pressTimer = null;
+      }
+    });
+    for (const type of ['pointerup', 'pointercancel']) {
+      detailContent.addEventListener(type, () => {
+        clearTimeout(pressTimer);
+        pressTimer = null;
+      });
+    }
+
+    detailContent.addEventListener('click', (e) => {
+      const frame = e.target.closest('.photo-frame');
+      if (suppressClick) { suppressClick = false; return; }
+      if (!frame || !selectedPhotoSeqs.size) return;   // taps are free outside selection mode
+      togglePhotoSelected(Number(frame.dataset.stopseq));
+    });
+
+    // Selection-mode rail action: pin the chosen filter onto the selected
+    // photo records, then rebuild the detail (visible frames re-render).
+    async function assignFilterToSelection(filterId) {
+      const busy = document.getElementById('filter-busy');
+      busy.dataset.token = 'busy';
+      busy.textContent = 'rendering…';
+      busy.hidden = false;
+      const db = await dbPromise;
+      for (const p of currentDetailPhotos) {
+        if (!selectedPhotoSeqs.has(p.stopSeq)) continue;
+        p.filterId = filterId;
+        if (db) await put(db, 'photos', p);
+      }
+      showWalkDetail(currentDetailWalk.id);
+    }
+
+    // One-time instruction modal — long-press isn't discoverable otherwise.
+    const photoHintOverlay = document.getElementById('photo-hint-overlay');
+    document.getElementById('btn-photo-hint-ok').addEventListener('click', () => {
+      photoHintOverlay.hidden = true;
+    });
+    photoHintOverlay.addEventListener('click', (e) => {
+      if (e.target === photoHintOverlay) photoHintOverlay.hidden = true;
+    });
+
     async function showWalkDetail(walkId) {
       const db = await dbPromise;
       if (!db) return;
       const walk = await get(db, 'walks', walkId);
       if (!walk) return;
+      // A different walk drops any in-progress selection; re-renders of the
+      // same walk (filter assign, skin change) keep it.
+      if (currentDetailWalk?.id !== walk.id) selectedPhotoSeqs.clear();
       currentDetailWalk = walk;
 
       // Load photos.
       const photos = await byIndex(db, 'photos', 'walkId', walkId);
+      currentDetailPhotos = photos;
 
       // Build the detail content.
       const date = walk.started ? formatWalkDate(walk.started) : '?';
@@ -3239,7 +3397,19 @@
       // Sync the rails after the screen is visible so their geometry exists.
       skinRail.setValue(currentSkin);
       filterRail.setValue(currentFilter);
+      // Re-mark the selection the rebuild just wiped (same walk only).
+      for (const seq of selectedPhotoSeqs) {
+        detailContent.querySelector(`.photo-frame[data-stopseq="${seq}"]`)
+          ?.classList.add('selected');
+      }
+      updateSelectChip();
       if (photos.length) {
+        // First detail view with photos: explain the long-press once.
+        if (!seenPhotoSelectHint) {
+          seenPhotoSelectHint = true;
+          savePrefs();
+          photoHintOverlay.hidden = false;
+        }
         fillDetailPhotos(photos, walk.id, currentFilter);
       } else {
         // Filter tap showed the indicator but there's nothing to render.
@@ -3318,7 +3488,7 @@
         let img = null;
         try { img = await loadImage(src); } catch { /* photo unreadable - card goes out bare */ }
         if (img) {
-          const rendered = await renderPhotoToCanvas(img, currentFilter, CARD_SIZE, CARD_SIZE);
+          const rendered = await renderPhotoToCanvas(img, effectiveFilterId(photo, currentFilter), CARD_SIZE, CARD_SIZE);
           ctx.drawImage(rendered, 0, 0);
         }
         if (!photo.dataUrl) URL.revokeObjectURL(src);
@@ -3447,6 +3617,7 @@
       if (e.key !== 'Escape') return;
       if (exportSheetCtl.isOpen()) exportSheetCtl.close();
       if (filtersSheetCtl.isOpen()) filtersSheetCtl.close();
+      photoHintOverlay.hidden = true;
     });
 
     // Sheet row dispatch. Each action body is the verbatim logic from the old

@@ -187,6 +187,12 @@ export function getFilter(id) {
   return allFilters().find((filter) => filter.id === id) || FILTERS.find((filter) => filter.id === 'original');
 }
 
+// Per-photo override: a photo pinned to a filter by the Walk Detail
+// selection UI carries `filterId`; absent, the walk-wide choice applies.
+export function effectiveFilterId(photo, fallbackId) {
+  return photo?.filterId ?? fallbackId;
+}
+
 // Parse pasted/file JSON into a validated {id, name, spec} record for the
 // filters store. Accepts a bare Filter Spec, a {spec} record, or a legacy
 // v1 {effects} preset. `takenIds` are extra ids to avoid (live imports).
