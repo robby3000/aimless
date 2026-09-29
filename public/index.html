@@ -466,21 +466,7 @@
       color: var(--accent);
       flex-shrink: 0;
     }
-    /* Selection chip: appears in the Filter row while photos are selected. */
-    .select-chip {
-      flex-shrink: 0;
-      background: var(--accent);
-      color: var(--bg);
-      border: none;
-      border-radius: 7px;
-      padding: 5px 10px;
-      font: inherit;
-      font-size: 0.72rem;
-      font-weight: 600;
-      white-space: nowrap;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .select-chip:active { opacity: 0.8; }
+
     .rail {
       flex: 1;
       min-width: 0;
@@ -941,7 +927,7 @@
       user-select: none;
     }
     .photo-frame img, .photo-frame canvas { display: block; width: 100%; height: auto; }
-    .photo-frame.selected { box-shadow: inset 0 0 0 3px var(--accent); }
+    .photo-frame.selected { box-shadow: inset 0 0 0 4px var(--accent); }
     .photo-loading {
       height: 120px;
       border-radius: 8px;
@@ -1244,7 +1230,6 @@
       <div class="rail-row">
         <span class="rail-label">Filter</span>
         <div class="rail" id="rail-filter"></div>
-        <button id="select-chip" class="select-chip" hidden></button>
         <span id="filter-busy" class="filter-busy" hidden></span>
       </div>
       <div class="detail-actions">
@@ -1609,12 +1594,15 @@
       return {
         // Re-query items after innerHTML rebuilds.
         refresh() { items = [...el.querySelectorAll('.rail-item')]; },
-        setValue(value) {
+        setValue(value, scroll = true) {
           const i = Math.max(0, items.findIndex((it) => it.dataset.value === value));
           select(i, false);
           // Only meaningful when the rail is laid out (its screen visible);
           // showWalkDetail re-syncs whenever the detail screen opens.
-          if (el.clientWidth > 0) el.scrollLeft = centerOf(items[i]) - el.clientWidth / 2;
+          // scroll=false just moves the highlight — used in photo-selection
+          // mode, where re-centering would yank the rail out from under the
+          // finger mid-swipe.
+          if (scroll && el.clientWidth > 0) el.scrollLeft = centerOf(items[i]) - el.clientWidth / 2;
         },
       };
     }
@@ -3197,12 +3185,14 @@
     }
 
     // --- Per-photo filter selection ---
-    // Long-press on a photo selects it (coral border); while any photos are
+    // Long-press on a photo selects it (coral outline); while any photos are
     // selected, taps toggle others and the Filter rail writes filterId onto
-    // just the selected photo records. Clearing the last selection exits
-    // selection mode and the rail goes back to the walk-wide pref.
+    // just the selected photo records. With a uniform selection the rail
+    // highlights the filter the selected photos share; a mixed selection
+    // leaves the highlight alone (the rail is input-only there). Tapping
+    // empty space clears the selection and returns the rail to the
+    // walk-wide pref.
     const detailContent = document.getElementById('detail-content');
-    const selectChip = document.getElementById('select-chip');
     const selectedPhotoSeqs = new Set();
     let currentDetailPhotos = [];
     let pressTimer = null;
@@ -3211,11 +3201,14 @@
     let pressY = 0;
     let suppressClick = false;
 
-    function updateSelectChip() {
-      selectChip.hidden = selectedPhotoSeqs.size === 0;
-      if (selectedPhotoSeqs.size) {
-        selectChip.textContent = `${selectedPhotoSeqs.size} selected · clear`;
-      }
+    function syncFilterRailToSelection() {
+      if (!selectedPhotoSeqs.size) { filterRail.setValue(currentFilter); return; }
+      const effs = new Set(currentDetailPhotos
+        .filter((p) => selectedPhotoSeqs.has(p.stopSeq))
+        .map((p) => effectiveFilterId(p, currentFilter)));
+      // Highlight only — never scroll: the user may still be swiping, and a
+      // programmatic re-centre reads as the rail snapping back.
+      if (effs.size === 1) filterRail.setValue([...effs][0], false);
     }
 
     function togglePhotoSelected(seq) {
@@ -3223,21 +3216,15 @@
       if (selected) selectedPhotoSeqs.add(seq); else selectedPhotoSeqs.delete(seq);
       detailContent.querySelector(`.photo-frame[data-stopseq="${seq}"]`)
         ?.classList.toggle('selected', selected);
-      updateSelectChip();
-      // Empty selection = normal mode again: re-point the rail at the
-      // walk-wide filter it temporarily stopped reflecting.
-      if (!selectedPhotoSeqs.size) filterRail.setValue(currentFilter);
+      syncFilterRailToSelection();
     }
 
     function clearPhotoSelection() {
       selectedPhotoSeqs.clear();
       detailContent.querySelectorAll('.photo-frame.selected')
         .forEach((f) => f.classList.remove('selected'));
-      updateSelectChip();
       filterRail.setValue(currentFilter);
     }
-
-    selectChip.addEventListener('click', clearPhotoSelection);
 
     // Long-press on an image invites the OS save/share sheet — suppress it.
     detailContent.addEventListener('contextmenu', (e) => {
@@ -3272,10 +3259,12 @@
     }
 
     detailContent.addEventListener('click', (e) => {
-      const frame = e.target.closest('.photo-frame');
       if (suppressClick) { suppressClick = false; return; }
-      if (!frame || !selectedPhotoSeqs.size) return;   // taps are free outside selection mode
-      togglePhotoSelected(Number(frame.dataset.stopseq));
+      const frame = e.target.closest('.photo-frame');
+      if (!selectedPhotoSeqs.size) return;   // taps are free outside selection mode
+      // A tap off the photos clears the selection; a tap on one toggles it.
+      if (frame) togglePhotoSelected(Number(frame.dataset.stopseq));
+      else clearPhotoSelection();
     });
 
     // Selection-mode rail action: pin the chosen filter onto the selected
@@ -3410,13 +3399,12 @@
       showScreen('detail');
       // Sync the rails after the screen is visible so their geometry exists.
       skinRail.setValue(currentSkin);
-      filterRail.setValue(currentFilter);
       // Re-mark the selection the rebuild just wiped (same walk only).
       for (const seq of selectedPhotoSeqs) {
         detailContent.querySelector(`.photo-frame[data-stopseq="${seq}"]`)
           ?.classList.add('selected');
       }
-      updateSelectChip();
+      syncFilterRailToSelection();
       if (photos.length) {
         // First detail view with photos: explain the long-press once.
         if (!seenPhotoSelectHint) {
