@@ -3362,7 +3362,7 @@
         const myVoiceHtml = myIdx >= 0 && myVoiceBlocks[myIdx]
           ? `<div class="card-text card-haiku myvoice-text">${myVoiceBlocks[myIdx].split('\n').map((l) => `<span class="haiku-line">${esc(l)}</span>`).join('')}</div>`
           : '';
-        return `<div class="stop">
+        return `<div class="stop" data-seq="${s.seq}">
           <div class="stop-num">${i + 1}</div>
           <div class="stop-body">
             <div class="stop-meta">${status}</div>
@@ -3382,6 +3382,17 @@
             .join('')}</div>`
         : '';
 
+      // The rebuild resets scroll, and photo frames re-mount as 120px
+      // placeholders — restoring scrollTop would clamp to the bottom. Keep
+      // the user's place instead: remember the stop at the top of the
+      // viewport (and how far it was scrolled past) and put it back.
+      const anchor = [...detailContent.querySelectorAll('.stop')]
+        .find((el) => el.getBoundingClientRect().bottom > detailContent.getBoundingClientRect().top);
+      const anchorSeq = anchor?.dataset.seq ?? null;
+      const anchorOffset = anchor
+        ? anchor.getBoundingClientRect().top - detailContent.getBoundingClientRect().top
+        : 0;
+
       document.getElementById('detail-content').innerHTML = `
         <h1>Aimless</h1>
         <div class="seed">${walk.seed}</div>
@@ -3397,6 +3408,15 @@
 
       applySkin();
       showScreen('detail');
+      // Restore the pre-rebuild viewport position (no-op on first open —
+      // the screen was hidden so no anchor was found).
+      if (anchorSeq != null) {
+        const stop = detailContent.querySelector(`.stop[data-seq="${anchorSeq}"]`);
+        if (stop) {
+          detailContent.scrollTop += stop.getBoundingClientRect().top
+            - detailContent.getBoundingClientRect().top - anchorOffset;
+        }
+      }
       // Sync the rails after the screen is visible so their geometry exists.
       skinRail.setValue(currentSkin);
       // Re-mark the selection the rebuild just wiped (same walk only).
