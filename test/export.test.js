@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildHTMLExport, voiceName, formatWalkDate } from '../public/lib/export.js';
+import { buildHTMLExport, voiceName, formatWalkDate, parseMyVoiceText } from '../public/lib/export.js';
 
 const WALK = {
   id: 'walk-1',
@@ -167,4 +167,48 @@ test('voiceName maps slugs and tolerates unknowns', () => {
 test('formatWalkDate spells out the month', () => {
   assert.equal(formatWalkDate(new Date(2026, 7, 8).getTime()), 'August 8, 2026');
   assert.equal(formatWalkDate(new Date(2026, 0, 31).getTime()), 'January 31, 2026');
+});
+
+test('parseMyVoiceText splits on blank lines and preserves internal breaks', () => {
+  const blocks = parseMyVoiceText('line 1\nline 2\nline 3\n\nline 4\nline 5\n\n\nline 6');
+  assert.deepEqual(blocks, ['line 1\nline 2\nline 3', 'line 4\nline 5', 'line 6']);
+});
+
+test('parseMyVoiceText tolerates CRLF and ragged blank lines', () => {
+  const blocks = parseMyVoiceText('one\r\ntwo\r\n\r\n   \r\nthree');
+  assert.deepEqual(blocks, ['one\ntwo', 'three']);
+  assert.deepEqual(parseMyVoiceText(''), []);
+  assert.deepEqual(parseMyVoiceText('\n\n\n'), []);
+});
+
+test('buildHTMLExport places My Voice blocks under photos in order', async () => {
+  const walk = {
+    ...WALK,
+    voice: 'myvoice',
+    stops: WALK.stops.map((s) => ({ ...s, cardText: undefined })),
+    myVoice: ['first block\nstill first', 'second block'],
+  };
+  const photos = [
+    { stopSeq: 1, dataUrl: 'data:image/jpeg;base64,P1' },
+    { stopSeq: 0, dataUrl: 'data:image/jpeg;base64,P0' },
+  ];
+  const html = await buildHTMLExport(walk, photos, '<svg></svg>');
+  // Block 0 belongs to the first photo (stopSeq 0), wherever it lands in the doc.
+  assert.ok(html.indexOf('first block') > html.indexOf('P0'), 'first block not under photo 1');
+  assert.ok(html.indexOf('first block') < html.indexOf('P1'), 'first block after second photo');
+  assert.ok(html.indexOf('second block') > html.indexOf('P1'), 'second block not under photo 2');
+  assert.ok(html.includes('<span class="haiku-line">still first</span>'), 'internal line break not preserved');
+});
+
+test('extra My Voice blocks trail the last stop', async () => {
+  const walk = { ...WALK, voice: 'none', myVoice: ['only block', 'extra block'] };
+  const html = await buildHTMLExport(walk, [{ stopSeq: 0, dataUrl: 'data:image/jpeg;base64,P0' }], '<svg></svg>');
+  assert.ok(html.indexOf('extra block') > html.indexOf('only block'));
+  assert.ok(html.indexOf('extra block') < html.indexOf('<footer>'), 'tail block not before footer');
+});
+
+test('My Voice text is HTML-escaped', async () => {
+  const walk = { ...WALK, voice: 'myvoice', myVoice: ['a <b> & "quote"'] };
+  const html = await buildHTMLExport(walk, [{ stopSeq: 0, dataUrl: 'data:image/jpeg;base64,P0' }], '<svg></svg>');
+  assert.ok(html.includes('a &lt;b&gt; &amp; &quot;quote&quot;'));
 });

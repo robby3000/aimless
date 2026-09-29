@@ -1255,12 +1255,21 @@
       <span class="row-ico">&#9874;</span>
       <span class="row-text"><span class="row-title">Route</span><span class="row-sub">Export KML for mapping apps</span></span>
     </button>
+    <button class="sheet-row" data-export="add-text" id="row-add-text" hidden>
+      <span class="row-ico">&#9998;</span>
+      <span class="row-text"><span class="row-title" id="add-text-title">Add text</span><span class="row-sub">Select a text file — blocks map to photos in order</span></span>
+    </button>
+    <button class="sheet-row" data-export="remove-text" id="row-remove-text" hidden>
+      <span class="row-ico">&#10005;</span>
+      <span class="row-text"><span class="row-title">Remove text</span><span class="row-sub">Detach the imported text from this walk</span></span>
+    </button>
     <label class="sheet-row sheet-toggle">
       <span class="row-ico">&#8599;</span>
       <span class="row-text"><span class="row-title">KML link in footer</span><span class="row-sub">HTML links the walk's coordinates for mapping apps</span></span>
       <input type="checkbox" id="opt-kml-link">
     </label>
   </div>
+  <input type="file" id="myvoice-file" accept=".txt,text/plain" hidden>
 
   <nav>
     <button id="nav-go" class="active">Go</button>
@@ -1303,7 +1312,7 @@
     import { openDB, getPrefs, setPrefs, put, get, all, byIndex, del } from './lib/store.js';
     import { createTracker, reachStop, unreachableRate, MAX_ACCURACY_M } from './lib/proximity.js';
     import { haversine, bearing, simplify, pathLength, formatDistance, formatKm, compassPoint, bounds, headingFromAlpha, nextRotation, createTraceGate } from './lib/geo.js';
-    import { buildHTMLExport, downloadFile, blobToDataURL, voiceName, formatWalkDate } from './lib/export.js';
+    import { buildHTMLExport, downloadFile, blobToDataURL, voiceName, formatWalkDate, parseMyVoiceText } from './lib/export.js';
     import { buildKmlString } from './lib/kml.js';
     import { SKINS, getSkin, scopeCSS, BASE_CSS } from './lib/skins.js';
     import { isIOS, isInAppBrowser, isStandalone } from './lib/platform.js';
@@ -3159,6 +3168,10 @@
       // preview res in the background (fillDetailPhotos).
       const photoMap = new Map();
       for (const p of photos) photoMap.set(p.stopSeq, p);
+      // My Voice blocks map to photos in stop order — the same mapping the
+      // export uses, so the detail view previews the artifact faithfully.
+      const myVoiceBlocks = Array.isArray(walk.myVoice) ? walk.myVoice : [];
+      const photoSeqs = [...photoMap.keys()].sort((a, b) => a - b);
       // Same markup vocabulary as the HTML export, so the shared base styles
       // and skins behave identically here and in the exported file.
       const stopHtml = walk.stops.map((s, i) => {
@@ -3185,6 +3198,11 @@
           : s.cardText
             ? `<div class="card-text">${s.cardText}</div>`
             : '';
+        // The walker's own text sits under the photo it belongs to.
+        const myIdx = photoSeqs.indexOf(s.seq);
+        const myVoiceHtml = myIdx >= 0 && myVoiceBlocks[myIdx]
+          ? `<div class="card-text card-haiku myvoice-text">${myVoiceBlocks[myIdx].split('\n').map((l) => `<span class="haiku-line">${l}</span>`).join('')}</div>`
+          : '';
         return `<div class="stop">
           <div class="stop-num">${i + 1}</div>
           <div class="stop-body">
@@ -3192,9 +3210,16 @@
             ${hexHtml}
             ${cardHtml}
             ${photoHtml}
+            ${myVoiceHtml}
           </div>
         </div>`;
       }).join('');
+
+      const myVoiceTail = myVoiceBlocks.length > photoSeqs.length
+        ? myVoiceBlocks.slice(photoSeqs.length)
+            .map((b) => `<div class="card-text card-haiku myvoice-text">${b.split('\n').map((l) => `<span class="haiku-line">${l}</span>`).join('')}</div>`)
+            .join('')
+        : '';
 
       document.getElementById('detail-content').innerHTML = `
         <h1>Aimless</h1>
@@ -3206,6 +3231,7 @@
         </div>
         <div class="trace">${svg}</div>
         ${stopHtml}
+        ${myVoiceTail}
       `;
 
       applySkin();
@@ -3386,9 +3412,33 @@
     const filtersSheetCtl = makeSheet(filtersSheet, document.getElementById('filters-sheet-overlay'));
 
     document.getElementById('btn-detail-export').addEventListener('click', () => {
-      if (currentDetailWalk) exportSheetCtl.open();
+      if (!currentDetailWalk) return;
+      // The walker's own text attaches at export time — offered to My Voice
+      // and No Voice walks, where nothing else writes into the artifact.
+      const hasText = Array.isArray(currentDetailWalk.myVoice) && currentDetailWalk.myVoice.length > 0;
+      const eligible = currentDetailWalk.voice === 'myvoice' || currentDetailWalk.voice === 'none';
+      document.getElementById('row-add-text').hidden = !eligible;
+      document.getElementById('row-remove-text').hidden = !(eligible && hasText);
+      document.getElementById('add-text-title').textContent = hasText ? 'Replace text' : 'Add text';
+      exportSheetCtl.open();
     });
     document.getElementById('opt-kml-link').addEventListener('change', savePrefs);
+
+    // My Voice: the file's blank-line-separated blocks map to the walk's
+    // photos in order, and persist on the walk record for re-exports.
+    const myVoiceFile = document.getElementById('myvoice-file');
+    myVoiceFile.addEventListener('change', async () => {
+      const file = myVoiceFile.files[0];
+      myVoiceFile.value = '';
+      if (!file || !currentDetailWalk) return;
+      const blocks = parseMyVoiceText(await file.text());
+      if (!blocks.length) { showToast('No text blocks found in that file'); return; }
+      currentDetailWalk.myVoice = blocks;
+      const db = await dbPromise;
+      if (db) await put(db, 'walks', currentDetailWalk);
+      showWalkDetail(currentDetailWalk.id);
+      showToast(`${blocks.length} text block${blocks.length === 1 ? '' : 's'} attached`);
+    });
     document.getElementById('btn-filters').addEventListener('click', () => {
       renderManageList();
       filtersSheetCtl.open();
@@ -3460,6 +3510,14 @@
         } else {
           downloadFile(filename, cardBlob, 'image/png');
         }
+      } else if (action === 'add-text') {
+        myVoiceFile.click();
+      } else if (action === 'remove-text') {
+        delete currentDetailWalk.myVoice;
+        const db = await dbPromise;
+        if (db) await put(db, 'walks', currentDetailWalk);
+        showWalkDetail(currentDetailWalk.id);
+        showToast('Text removed');
       } else if (action === 'route') {
         // KML route export: plan path + walked trace + stop placemarks.
         const kml = buildKmlString(currentDetailWalk);
