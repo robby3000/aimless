@@ -78,8 +78,14 @@ test('the summary does not include the "close as I can get" count', async () => 
   assert.ok(!html.includes('%)'));
 });
 
-test('the footer has an Export KML data URI link', async () => {
+test('the footer omits the KML link unless opted in', async () => {
   const html = await buildHTMLExport(WALK, [], '<svg></svg>');
+  assert.ok(!html.includes('Export KML</a>'));
+  assert.ok(!html.includes('vnd.google-earth.kml'));
+});
+
+test('the footer has an Export KML data URI link when includeKml is set', async () => {
+  const html = await buildHTMLExport(WALK, [], '<svg></svg>', '', 'sky', { includeKml: true });
   assert.ok(html.includes('Export KML</a>'));
   assert.ok(html.includes('data:application/vnd.google-earth.kml+xml'));
   assert.ok(html.includes('download="aimless-moss-fern-quartz.kml"'));

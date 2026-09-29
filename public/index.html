@@ -637,6 +637,8 @@
     .sheet-row .row-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
     .sheet-row .row-title { font-weight: 500; }
     .sheet-row .row-sub { font-size: 0.78rem; color: var(--fg-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sheet-toggle { cursor: pointer; }
+    .sheet-toggle input { margin-left: auto; width: 18px; height: 18px; accent-color: var(--accent); flex-shrink: 0; }
     @media (prefers-reduced-motion: reduce) {
       .sheet-overlay, .sheet { transition: none; }
     }
@@ -1247,6 +1249,11 @@
       <span class="row-ico">&#9874;</span>
       <span class="row-text"><span class="row-title">Route</span><span class="row-sub">Export KML for mapping apps</span></span>
     </button>
+    <label class="sheet-row sheet-toggle">
+      <span class="row-ico">&#8599;</span>
+      <span class="row-text"><span class="row-title">KML link in footer</span><span class="row-sub">HTML links the walk's coordinates for mapping apps</span></span>
+      <input type="checkbox" id="opt-kml-link">
+    </label>
   </div>
 
   <nav>
@@ -1738,7 +1745,7 @@
     const elStops = document.getElementById('setting-stops');
     const elBudget = document.getElementById('setting-budget');
     const elVoice = document.getElementById('setting-voice');
-    const DEFAULT_PREFS = { stops: 5, budgetMin: 45, voice: 'crow', skin: 'default', filter: 'original', hiddenFilters: [] };
+    const DEFAULT_PREFS = { stops: 5, budgetMin: 45, voice: 'crow', skin: 'default', filter: 'original', hiddenFilters: [], kmlLink: false };
 
     // Scroll-snap wheel: keeps `input` (a hidden input carrying the setting's
     // value) in sync with the centred item, and saves prefs on user scrolls.
@@ -1796,6 +1803,7 @@
       wheelVoice.setValue(prefs.voice ?? DEFAULT_PREFS.voice);
       currentSkin = prefs.skin ?? DEFAULT_PREFS.skin;
       currentFilter = prefs.filter ?? DEFAULT_PREFS.filter;
+      document.getElementById('opt-kml-link').checked = prefs.kmlLink ?? DEFAULT_PREFS.kmlLink;
       setHiddenFilters(prefs.hiddenFilters);
       if (isFilterHidden(currentFilter)) currentFilter = visibleFilters()[0]?.id || 'original';
       renderManageList();
@@ -1815,6 +1823,7 @@
         skin: currentSkin,
         filter: currentFilter,
         hiddenFilters: hiddenFilters(),
+        kmlLink: document.getElementById('opt-kml-link').checked,
       });
     }
 
@@ -3179,7 +3188,9 @@
         const url = await renderDetailPhoto(p, currentFilter);
         if (url && url.startsWith('data:')) rendered.push({ stopSeq: p.stopSeq, dataUrl: url });
       }
-      return buildHTMLExport(currentDetailWalk, rendered, svg, skin.css, skin.icon);
+      return buildHTMLExport(currentDetailWalk, rendered, svg, skin.css, skin.icon, {
+        includeKml: document.getElementById('opt-kml-link').checked,
+      });
     }
 
     // The artifact build renders every photo through the engine — a slow,
@@ -3329,6 +3340,7 @@
     document.getElementById('btn-detail-export').addEventListener('click', () => {
       if (currentDetailWalk) exportSheetCtl.open();
     });
+    document.getElementById('opt-kml-link').addEventListener('change', savePrefs);
     document.getElementById('btn-filters').addEventListener('click', () => {
       renderManageList();
       filtersSheetCtl.open();
