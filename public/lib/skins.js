@@ -71,6 +71,10 @@ h1 a { color: inherit; text-decoration: none; }
   border-top: 1px solid color-mix(in srgb, currentColor 22%, transparent);
 }
 .haiku-line { display: block; overflow-wrap: break-word; }
+/* My Voice overflow: blocks beyond the photo count trail the content as
+   plain paragraphs — no card frame, rule, or stop number. */
+.myvoice-tail { margin-top: 24px; }
+.myvoice-tail p { margin: 0 0 1.1em; font-size: 1.1rem; line-height: 1.6; overflow-wrap: break-word; }
 footer { margin-top: 32px; color: var(--fg-dim); font-size: 0.8rem; text-align: center; }
 footer a { color: inherit; }
 .app-icon { width: 44px; height: 44px; vertical-align: -8px; margin-right: 6px; }

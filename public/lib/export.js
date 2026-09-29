@@ -6,7 +6,7 @@ import { formatKm } from './geo.js';
 import { BASE_CSS, PRINT_CSS } from './skins.js';
 import { buildKmlString } from './kml.js';
 
-const esc = (value) => String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+export const esc = (value) => String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 // Exported artifacts are baked pixels in plain <img> tags — no CSS/SVG
 // filter machinery. This is the only photo styling the keepsake needs.
@@ -170,9 +170,12 @@ export async function buildHTMLExport(walk, photos, svgTrace, skinCss = '', icon
   }).join('\n');
 
   // Blocks beyond the photo count still belong to the walk — they trail
-  // the last stop rather than being dropped.
+  // below the content as plain paragraphs, with none of the card chrome
+  // (no rule above, no skin ornament) that under-photo blocks carry.
   const myVoiceTail = myVoice.length > photoSeqs.length
-    ? myVoice.slice(photoSeqs.length).map(myVoiceBlockHtml).join('\n')
+    ? `<div class="myvoice-tail">${myVoice.slice(photoSeqs.length)
+        .map((b) => `<p>${b.split('\n').map(esc).join('<br>')}</p>`)
+        .join('')}</div>`
     : '';
 
   // Filtered pixels are baked into the photo data URLs — the artifact

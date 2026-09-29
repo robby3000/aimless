@@ -1359,7 +1359,7 @@
     import { openDB, getPrefs, setPrefs, put, get, all, byIndex, del } from './lib/store.js';
     import { createTracker, reachStop, unreachableRate, MAX_ACCURACY_M } from './lib/proximity.js';
     import { haversine, bearing, simplify, pathLength, formatDistance, formatKm, compassPoint, bounds, headingFromAlpha, nextRotation, createTraceGate } from './lib/geo.js';
-    import { buildHTMLExport, downloadFile, blobToDataURL, voiceName, formatWalkDate, parseMyVoiceText } from './lib/export.js';
+    import { buildHTMLExport, downloadFile, blobToDataURL, voiceName, formatWalkDate, parseMyVoiceText, esc } from './lib/export.js';
     import { buildKmlString } from './lib/kml.js';
     import { SKINS, getSkin, scopeCSS, BASE_CSS } from './lib/skins.js';
     import { isIOS, isInAppBrowser, isStandalone } from './lib/platform.js';
@@ -3371,7 +3371,7 @@
         // The walker's own text sits under the photo it belongs to.
         const myIdx = photoSeqs.indexOf(s.seq);
         const myVoiceHtml = myIdx >= 0 && myVoiceBlocks[myIdx]
-          ? `<div class="card-text card-haiku myvoice-text">${myVoiceBlocks[myIdx].split('\n').map((l) => `<span class="haiku-line">${l}</span>`).join('')}</div>`
+          ? `<div class="card-text card-haiku myvoice-text">${myVoiceBlocks[myIdx].split('\n').map((l) => `<span class="haiku-line">${esc(l)}</span>`).join('')}</div>`
           : '';
         return `<div class="stop">
           <div class="stop-num">${i + 1}</div>
@@ -3385,10 +3385,12 @@
         </div>`;
       }).join('');
 
+      // Blocks beyond the photo count trail the content as plain
+      // paragraphs — no card rule or skin ornament (same as the export).
       const myVoiceTail = myVoiceBlocks.length > photoSeqs.length
-        ? myVoiceBlocks.slice(photoSeqs.length)
-            .map((b) => `<div class="card-text card-haiku myvoice-text">${b.split('\n').map((l) => `<span class="haiku-line">${l}</span>`).join('')}</div>`)
-            .join('')
+        ? `<div class="myvoice-tail">${myVoiceBlocks.slice(photoSeqs.length)
+            .map((b) => `<p>${b.split('\n').map(esc).join('<br>')}</p>`)
+            .join('')}</div>`
         : '';
 
       document.getElementById('detail-content').innerHTML = `

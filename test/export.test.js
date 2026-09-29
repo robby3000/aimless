@@ -200,11 +200,15 @@ test('buildHTMLExport places My Voice blocks under photos in order', async () =>
   assert.ok(html.includes('<span class="haiku-line">still first</span>'), 'internal line break not preserved');
 });
 
-test('extra My Voice blocks trail the last stop', async () => {
-  const walk = { ...WALK, voice: 'none', myVoice: ['only block', 'extra block'] };
+test('extra My Voice blocks trail the last stop as plain paragraphs', async () => {
+  const walk = { ...WALK, voice: 'none', myVoice: ['only block', 'extra block', 'another extra'] };
   const html = await buildHTMLExport(walk, [{ stopSeq: 0, dataUrl: 'data:image/jpeg;base64,P0' }], '<svg></svg>');
   assert.ok(html.indexOf('extra block') > html.indexOf('only block'));
   assert.ok(html.indexOf('extra block') < html.indexOf('<footer>'), 'tail block not before footer');
+  // The tail is a run of plain paragraphs — no card chrome per block.
+  const tail = html.slice(html.indexOf('<div class="myvoice-tail">'), html.indexOf('<footer>'));
+  assert.ok(tail.includes('<p>extra block</p><p>another extra</p>'));
+  assert.ok(!tail.includes('card-haiku') && !tail.includes('stop-num'));
 });
 
 test('My Voice text is HTML-escaped', async () => {
