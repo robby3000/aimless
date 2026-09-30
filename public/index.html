@@ -2857,6 +2857,16 @@
         <br>Seed: <span class="seed">${walk.plan.seed}</span>
       `;
 
+      // "View in archive" only when the walk was actually archived —
+      // giving up with nothing recorded leaves nothing to view.
+      document.getElementById('btn-done-archive').hidden = !shouldArchive;
+      // "Back to start" only when the last fix is genuinely away from the
+      // origin — pointless when you're already standing on it. No fix at
+      // all means we can't tell, so the button stays.
+      const lastFix = walk.trace[walk.trace.length - 1];
+      document.getElementById('btn-done-home').hidden =
+        !!lastFix && haversine(lastFix, walk.plan.origin) <= 40;
+
       walk = null;
       lastBearing = null;
       lastDistance = null;
