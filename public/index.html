@@ -256,9 +256,14 @@
     .walk-header {
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-start;
       font-size: 0.9rem;
       color: var(--fg-dim);
+    }
+    .walk-head-left {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
     }
     .compass {
       flex: 1;
@@ -353,13 +358,6 @@
       display: none;
     }
     .card-display.visible { display: block; }
-    .card-display .voice {
-      font-size: 0.8rem;
-      color: var(--accent);
-      margin-bottom: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
 
     /* The Inner voice: the hexagram its coordinates carried. */
     .card-display .hex {
@@ -1075,7 +1073,10 @@
   <!-- Walk screen -->
   <section id="screen-walk" class="screen">
     <div class="walk-header">
-      <span id="walk-seed" class="seed"></span>
+      <div class="walk-head-left">
+        <span id="walk-seed" class="seed"></span>
+        <div id="walk-voice"></div>
+      </div>
       <span id="walk-timer"></span>
     </div>
     <div id="compass-view" class="compass">
@@ -1094,7 +1095,6 @@
     <input type="file" id="photo-input" accept="image/*" capture="environment" hidden>
     <div id="stop-counter" class="stop-counter">Stop <b>1</b> of 5</div>
     <div id="card-display" class="card-display">
-      <div id="card-voice" class="voice"></div>
       <div id="card-hex" class="hex" hidden>
         <span id="card-hex-glyph" class="glyph"></span>
         <span id="card-hex-title" class="hex-title"></span>
@@ -1923,7 +1923,7 @@
     const compassBearing = document.getElementById('compass-bearing');
     const stopCounter = document.getElementById('stop-counter');
     const cardDisplay = document.getElementById('card-display');
-    const cardVoice = document.getElementById('card-voice');
+    const walkVoice = document.getElementById('walk-voice');
     const cardHex = document.getElementById('card-hex');
     const cardHexGlyph = document.getElementById('card-hex-glyph');
     const cardHexTitle = document.getElementById('card-hex-title');
@@ -2529,6 +2529,9 @@
 
         // Show the walk screen.
         walkSeed.textContent = seed;
+        // The voice that authors this walk's cards — part of the header
+        // identity, dim like the seed, rather than decoration on the card.
+        walkVoice.innerHTML = `Voice of ${walk.voice.name}<br>${walk.voice.epithet}`;
         updateStopCounter();
         compassDist.textContent = '---';
         compassBearing.textContent = '---\u00b0';
@@ -2614,7 +2617,6 @@
     }
 
     function showCard(card, voice) {
-      cardVoice.textContent = `${voice.name} — ${voice.epithet}`;
       // Inner cards carry the hexagram the waypoint's coordinates resolved
       // to: glyph above, number and title beneath, then the haiku. Oracle
       // cards reuse the same block for their drawn title, minus the glyph.
