@@ -783,6 +783,16 @@
     #filename-input:focus { border-color: var(--accent); outline: none; }
     .confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
     .confirm-actions button { min-width: 76px; }
+    #photo-hint-box .hint-never {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 12px;
+      font-size: 0.8rem;
+      color: var(--fg-dim);
+      cursor: pointer;
+    }
+    #photo-hint-box .hint-never input { accent-color: var(--accent); margin: 0; }
     #toast .toast-action {
       background: var(--accent);
       color: var(--bg);
@@ -1327,13 +1337,15 @@
     </div>
   </div>
 
-  <!-- One-time hint: long-press selects photos for per-photo filters -->
+  <!-- Hint: long-press selects photos for per-photo filters. Shows on every
+       walk-detail open until "do not show again" is checked. -->
   <div id="photo-hint-overlay" hidden>
     <div id="photo-hint-box" role="dialog" aria-modal="true">
-      <div id="photo-hint-text">Long press on an image to select it and change its filter. Tap more images to select them too.</div>
+      <div id="photo-hint-text">Long press on an image to select it and change its filter. Tap more images to select them too. Press again to deselect the image.</div>
       <div class="confirm-actions">
         <button id="btn-photo-hint-ok" class="btn-primary">Got it</button>
       </div>
+      <label class="hint-never"><input type="checkbox" id="photo-hint-never"> do not show again</label>
     </div>
   </div>
 
@@ -3306,16 +3318,26 @@
       showWalkDetail(currentDetailWalk.id);
     }
 
-    // One-time instruction modal — long-press isn't discoverable otherwise.
+    // Instruction modal — long-press isn't discoverable otherwise. Shows on
+    // every detail open until the user ticks "do not show again".
     const photoHintOverlay = document.getElementById('photo-hint-overlay');
-    document.getElementById('btn-photo-hint-ok').addEventListener('click', () => {
+    const photoHintNever = document.getElementById('photo-hint-never');
+    function dismissPhotoHint() {
+      if (photoHintNever.checked) {
+        seenPhotoSelectHint = true;
+        savePrefs();
+      }
       photoHintOverlay.hidden = true;
-    });
+    }
+    document.getElementById('btn-photo-hint-ok').addEventListener('click', dismissPhotoHint);
     photoHintOverlay.addEventListener('click', (e) => {
-      if (e.target === photoHintOverlay) photoHintOverlay.hidden = true;
+      if (e.target === photoHintOverlay) dismissPhotoHint();
     });
 
     async function showWalkDetail(walkId) {
+      // Entry means the detail screen isn't already showing — internal
+      // rebuilds (filter assign, skin change) call this while it is.
+      const enteringDetail = !screens.detail.classList.contains('active');
       const db = await dbPromise;
       if (!db) return;
       const walk = await get(db, 'walks', walkId);
@@ -3449,10 +3471,10 @@
       }
       syncFilterRailToSelection();
       if (photos.length) {
-        // First detail view with photos: explain the long-press once.
-        if (!seenPhotoSelectHint) {
-          seenPhotoSelectHint = true;
-          savePrefs();
+        // Explain the long-press on every entry into this screen until the
+        // user opts out. Internal rebuilds don't re-trigger it.
+        if (enteringDetail && !seenPhotoSelectHint) {
+          photoHintNever.checked = false;
           photoHintOverlay.hidden = false;
         }
         fillDetailPhotos(photos, walk.id, currentFilter);
@@ -3662,7 +3684,7 @@
       if (e.key !== 'Escape') return;
       if (exportSheetCtl.isOpen()) exportSheetCtl.close();
       if (filtersSheetCtl.isOpen()) filtersSheetCtl.close();
-      photoHintOverlay.hidden = true;
+      if (!photoHintOverlay.hidden) dismissPhotoHint();
     });
 
     // Sheet row dispatch. Each action body is the verbatim logic from the old
