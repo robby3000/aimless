@@ -3150,6 +3150,13 @@
         await new Promise((r) => requestAnimationFrame(r));
         try {
           const { img, rawSrc } = await photoSource(p);
+          // Learn the photo's aspect ratio once so future rebuilds can mount
+          // the loading placeholder at the real shape — nothing grows, so
+          // nothing pushes the viewport around while renders land.
+          if (img?.naturalWidth && !p.ar) {
+            p.ar = img.naturalWidth / img.naturalHeight;
+            dbPromise.then((db) => db && put(db, 'photos', p)).catch(() => {});
+          }
           const frame = token === detailRenderToken &&
             currentDetailWalk?.id === walkId && currentFilter === filterId &&
             document.querySelector(`.photo-frame[data-stopseq="${p.stopSeq}"]`);
@@ -3338,8 +3345,12 @@
       // Same markup vocabulary as the HTML export, so the shared base styles
       // and skins behave identically here and in the exported file.
       const stopHtml = walk.stops.map((s, i) => {
-        const photoHtml = photoMap.has(s.seq)
-          ? `<div class="photo-frame" data-stopseq="${s.seq}"><div class="photo-loading"></div></div>`
+        // Known aspect ratios make the placeholder the photo's real shape —
+        // rebuilds stop shifting the layout while renders fill in.
+        const sp = photoMap.get(s.seq);
+        const arStyle = sp?.ar ? ` style="aspect-ratio:${sp.ar.toFixed(4)};height:auto"` : '';
+        const photoHtml = sp
+          ? `<div class="photo-frame" data-stopseq="${s.seq}"><div class="photo-loading"${arStyle}></div></div>`
           : '';
         const status = s.approached
           ? '<span class="status approached">close as I can get</span>'
