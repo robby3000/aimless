@@ -638,6 +638,24 @@
     .sheet-row .row-sub { font-size: 0.78rem; color: var(--fg-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .sheet-toggle { cursor: pointer; }
     .sheet-toggle input { margin-left: auto; width: 18px; height: 18px; accent-color: var(--accent); flex-shrink: 0; }
+    .sheet-kml {
+      border-top: 1px solid var(--surface-2);
+      margin-top: 8px;
+      padding-top: 6px;
+    }
+    .sheet-kml .kml-head { padding: 10px 20px 6px; }
+    .sheet-kml .kml-title {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--fg-dim);
+    }
+    .sheet-kml .kml-sub {
+      font-size: 0.78rem;
+      font-style: italic;
+      color: var(--fg-dim);
+      margin-top: 3px;
+    }
     @media (prefers-reduced-motion: reduce) {
       .sheet-overlay, .sheet { transition: none; }
     }
@@ -1281,10 +1299,6 @@
       <span class="row-ico">&#9993;</span>
       <span class="row-text"><span class="row-title">Card</span><span class="row-sub">Send a card via the share menu</span></span>
     </button>
-    <button class="sheet-row" data-export="route">
-      <span class="row-ico">&#9874;</span>
-      <span class="row-text"><span class="row-title">Route</span><span class="row-sub">Export KML for mapping apps</span></span>
-    </button>
     <button class="sheet-row" data-export="add-text" id="row-add-text" hidden>
       <span class="row-ico">&#9998;</span>
       <span class="row-text"><span class="row-title" id="add-text-title">Add text</span><span class="row-sub">Select a text file — blocks map to photos in order</span></span>
@@ -1293,11 +1307,21 @@
       <span class="row-ico">&#10005;</span>
       <span class="row-text"><span class="row-title">Remove text</span><span class="row-sub">Detach the imported text from this walk</span></span>
     </button>
-    <label class="sheet-row sheet-toggle">
-      <span class="row-ico">&#8599;</span>
-      <span class="row-text"><span class="row-title">KML link in footer</span><span class="row-sub">HTML links the walk's coordinates for mapping apps</span></span>
-      <input type="checkbox" id="opt-kml-link">
-    </label>
+    <div class="sheet-kml">
+      <div class="kml-head">
+        <div class="kml-title">KML settings</div>
+        <div class="kml-sub">To open your walk routes in mapping apps</div>
+      </div>
+      <button class="sheet-row" data-export="route">
+        <span class="row-ico">&#9874;</span>
+        <span class="row-text"><span class="row-title">Export Route</span></span>
+      </button>
+      <label class="sheet-row sheet-toggle">
+        <span class="row-ico">&#8599;</span>
+        <span class="row-text"><span class="row-title">Add KML link to footer</span><span class="row-sub">HTML links the walk's coordinates for mapping apps</span></span>
+        <input type="checkbox" id="opt-kml-link">
+      </label>
+    </div>
   </div>
   <input type="file" id="myvoice-file" accept=".txt,text/plain" hidden>
 
