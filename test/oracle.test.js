@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { oracleCard, echoOpener } from '../public/lib/oracle.js';
+import { oracleCard } from '../public/lib/oracle.js';
 import { makeRng } from '../public/lib/rng.js';
 import { decimalsOf } from '../public/lib/inner.js';
 
@@ -26,13 +26,6 @@ test('every oracle voice ships four pools of exactly 64 lines', () => {
       assert.ok(v[pool].every((l) => typeof l === 'string' && l.length > 0), `${slug}.${pool} has an empty line`);
     }
     assert.ok(v.slug && v.name && v.epithet, `${slug} is missing metadata`);
-  }
-});
-
-test('the echo voice carries all five opener banks', () => {
-  const echo = VOICES.echo.echo;
-  for (const key of ['first', 'reached-photo', 'reached-skipped', 'approached-photo', 'approached-skipped']) {
-    assert.ok(Array.isArray(echo[key]) && echo[key].length > 0, `missing echo bank ${key}`);
   }
 });
 
@@ -84,35 +77,3 @@ test('index draws are spread across the pools, not clumped', () => {
   assert.ok(seen.size > 1900, `only ${seen.size} distinct cards in 2000 draws`);
 });
 
-test('echoOpener picks the bank matching the previous stop outcome', () => {
-  const echo = VOICES.echo;
-  const cases = [
-    [null, 'first'],
-    [{ approached: false, photo: true }, 'reached-photo'],
-    [{ approached: false, photo: false }, 'reached-skipped'],
-    [{ approached: true, photo: true }, 'approached-photo'],
-    [{ approached: true, photo: false }, 'approached-skipped'],
-  ];
-  for (const [prev, key] of cases) {
-    const line = echoOpener(echo, 'test-seed', 1, prev);
-    assert.ok(echo.echo[key].includes(line), `outcome ${key} picked from wrong bank: "${line}"`);
-  }
-});
-
-test('echoOpener is deterministic for a given seed, stop and history', () => {
-  const echo = VOICES.echo;
-  const prev = { approached: true, photo: false };
-  assert.equal(
-    echoOpener(echo, 'seed-a', 2, prev),
-    echoOpener(echo, 'seed-a', 2, prev),
-  );
-  // A different history at the same seed and stop picks a different bank.
-  const a = echoOpener(echo, 'seed-a', 2, prev);
-  const b = echoOpener(echo, 'seed-a', 2, { approached: false, photo: true });
-  assert.ok(echo.echo['approached-skipped'].includes(a));
-  assert.ok(echo.echo['reached-photo'].includes(b));
-});
-
-test('echoOpener returns null for a voice with no echo bank', () => {
-  assert.equal(echoOpener(VOICES.stray, 'seed', 0, null), null);
-});

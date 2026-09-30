@@ -1349,7 +1349,7 @@
     import { SKINS, getSkin, scopeCSS, BASE_CSS } from './lib/skins.js';
     import { isIOS, isInAppBrowser, isStandalone } from './lib/platform.js';
     import { buildHexIndex, innerCard } from './lib/inner.js';
-    import { oracleCard, echoOpener } from './lib/oracle.js';
+    import { oracleCard } from './lib/oracle.js';
     import { FILTERS, getFilter, allFilters, visibleFilters, setImportedFilters, importFilterSpec,
              setHiddenFilters, hiddenFilters, hideFilter, unhideFilter, isFilterHidden,
              effectiveFilterId } from './lib/filters.js';
@@ -2597,20 +2597,6 @@
       exitFocus();
       resetFocusTimer();
       saveActiveWalk();
-
-      // The Echo prepends a line about the previous stop's outcome — chosen
-      // here, not at plan time, because the outcome isn't known until it
-      // happens. Written back to stop.card so the walk record keeps the card
-      // the user actually saw.
-      if (walk.voice.echo && stop.card && !stop.card.echoApplied) {
-        const prev = stop.seq > 0 ? walk.plan.stops[stop.seq - 1] : null;
-        const opener = echoOpener(walk.voice, walk.plan.seed, stop.seq, prev && {
-          approached: !!prev.approached,
-          photo: !!walk.photos[stop.seq - 1],
-        });
-        if (opener) stop.card.text = `${opener}\n${stop.card.text}`;
-        stop.card.echoApplied = true;
-      }
 
       // Show the card (silent voices carry none — straight to the panel).
       if (stop.card) showCard(stop.card, walk.voice);

@@ -31,25 +31,3 @@ export function oracleCard(stop, voice) {
     oracle: { title },
   };
 }
-
-/**
- * The Echo's opener: the one line that reflects what the walker did rather
- * than where they are. Chosen at arrival time (the previous stop's outcome
- * isn't known at plan time), seeded so the same seed and the same behaviour
- * always give the same line.
- *
- * @param {object} voice      pool data carrying the `echo` opener banks.
- * @param {string} seed       the walk seed.
- * @param {number} stopIndex  index of the stop being arrived at.
- * @param {object|null} previous  previous stop outcome { approached, photo },
- *   or null for the first stop.
- * @returns {string|null} the opener line, or null if the bank is missing.
- */
-export function echoOpener(voice, seed, stopIndex, previous) {
-  const key = !previous
-    ? 'first'
-    : `${previous.approached ? 'approached' : 'reached'}-${previous.photo ? 'photo' : 'skipped'}`;
-  const bank = voice.echo?.[key];
-  if (!bank?.length) return null;
-  return makeRng(`${seed}|echo|${stopIndex}`).pick(bank);
-}

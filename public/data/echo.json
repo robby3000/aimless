@@ -266,37 +266,5 @@
     "never have. Listen",
     "right beside the pane",
     "make it worth hearing"
-  ],
-  "echo": {
-    "first": [
-      "Nothing has happened yet",
-      "You set out a few minutes ago",
-      "Everything from here on will be repeated",
-      "Start with what you already know"
-    ],
-    "reached-photo": [
-      "You photographed the last one",
-      "You stopped exactly where you were sent",
-      "You looked at the last one through a screen",
-      "You arrived and kept something"
-    ],
-    "reached-skipped": [
-      "You did not keep the last one",
-      "You left the last one where it was",
-      "You arrived and took nothing",
-      "The last one is already fading"
-    ],
-    "approached-photo": [
-      "You did not quite reach the last one",
-      "You settled for close last time",
-      "You photographed what was near enough",
-      "Near enough was enough last time"
-    ],
-    "approached-skipped": [
-      "You stopped short of the last one and kept nothing",
-      "The last one is still out there",
-      "You stopped short and moved on",
-      "Nothing from the last one came with you"
-    ]
-  }
+  ]
 }
