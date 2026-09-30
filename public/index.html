@@ -3119,6 +3119,24 @@
     // whole set, and rendered canvases are shared with the export path.
     let detailRenderToken = 0;
     let detailObserver = null;
+    // A detail rebuild parks the viewport on the topmost visible stop — but
+    // remounted photo frames start as small placeholders and grow as they
+    // render, pushing that stop down. Keep the anchor alive through the lazy
+    // fill: re-apply it after each render until the user scrolls themselves
+    // (detected by scrollTop drifting from our last applied position).
+    let scrollAnchor = null;
+    function restoreScrollAnchor() {
+      if (!scrollAnchor) return;
+      if (scrollAnchor.appliedTop != null && detailContent.scrollTop !== scrollAnchor.appliedTop) {
+        scrollAnchor = null;
+        return;
+      }
+      const stop = detailContent.querySelector(`.stop[data-seq="${scrollAnchor.seq}"]`);
+      if (!stop) { scrollAnchor = null; return; }
+      detailContent.scrollTop += stop.getBoundingClientRect().top
+        - detailContent.getBoundingClientRect().top - scrollAnchor.offset;
+      scrollAnchor.appliedTop = detailContent.scrollTop;
+    }
     function fillDetailPhotos(photos, walkId, filterId) {
       const token = ++detailRenderToken;
       if (detailObserver) detailObserver.disconnect();
@@ -3163,7 +3181,7 @@
           } catch { canvas.width = canvas.height = 0; }
           frame.replaceChildren(canvas);
         } catch { /* unreadable photo — leave shimmer */ }
-        finally { finished++; tick(); }
+        finally { finished++; tick(); restoreScrollAnchor(); }
       };
       // No IntersectionObserver (ancient WebView): render everything.
       if (typeof IntersectionObserver === 'undefined') {
@@ -3408,15 +3426,11 @@
 
       applySkin();
       showScreen('detail');
-      // Restore the pre-rebuild viewport position (no-op on first open —
+      // Restore the pre-rebuild viewport position now, and keep restoring it
+      // as lazy photo renders grow the placeholders (no-op on first open —
       // the screen was hidden so no anchor was found).
-      if (anchorSeq != null) {
-        const stop = detailContent.querySelector(`.stop[data-seq="${anchorSeq}"]`);
-        if (stop) {
-          detailContent.scrollTop += stop.getBoundingClientRect().top
-            - detailContent.getBoundingClientRect().top - anchorOffset;
-        }
-      }
+      scrollAnchor = anchorSeq != null ? { seq: anchorSeq, offset: anchorOffset } : null;
+      restoreScrollAnchor();
       // Sync the rails after the screen is visible so their geometry exists.
       skinRail.setValue(currentSkin);
       // Re-mark the selection the rebuild just wiped (same walk only).
