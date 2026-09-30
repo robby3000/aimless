@@ -92,7 +92,7 @@
     <label>Origin lng <input id="sim-lng" value="-4.2518" step="0.0001"></label>
     <label>Stops <select id="sim-stops"><option>3</option><option selected>5</option><option>7</option></select></label>
     <label>Minutes <select id="sim-budget"><option>30</option><option selected>45</option><option>60</option></select></label>
-    <label>Voice <select id="sim-voice"><option value="crow">Crow</option><option value="threshold">Threshold</option><option value="lattice">Lattice</option><option value="inner">Inner</option><option value="stray">Stray</option><option value="small">Small</option><option value="slow">Slow</option><option value="echo">Echo</option><option value="myvoice">My Voice</option><option value="none">No Voice</option></select></label>
+    <label>Voice <select id="sim-voice"><option value="crow">Crow</option><option value="threshold">Threshold</option><option value="lattice">Lattice</option><option value="inner">Inner</option><option value="stray">Stray</option><option value="small">Small</option><option value="slow">Slow</option><option value="echo">Echo</option><option value="myvoice">My Voice</option></select></label>
   </div>
 
   <div class="row">
@@ -241,7 +241,7 @@
       const origin = { lat, lng };
       const plan = planWalk({ origin, stops, budgetMin, seed });
       // Silent voices have no data file — no card content at all.
-      const silent = { none: { slug: 'none', name: 'No Voice' }, myvoice: { slug: 'myvoice', name: 'My Voice' } }[voiceSlug];
+      const silent = { myvoice: { slug: 'myvoice', name: 'My Voice' } }[voiceSlug];
       const voiceData = silent || await fetch(`./data/${voiceSlug}.json`).then(r => r.json());
       // The Inner has no deck: each stop's card comes from its coordinates.
       // Oracle voices (titles pool) likewise draw from coordinates via

@@ -1069,7 +1069,6 @@
             <div class="wheel-item" data-value="slow">The Slow</div>
             <div class="wheel-item" data-value="echo">The Echo</div>
             <div class="wheel-item" data-value="myvoice">My Voice</div>
-            <div class="wheel-item" data-value="none">No Voice</div>
           </div>
         </div>
       </div>
@@ -1196,7 +1195,7 @@
       </details>
       <details>
         <summary>What is the Voice all about?</summary>
-        <p>The voice you pick on the Go screen sets the character of the card you receive at each waypoint. Except for The Inner, every voice works the same way: a formula converts the waypoint's coordinates into a title and three lines drawn from that voice's own pools of verse. The same place always says the same thing to the same voice — the words belong to the spot; you just walk to them.</p>
+        <p>The voice you pick on the Go screen sets the character of the card you receive at each waypoint. Except for The Inner and My Voice, every voice works the same way: a formula converts the waypoint's coordinates into a title and three lines drawn from that voice's own pools of verse. The same place always says the same thing to the same voice — the words belong to the spot; you just walk to them.</p>
         <ul>
           <li><strong>The Crow</strong> — the appraising eye. Knows the difference between a thing that has been dropped and a thing that has been left.</li>
           <li><strong>The Threshold</strong> — the place that is neither. Doorways, crossings, and the moment in between.</li>
@@ -1206,8 +1205,7 @@
           <li><strong>The Small</strong> — the world under your feet. A whole landscape in every crack.</li>
           <li><strong>The Slow</strong> — the thing with more time than you. Everything is moving; it is simply moving slower than you are.</li>
           <li><strong>The Echo</strong> — the one that repeats you. Answers each waypoint with what you did at the last one.</li>
-          <li><strong>My Voice</strong> — your own words. Walk in silence, then attach a text file at export: each blank-line-separated block lands beneath a photo.</li>
-          <li><strong>No Voice</strong> — just the photos. The waypoints ask nothing but a picture.</li>
+          <li><strong>My Voice</strong> — your own words, or none. No cards on the walk. Attach a text file at export and each blank-line-separated block lands beneath a photo — or attach nothing and keep just the photos.</li>
         </ul>
         <p>Tip: it can be a good idea to pause and ponder the lines, because they can sometimes manifest a kind of magic synchronicity that only becomes apparent after you stop and consider — give it a go!</p>
       </details>
@@ -1871,7 +1869,10 @@
       await refreshImportedFilters();
       wheelStops.setValue(String(prefs.stops ?? DEFAULT_PREFS.stops));
       wheelBudget.setValue(String(prefs.budgetMin ?? DEFAULT_PREFS.budgetMin));
-      wheelVoice.setValue(prefs.voice ?? DEFAULT_PREFS.voice);
+      // 'none' (No Voice) was removed — My Voice with no attached text is
+      // the same artifact, so saved selections fold into it.
+      const savedVoice = prefs.voice === 'none' ? 'myvoice' : (prefs.voice ?? DEFAULT_PREFS.voice);
+      wheelVoice.setValue(savedVoice);
       currentSkin = prefs.skin ?? DEFAULT_PREFS.skin;
       currentFilter = prefs.filter ?? DEFAULT_PREFS.filter;
       document.getElementById('opt-kml-link').checked = prefs.kmlLink ?? DEFAULT_PREFS.kmlLink;
@@ -1903,10 +1904,9 @@
     loadPrefs();
 
     // --- Voice loading ---
-    // No Voice and My Voice carry no card content at all — the walker's own
-    // words (My Voice) are attached later, at export time.
+    // My Voice carries no card content — the walker's own words are attached
+    // later, at export time (or not at all, for a photo-only artifact).
     const SILENT_VOICES = {
-      none:    { slug: 'none',    name: 'No Voice',  epithet: 'just the walking' },
       myvoice: { slug: 'myvoice', name: 'My Voice',  epithet: 'your own words' },
     };
     async function loadVoice(slug) {
@@ -3650,10 +3650,10 @@
 
     document.getElementById('btn-detail-export').addEventListener('click', () => {
       if (!currentDetailWalk) return;
-      // The walker's own text attaches at export time — offered to My Voice
-      // and No Voice walks, where nothing else writes into the artifact.
+      // The walker's own text attaches at export time — My Voice walks only;
+      // other voices' cards already write into the artifact.
       const hasText = Array.isArray(currentDetailWalk.myVoice) && currentDetailWalk.myVoice.length > 0;
-      const eligible = currentDetailWalk.voice === 'myvoice' || currentDetailWalk.voice === 'none';
+      const eligible = currentDetailWalk.voice === 'myvoice';
       document.getElementById('row-add-text').hidden = !eligible;
       document.getElementById('row-remove-text').hidden = !(eligible && hasText);
       document.getElementById('add-text-title').textContent = hasText ? 'Replace text' : 'Add text';
