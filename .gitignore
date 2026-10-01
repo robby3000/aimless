@@ -53,6 +53,5 @@ test/styling-tests-coralreef.html
 test/styling-tests-chartroom.html
 test/scroll-snap-picker.html
 test/scroll-snap-picker-v2.html
-docs/ui-map.md
-docs/iching/
-docs/ignore/
+# All docs are local planning material — none belong in the public repo
+docs/
