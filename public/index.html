@@ -1701,7 +1701,10 @@
       }
       currentFilter = value;
       savePrefs();
-      showToast('Long-press photos to select');
+      if (!selectToastShown) {
+        selectToastShown = true;
+        showToast('Long-press photos to select');
+      }
     });
 
     // --- Filter management ---
@@ -3289,6 +3292,9 @@
     const detailContent = document.getElementById('detail-content');
     const selectedPhotoSeqs = new Set();
     let currentDetailPhotos = [];
+    // The "select photos first" toast fires at most once per detail entry —
+    // later no-selection taps still arm the filter, silently.
+    let selectToastShown = false;
     let pressTimer = null;
     let pressSeq = -1;
     let pressX = 0;
@@ -3429,6 +3435,7 @@
       // Entry means the detail screen isn't already showing — internal
       // rebuilds (filter assign, skin change) call this while it is.
       const enteringDetail = !screens.detail.classList.contains('active');
+      if (enteringDetail) selectToastShown = false;
       const db = await dbPromise;
       if (!db) return;
       const walk = await get(db, 'walks', walkId);
