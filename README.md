@@ -4,26 +4,37 @@ Go nowhere, on purpose.
 
 Press one button. Aimless picks five points at random bearings and distances, chained into a wander
 rather than scattered around you. It gives you a compass arrow and a distance — no map, no route,
-no fastest way. When you get close to a point your phone sounds and a card appears telling you to do
-something odd: *appraise the most recently disturbed surface here, without moving your feet*. You
-photograph it, or you don't. At the end you get an abstract drawing of the shape you walked and a
-single HTML file you can keep, print, or send to someone.
+no fastest way. When you get close to a point your phone sounds and the place speaks: a card whose
+text is drawn deterministically from the coordinates themselves, so the location is quite literally
+the author. You photograph something, or you don't. At the end you get an abstract drawing of the
+shape you walked and a single HTML file you can keep, print, or send to someone.
 
 No accounts. No server. No map tiles. No API keys. No build step. A folder of static files that
 works on a plane.
 
 ---
 
-**Status: planning. No code yet.** Start with [`AGENTS.md`](./AGENTS.md).
+**Status: live** as an installable PWA. Contributor notes and commands are in
+[`AGENTS.md`](./AGENTS.md).
+
+## What it does
+
+- Generates a seeded wander of waypoints — same seed, same route — sized to your chosen stop count
+  and time budget, navigated by compass arrow only.
+- At each waypoint a voice speaks. Seven oracle voices derive their cards deterministically from
+  the coordinates; The Inner draws an I Ching hexagram; My Voice keeps quiet and optionally pairs
+  your own text with the walk at export.
+- Photos you capture can be filtered individually or together — named presets or a Surprise roll —
+  rendered by the shared `wobbletone-engine` submodule, and the whole artifact restyles through
+  selectable skins.
+- Exports a self-contained HTML keepsake, a share card, and a KML route for mapping apps.
+- Works fully offline once installed; all data lives in IndexedDB on the device.
 
 ## Documentation
 
-| Document | Purpose |
-|---|---|
-| [`docs/roadmap.md`](./docs/roadmap.md) | The build plan — decisions, six steps, device notes. Short on purpose. |
-| [`docs/blueprint.md`](./docs/blueprint.md) | What it is, why it exists, how walks are generated |
-| [`docs/deck.md`](./docs/deck.md) | The cards: grammar, three voices, and why they are deliberately generic |
-| [`docs/verdict.md`](./docs/verdict.md) | Template for the five real walks. The actual output of the project. |
+Planning docs (`roadmap`, `blueprint`, `deck`, `verdict`) are deliberately not in this public repo —
+`docs/` is gitignored as local working material. [`AGENTS.md`](./AGENTS.md) carries what a
+contributor needs.
 
 ## Stack
 
