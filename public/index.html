@@ -963,12 +963,23 @@
       margin-top: 8px;
       border-radius: 8px;
       overflow: hidden;
-      /* Long-press selects photos; suppress the OS image sheet/callout. */
+      /* Long-press selects photos; suppress the OS image sheet/callout and
+         the native tap/selection highlight (it paints blue over the photo). */
       -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
       -webkit-user-select: none;
       user-select: none;
     }
-    .photo-frame img, .photo-frame canvas { display: block; width: 100%; height: auto; }
+    .photo-frame img, .photo-frame canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+      pointer-events: none;   /* gestures belong to the frame, not the child */
+    }
     .photo-frame.selected { box-shadow: 0 0 0 4px var(--accent); }
     .photo-loading {
       height: 120px;
@@ -1579,7 +1590,7 @@
     const railFilter = document.getElementById('rail-filter');
     // Surprise always rides the last slot — it's an action (roll a random
     // stack onto the one selected photo), not a stored filter.
-    const SURPRISE_TOKEN = '<div class="rail-item rail-surprise" data-value="surprise">Surprise</div>';
+    const SURPRISE_TOKEN = '<div class="rail-item rail-surprise" data-action data-value="surprise">Surprise</div>';
     railFilter.innerHTML = FILTERS.map((f) => `<div class="rail-item" data-value="${f.id}">${f.name}</div>`).join('') + SURPRISE_TOKEN;
     // The shared base result styles and the active skin are injected scoped
     // to the detail view so they cannot leak into the rest of the app; the
@@ -1642,6 +1653,9 @@
         const it = e.target.closest('.rail-item');
         const i = it ? items.indexOf(it) : -1;
         if (i < 0) return;
+        // Action items (Surprise) fire on every tap, even when already
+        // highlighted — they are verbs, not positions on a dial.
+        if (it.dataset.action !== undefined) { onSelect(it.dataset.value); return; }
         select(i, true);
         const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
         el.scrollTo({ left: centerOf(it) - el.clientWidth / 2, behavior: reduce ? 'auto' : 'smooth' });
