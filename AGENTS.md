@@ -6,12 +6,17 @@ self-contained HTML file you can keep. Zero dependencies, zero build step, zero 
 
 ## Start here
 
-1. [`docs/roadmap.md`](./docs/roadmap.md) — the build plan. Executive summary, 12 decisions, six
+**`docs/` is gitignored — everything in it is local-only.** The files exist on disk but not on
+GitHub; the links below resolve for whoever holds the working copy.
+
+1. `docs/roadmap.md` — the build plan. Executive summary, 12 decisions, six
    steps. **It is short on purpose.**
-2. [`docs/blueprint.md`](./docs/blueprint.md) — what and why.
-3. [`docs/deck.md`](./docs/deck.md) — the card content. Binding. Read before touching `deck.js`.
-4. [`docs/verdict.md`](./docs/verdict.md) — the template the human fills in after five real walks.
+2. `docs/blueprint.md` — what and why.
+3. `docs/deck.md` — the card content. Binding. Read before touching `deck.js` or the voices.
+4. `docs/verdict.md` — the template the human fills in after five real walks.
    Do not delete it and do not fill it in yourself.
+5. `docs/ignore/` — working drafts and discussion docs (voice pools, UI proposals). Nothing in
+   it is load-bearing.
 
 ## Commands
 
@@ -56,21 +61,21 @@ public/
     surprise.js         # Surprise rail action: seeded-random effect stack onto one photo
     oracle.js           # oracle voices: coordinate -> 4 pool indices (titles/l1/l2/l3)
   data/
-    crow.json  threshold.json  lattice.json    # oracle pools (deck format replaced)
-    stray.json small.json slow.json echo.json  # oracle pools; echo adds opener banks
+    crow.json  threshold.json  lattice.json    # oracle pools (the seeded-deck format is replaced)
+    stray.json small.json slow.json echo.json  # oracle pools
     inner.json          # 64 hexagrams: number, hex_font, binary, title, haiku
 test/
   geo.test.js  rng.test.js  walk.test.js  deck.test.js  proximity.test.js  skins.test.js
   platform.test.js  export.test.js  inner.test.js  filters.test.js  filter-renderer.test.js
-  kml.test.js  walk-nav.test.js  engine.test.js  surprise.test.js
+  kml.test.js  walk-nav.test.js  engine.test.js  surprise.test.js  oracle.test.js
 scripts/
   make-icons.mjs      # npm run icons
   stamp-sw.mjs        # npm run stamp -- rewrites the sw.js cache name
-docs/
-  roadmap.md  blueprint.md  deck.md  verdict.md  cache-busting.md
+docs/                 # GITIGNORED, local only — planning, specs, drafts in docs/ignore/
 .github/workflows/
   pages.yml           # test + stamp check, then deploy public/ to GitHub Pages
 package.json          # no dependencies; "test": "node --test test/**/*.test.js"
+.gitignore            # has a belt-and-braces block: never commit exports, photos, or secrets
 ```
 
 ## Hard constraints
@@ -85,12 +90,10 @@ package.json          # no dependencies; "test": "node --test test/**/*.test.js"
 - **Seeded randomness only** (A7). Never call `Math.random()` in generation code.
 - **Do not build Phase 2 (AI cards) until five real walks are logged in `verdict.md`** (A12). This
   is the entire reason the repo exists.
-- **This repo is PUBLIC. No private/competition research or strategy docs get committed here.** Anything
-  like Phase-2 research, competitor teardowns, monetization/hosting analysis, or unpublished product
-  strategy belongs in the **private KnowledgeVault** (`/mnt/d/KnowledgeVault/…`), never in `docs/` or
-  anywhere under this repo. Generated research artifacts (e.g. `docs/phase2-research.md`) must be
-  relocated to the Vault and kept out of the working tree + any push. Respect the no-public-exposure
-  posture: the NUC/Tailscale is never an origin for anything Aimless publishes.
+- **This repo is PUBLIC.** `docs/` is gitignored so local planning drafts are safe there, but
+  durable private/competition research and strategy belongs in the **private KnowledgeVault**
+  (`/mnt/d/KnowledgeVault/…`). Respect the no-public-exposure posture: the NUC/Tailscale is never
+  an origin for anything Aimless publishes.
 - **Count the "close as I can get" presses** and surface the total. See `blueprint.md` §6 — that
   number decides whether the sibling `glyph-drift` project gets built.
 
@@ -102,7 +105,7 @@ even if the app is good.
 
 ## Device gotchas
 
-Six things that will each cost an afternoon. Full detail in `roadmap.md` §5, and a longer treatment
+Things that will each cost an afternoon. Full detail in `roadmap.md` §5, and a longer treatment
 in the sibling `glyph-drift` repo at `docs/device-reality.md`.
 
 - **iOS has no vibration API** and never will. Tone plus screen flash on all platforms; haptics are
@@ -140,8 +143,38 @@ there is no CSS/SVG filter pipeline. Runtime-imported specs persist in the `filt
 schema v2) and resolve through `getFilter` after the built-ins. Exported keepsakes must stay free
 of scripts and filter machinery — `export.test.js` asserts it.
 
+**Per-photo filter resolution** is `effectiveSpec(photo, fallback)`: `photo.filterSpec`
+(a Surprise roll) beats `photo.filterId` (a named pick) beats the global pref. Detail render,
+export, and share cards all go through it. `Surprise` in the rail is an *action token*, not a
+stored filter — every deliberate tap re-rolls a 3–6-effect stack generated by `surprise.js`
+from the engine's own `registry.js` param tables (crypto-seeded `makeRng`, `opacity` excluded,
+validated through `validateSpec`).
+
+**Voice model**: nine voices on the wheel. Seven oracle voices (Crow, Threshold, Lattice, Stray,
+Small, Slow, Echo) derive cards from coordinates via `oracle.js` — four indices pick a title +
+three lines from each voice's `data/*.json` pools (64⁴ combos per voice; every pooled line must
+stand alone
+grammatically because recombination splits sibling lines). The Inner is separate — a coordinate-
+derived I Ching hexagram (`inner.js` + `inner.json`). My Voice has no cards; it optionally takes a
+user text file at export time (blank-line-separated blocks map to photos). "No Voice" was removed —
+the legacy `'none'` pref migrates to `'myvoice'`, and `export.js` keeps the name so old archived
+walks still render. `deck.js` survives for the SVG walk trace (`drawWalk`) and recent-seed
+avoidance (`pushRecent`/`recentKeys`); the seeded card deck is gone.
+
+**Modal opt-out convention**: informational modals (welcome, photo-select hint) show on every
+relevant entry until dismissed *with the "do not show again" checkbox checked* — all dismissal
+paths (button, backdrop, Escape) must honor the checkbox.
+
+**UI gotchas learned the hard way**:
+- `[hidden]` loses to any `display:` rule — sheet rows need `.sheet-row[hidden]{display:none}`.
+- Loading placeholders must match the photo's stored aspect ratio (`photo.ar`) or lazy fills
+  shove the viewport; fixed-height placeholders caused real scroll jumps.
+- Suppress native tap/selection feedback (`-webkit-tap-highlight-color: transparent`,
+  `user-select:none`, `-webkit-touch-callout:none`) on photo frames, or iOS/Android paint their
+  own blue over the coral selection ring.
+
 Vanilla ES modules. Pure logic in `public/lib/*.js`, tested with `node --test`; anything touching
 the DOM, storage or geolocation stays in `public/index.html` or `sim.html` and is verified manually
 via the simulator. Inline CSS and UI JS in `index.html` (the `pomo-day-sync` pattern). Dark, high
 contrast — this is read outdoors in daylight. No emojis. One logical change per commit, prefixed
-with the step id (e.g. `W2: chained walk generation`).
+with the area (`detail:`, `walk:`, `filters:`, `echo:` …).
