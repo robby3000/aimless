@@ -53,6 +53,7 @@ public/
     engine/             # wobbletone-engine git submodule — shared CPU renderer (do not edit here)
     kml.js              # KML route export (plan + trace + stop placemarks)
     walk-nav.js         # navigation guard: prevents bottom-nav taps from canceling a walk
+    surprise.js         # Surprise rail action: seeded-random effect stack onto one photo
     oracle.js           # oracle voices: coordinate -> 4 pool indices (titles/l1/l2/l3)
   data/
     crow.json  threshold.json  lattice.json    # oracle pools (deck format replaced)
@@ -61,7 +62,7 @@ public/
 test/
   geo.test.js  rng.test.js  walk.test.js  deck.test.js  proximity.test.js  skins.test.js
   platform.test.js  export.test.js  inner.test.js  filters.test.js  filter-renderer.test.js
-  kml.test.js  walk-nav.test.js  engine.test.js
+  kml.test.js  walk-nav.test.js  engine.test.js  surprise.test.js
 scripts/
   make-icons.mjs      # npm run icons
   stamp-sw.mjs        # npm run stamp -- rewrites the sw.js cache name

@@ -193,6 +193,13 @@ export function effectiveFilterId(photo, fallbackId) {
   return photo?.filterId ?? fallbackId;
 }
 
+// A Surprise roll stores its generated spec on the photo record itself —
+// it wins over both the per-photo filterId and the walk-wide pref.
+// Choosing a named filter afterwards clears it (index.html).
+export function effectiveSpec(photo, fallbackId) {
+  return photo?.filterSpec ?? getFilter(effectiveFilterId(photo, fallbackId))?.spec;
+}
+
 // Parse pasted/file JSON into a validated {id, name, spec} record for the
 // filters store. Accepts a bare Filter Spec, a {spec} record, or a legacy
 // v1 {effects} preset. `takenIds` are extra ids to avoid (live imports).

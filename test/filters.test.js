@@ -11,6 +11,7 @@ import {
   translateWobbletonePreset,
   validateFilter,
   effectiveFilterId,
+  effectiveSpec,
 } from '../public/lib/filters.js';
 
 const EFFECTS = [
@@ -225,4 +226,13 @@ test('effectiveFilterId: per-photo override wins, absent falls back', () => {
   assert.equal(effectiveFilterId({ filterId: 'original' }, 'vivid'), 'original');
   // A photo's pinned filter survives a different walk-wide choice.
   assert.equal(effectiveFilterId({ filterId: 'ghost' }, 'vivid'), 'ghost');
+});
+
+test('effectiveSpec: a stored Surprise spec wins over filterId and fallback', () => {
+  const roll = { format: 'wobbletone-filter', version: 1, name: 'Surprise', effects: [{ type: 'invert', params: { v: 100 } }] };
+  assert.equal(effectiveSpec({ filterSpec: roll }, 'original'), roll);
+  assert.equal(effectiveSpec({ filterSpec: roll, filterId: 'sepia' }, 'original'), roll);
+  // No stored spec: resolves through the named filter exactly as before.
+  assert.equal(effectiveSpec({ filterId: 'sepia' }, 'vivid'), getFilter('sepia').spec);
+  assert.equal(effectiveSpec({}, 'vivid'), getFilter('vivid').spec);
 });
