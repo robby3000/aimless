@@ -1692,24 +1692,16 @@
         return;
       }
       // With photos selected the rail is scoped to them: it writes filterId
-      // onto those photo records instead of changing the walk-wide pref.
+      // onto those photo records. With none selected there is no walk-wide
+      // render — the tap only arms the value as last-used (the item lights
+      // itself) and nudges toward selection.
       if (selectedPhotoSeqs.size && currentDetailWalk) {
         assignFilterToSelection(value);
         return;
       }
       currentFilter = value;
       savePrefs();
-      // Show the busy indicator at tap time — the DB fetch + DOM rebuild in
-      // showWalkDetail is itself part of the perceived wait. The 'busy'
-      // sentinel claims the element so a superseded fill's finally can't
-      // hide it; fillDetailPhotos takes ownership once it runs.
-      if (currentDetailWalk) {
-        const busy = document.getElementById('filter-busy');
-        busy.dataset.token = 'busy';
-        busy.textContent = 'rendering…';
-        busy.hidden = false;
-        showWalkDetail(currentDetailWalk.id);
-      }
+      showToast('Long-press photos to select');
     });
 
     // --- Filter management ---
@@ -3178,13 +3170,13 @@
     }
 
     // Data URL for the export artifact — render may be cached, encode is not.
-    // A photo's own spec/id (Surprise roll, then Walk Detail selection) wins
-    // over the walk-wide choice passed as filterId.
-    async function renderDetailPhoto(photo, filterId) {
+    // Only per-photo assignments render: a Surprise spec, else a picked
+    // filterId, else the photo is original. There is no walk-wide filter.
+    async function renderDetailPhoto(photo) {
       const { img, rawSrc } = await photoSource(photo);
       if (!img) return rawSrc;
       try {
-        return renderDetailCanvas(img, photo, effectiveSpec(photo, filterId), PREVIEW_MAX_DIM).toDataURL('image/jpeg', 0.85);
+        return renderDetailCanvas(img, photo, effectiveSpec(photo, 'original'), PREVIEW_MAX_DIM).toDataURL('image/jpeg', 0.85);
       } catch {
         return rawSrc;
       }
@@ -3214,7 +3206,7 @@
         - detailContent.getBoundingClientRect().top - scrollAnchor.offset;
       scrollAnchor.appliedTop = detailContent.scrollTop;
     }
-    function fillDetailPhotos(photos, walkId, filterId) {
+    function fillDetailPhotos(photos, walkId) {
       const token = ++detailRenderToken;
       if (detailObserver) detailObserver.disconnect();
       const bySeq = new Map(photos.map((p) => [p.stopSeq, p]));
@@ -3249,7 +3241,7 @@
             dbPromise.then((db) => db && put(db, 'photos', p)).catch(() => {});
           }
           const frame = token === detailRenderToken &&
-            currentDetailWalk?.id === walkId && currentFilter === filterId &&
+            currentDetailWalk?.id === walkId &&
             document.querySelector(`.photo-frame[data-stopseq="${p.stopSeq}"]`);
           if (!frame) return;
           if (!img) {
@@ -3258,7 +3250,7 @@
           }
           const canvas = document.createElement('canvas');
           try {
-            const rendered = renderDetailCanvas(img, p, effectiveSpec(p, filterId), PREVIEW_MAX_DIM);
+            const rendered = renderDetailCanvas(img, p, effectiveSpec(p, 'original'), PREVIEW_MAX_DIM);
             canvas.width = rendered.width;
             canvas.height = rendered.height;
             canvas.getContext('2d').drawImage(rendered, 0, 0);
@@ -3293,7 +3285,7 @@
     // highlights the filter the selected photos share; a mixed selection
     // leaves the highlight alone (the rail is input-only there). Tapping
     // empty space clears the selection and returns the rail to the
-    // walk-wide pref.
+    // last-used filter.
     const detailContent = document.getElementById('detail-content');
     const selectedPhotoSeqs = new Set();
     let currentDetailPhotos = [];
@@ -3307,7 +3299,7 @@
       if (!selectedPhotoSeqs.size) { filterRail.setValue(currentFilter); return; }
       const effs = new Set(currentDetailPhotos
         .filter((p) => selectedPhotoSeqs.has(p.stopSeq))
-        .map((p) => (p.filterSpec ? 'surprise' : effectiveFilterId(p, currentFilter))));
+        .map((p) => (p.filterSpec ? 'surprise' : effectiveFilterId(p, 'original'))));
       // Highlight only — never scroll: the user may still be swiping, and a
       // programmatic re-centre reads as the rail snapping back.
       if (effs.size === 1) filterRail.setValue([...effs][0], false);
@@ -3384,6 +3376,10 @@
         delete p.filterSpec;
         if (db) await put(db, 'photos', p);
       }
+      // Assigning counts as "used" — the rail highlights it next time the
+      // screen opens with nothing selected.
+      currentFilter = filterId;
+      savePrefs();
       showWalkDetail(currentDetailWalk.id);
     }
 
@@ -3572,7 +3568,7 @@
           photoHintNever.checked = false;
           photoHintOverlay.hidden = false;
         }
-        fillDetailPhotos(photos, walk.id, currentFilter);
+        fillDetailPhotos(photos, walk.id);
       } else {
         // Filter tap showed the indicator but there's nothing to render.
         document.getElementById('filter-busy').hidden = true;
@@ -3591,7 +3587,7 @@
       // detail-view cache makes this a no-op when the preview already ran).
       const rendered = [];
       for (const p of photos) {
-        const url = await renderDetailPhoto(p, currentFilter);
+        const url = await renderDetailPhoto(p);
         if (url && url.startsWith('data:')) rendered.push({ stopSeq: p.stopSeq, dataUrl: url });
       }
       return buildHTMLExport(currentDetailWalk, rendered, svg, skin.css, skin.icon, {
@@ -3650,7 +3646,7 @@
         let img = null;
         try { img = await loadImage(src); } catch { /* photo unreadable - card goes out bare */ }
         if (img) {
-          const rendered = await renderPhotoToCanvas(img, { spec: effectiveSpec(photo, currentFilter) }, CARD_SIZE, CARD_SIZE);
+          const rendered = await renderPhotoToCanvas(img, { spec: effectiveSpec(photo, 'original') }, CARD_SIZE, CARD_SIZE);
           ctx.drawImage(rendered, 0, 0);
         }
         if (!photo.dataUrl) URL.revokeObjectURL(src);
