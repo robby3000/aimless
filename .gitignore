@@ -46,12 +46,6 @@ node_modules/
 *.log
 
 # Styling playground — local design experiments, not part of the app
-test/styling-tests.html
-test/css-guide.md
-test/styling-tests-safelight.html
-test/styling-tests-coralreef.html
-test/styling-tests-chartroom.html
-test/scroll-snap-picker.html
-test/scroll-snap-picker-v2.html
+test/styling/
 # All docs are local planning material — none belong in the public repo
 docs/
