@@ -501,9 +501,8 @@
       transition: opacity 0.15s ease, color 0.15s ease;
     }
     .rail-item.selected { color: var(--fg); opacity: 1; }
-    /* Surprise is an action, not a filter — always coral, even unselected. */
-    .rail-item.rail-surprise { color: var(--accent); opacity: 0.6; }
-    .rail-item.rail-surprise.selected { color: var(--accent); opacity: 1; }
+    /* Surprise's only flourish: a coral period, same as the logo. */
+    .rail-item.rail-surprise span { color: var(--accent); }
     @media (prefers-reduced-motion: reduce) {
       .rail-item { transition: none; }
     }
@@ -1590,7 +1589,7 @@
     const railFilter = document.getElementById('rail-filter');
     // Surprise always rides the last slot — it's an action (roll a random
     // stack onto the one selected photo), not a stored filter.
-    const SURPRISE_TOKEN = '<div class="rail-item rail-surprise" data-action data-value="surprise">Surprise</div>';
+    const SURPRISE_TOKEN = '<div class="rail-item rail-surprise" data-action data-value="surprise">Surprise<span>.</span></div>';
     railFilter.innerHTML = FILTERS.map((f) => `<div class="rail-item" data-value="${f.id}">${f.name}</div>`).join('') + SURPRISE_TOKEN;
     // The shared base result styles and the active skin are injected scoped
     // to the detail view so they cannot leak into the rest of the app; the
