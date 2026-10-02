@@ -1298,7 +1298,7 @@
     <div class="sheet-handle"></div>
     <div class="sheet-heading">Filters</div>
     <div class="filter-manage-import">
-      <textarea id="filter-json" rows="4" spellcheck="false" placeholder='Paste filter spec JSON (from Wobbletone Code tab), or choose a .json file'></textarea>
+      <textarea id="filter-json" rows="4" spellcheck="false" placeholder='Paste filter spec JSON (from Wobbletone.com code tab) and import, or choose a .json file'></textarea>
       <input type="file" id="filter-file" accept=".json,application/json" hidden>
       <div class="filter-import-actions">
         <button id="btn-filter-file">choose file</button>
@@ -1345,7 +1345,7 @@
       </button>
       <label class="sheet-row sheet-toggle">
         <span class="row-ico">&#8599;</span>
-        <span class="row-text"><span class="row-title">Add KML link to footer</span></span>
+        <span class="row-text"><span class="row-title">Add KML link to footer</span><span class="row-sub">Embeds walk GPS coordinates</span></span>
         <input type="checkbox" id="opt-kml-link">
       </label>
     </div>
@@ -3392,7 +3392,16 @@
     // Rail tail action: exactly one photo must be selected. The rolled spec
     // stores on the photo record — effectiveSpec resolves it above filterId.
     async function surpriseSelectedPhoto() {
-      if (selectedPhotoSeqs.size !== 1) { showToast('Select one image only'); return; }
+      // No selection behaves like any filter tap: arm + the once-per-entry
+      // nudge. The single-image warning only fires for a real multi-select.
+      if (!selectedPhotoSeqs.size) {
+        if (!selectToastShown) {
+          selectToastShown = true;
+          showToast('Long-press photos to select');
+        }
+        return;
+      }
+      if (selectedPhotoSeqs.size > 1) { showToast('Select one image only'); return; }
       const p = currentDetailPhotos.find((x) => selectedPhotoSeqs.has(x.stopSeq));
       if (!p) return;
       const busy = document.getElementById('filter-busy');
