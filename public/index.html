@@ -1046,7 +1046,7 @@
   </header>
 
   <div id="inapp-banner" class="storage-banner" hidden>
-    <span>You're inside an app's built-in browser — the compass and GPS often don't work here. Open Aimless in Safari (Share → Open in Safari) for the full walk.</span>
+    <span>You're inside an app's built-in browser: the compass and GPS often don't work here. Open Aimless in Safari (Share → Open in Safari) for the full walk.</span>
     <button id="inapp-banner-dismiss" aria-label="Dismiss">×</button>
   </div>
 
@@ -1187,87 +1187,72 @@
   <section id="screen-info" class="screen">
     <div class="info-content">
       <h2>How Aimless works</h2>
-      <p>Placeholder: what the app is and what a walk is.</p>
-      <h2>Starting a walk</h2>
-      <p>Placeholder: the Go button, choosing stops, minutes and voice.</p>
-      <h2>During a walk</h2>
-      <p>Placeholder: follow the compass arrow; what happens at a waypoint; the card, the photo, "Close as I can get"; the focused walk state.</p>
-      <h2>After a walk</h2>
-      <p>Placeholder: the Walk Result screen, designs, export and share; the archive; deleting walks.</p>
+      <p>A walk, authored by chance. Press Go and Aimless draws a chain of waypoints you can't see on a map - only an arrow and a distance. At each waypoint the voice you chose puts a thought in your head. You take a photo if you want one. When you come back you hold a small artifact: the shape you walked, the photos, the words. A machine for serendipity, really. You supply the wandering, it supplies the accident.</p>
+      <h2>Starting</h2>
+      <p>Choose your settings, face the direction you'd like to drift, and press Go: the first waypoint lands roughly ahead of you.</p>
+      <h2>During</h2>
+      <p>Follow the arrow. Within about 30 metres of a waypoint the card is revealed and you're asked for a photo. The circle is generous on purpose: phone GPS drifts, so an exact spot could never be reached. If a waypoint is unreachable, tap "Close as I can get" and the walk accepts where you stood. "Give up" ends it early with whatever you have.</p>
+      <h2>After</h2>
+      <p>The result screen shows the trace you walked against the plan. Open a walk from the Archive for two more tools: Skin restyles the whole artifact, and Filter re-renders the photos you select (long-press to select, again to deselect). The export sheet offers a self-contained HTML file, a square share card, and a KML route for mapping apps.</p>
       <h2>Offline and privacy</h2>
-      <p>Placeholder: works fully offline; everything stays on the device.</p>
+      <p>Everything runs on your device and works offline once loaded. Nothing is uploaded. A walk leaves the phone only as a file you choose to export, so export the ones you want to keep. Installing to the home screen gives the storage the best protection and gives a full-screen experience.</p>
       <h2>FAQ</h2>
       <details>
         <summary>Which browser should I use?</summary>
-        <p><strong>Android: Chrome.</strong> This matters more than you'd think: Chrome installs Aimless as a real app — its own icon with no browser badge, its own window, a place in the app drawer, and protected storage. Most other Android browsers only pin a shortcut, and some restrict the sensors or storage Aimless needs.</p>
-        <p><strong>iPhone: Safari.</strong> iOS only lets Safari install apps to the home screen, so open Aimless there first.</p>
+        <p><strong>Android: Chrome.</strong> It installs Aimless as a real app: its own icon, its own window, protected storage. Most other Android browsers only pin a shortcut, and some restrict the sensors Aimless needs.</p>
+        <p><strong>iPhone: Safari.</strong> iOS only lets Safari install to the home screen.</p>
       </details>
       <details>
-        <summary>How do I install Aimless?</summary>
-        <p><strong>Chrome on Android:</strong> open aimless.earth, tap the &#8942; menu, then "Add to Home screen" or "Install app".</p>
-        <p><strong>Safari on iPhone:</strong> open aimless.earth, tap Share, then "Add to Home Screen".</p>
-        <p>After that, always open Aimless from its home-screen icon.</p>
+        <summary>How do I install it?</summary>
+        <p><strong>Chrome on Android:</strong> tap the &#8942; menu, then "Add to Home screen" or "Install app". <strong>Safari on iPhone:</strong> tap Share, then "Add to Home Screen". After that, always open Aimless from its icon.</p>
       </details>
       <details>
-        <summary>Which settings should I check?</summary>
-        <p>Location (and motion, on iPhone) are asked for on first open — both are essential. If you denied one by mistake:</p>
+        <summary>Which permissions matter?</summary>
+        <p>Location (and motion, on iPhone): both are essential, both are asked for on first open. If you denied one:</p>
         <ul>
-          <li><strong>Chrome on Android:</strong> tap the icon left of the address bar, then Permissions, and allow Location (and Motion sensors if listed).</li>
-          <li><strong>Safari on iPhone:</strong> iOS won't ask twice. Remove Aimless from your home screen, re-add it from Safari, and allow access. Also check Settings &rarr; Privacy &amp; Security &rarr; Location Services.</li>
-          <li><strong>Brave on Android:</strong> two gotchas. Brave blocks motion sensors by default, so the compass arrow never moves — allow them under brave://settings/content/sensors. And "Clear browsing data on exit" (Settings &rarr; Privacy) wipes your saved walks every time Brave closes — turn it off, or use Chrome.</li>
+          <li><strong>Chrome:</strong> tap the icon left of the address bar, then Permissions.</li>
+          <li><strong>iPhone:</strong> iOS won't ask twice. Remove the app, re-add it from Safari, and check Settings &rarr; Privacy &amp; Security &rarr; Location Services.</li>
+          <li><strong>Brave:</strong> it blocks motion sensors by default, so the compass never moves. Allow them under brave://settings/content/sensors. And "Clear browsing data on exit" wipes your saved walks: turn it off, or use Chrome.</li>
         </ul>
       </details>
       <details>
-        <summary>How can I export and save my walks?</summary>
-        <p>Open a walk from the Archive and tap "Export as HTML" — you get a single self-contained file that opens anywhere, no app needed. "Share walk" sends the same file to another app.</p>
-        <p>Important: walks live only in your browser's storage, and browsers can clear it under storage pressure or via privacy settings. Always export and back up any walk you want to keep.</p>
+        <summary>Will my walks survive?</summary>
+        <p>Only if you export them. Walks live in browser storage, which browsers can clear under pressure or via privacy settings. Open a walk from the Archive and tap export: the HTML file is self-contained, opens anywhere, and needs no app. Installing Aimless to the home screen gives storage the best protection.</p>
       </details>
       <details>
-        <summary>Can I remix my exported walk with my favourite AI chatbot?</summary>
-        <p>Yes! The export is a plain, self-contained HTML file — perfect raw material. Upload it to your chatbot of choice and try prompts like:</p>
+        <summary>What are the voices?</summary>
         <ul>
-          <li>"Extract the photos from this file and give them back to me as PNGs."</li>
-          <li>"Rewrite the five cards as a short poem about this walk."</li>
-          <li>"Turn the walked shape into a poster, with the date and distance as a caption."</li>
-          <li>"Restyle the page: change the colours to [your palette] and the font to [your font]."</li>
-          <li>"Write a one-paragraph story from these five cards."</li>
+          <li><strong>The Crow</strong> - the appraising eye. Knows the difference between a thing that has been dropped and a thing that has been left.</li>
+          <li><strong>The Threshold</strong> - the place that is neither. Doorways, crossings, and the moment in between.</li>
+          <li><strong>The Lattice</strong> - the grid that does not fit. Imposes its own order on whatever it finds.</li>
+          <li><strong>The Inner</strong> - the oracle. It reads places, not people.</li>
+          <li><strong>The Stray</strong> - the voice of what wanders. Animals, ghosts, memories, and the parts of you that refuse to stay put.</li>
+          <li><strong>The Small</strong> - the world under your feet. A whole landscape in every crack.</li>
+          <li><strong>The Slow</strong> - the thing with more time than you. Everything is moving; it is simply moving slower than you are.</li>
+          <li><strong>The Echo</strong> - the one that repeats you. The spot answers with a version of what it always says. You happen to be standing in it.</li>
+          <li><strong>My Voice</strong> - your own words, or none. No cards on the walk; attach a text file at export and each block of it lands beneath a photo.</li>
         </ul>
-        <p>Treat the file as a souvenir you can keep remixing — the original never changes.</p>
+        <p>Pause and ponder the lines you are given. Sometimes they turn out to have been waiting for you.</p>
       </details>
       <details>
-        <summary>How can I save a photo from a walk as a standalone image?</summary>
-        <p>One easy way: upload the exported walk HTML file to an AI chatbot and ask it to export the photos as PNG files.</p>
+        <summary>What if a waypoint is somewhere I shouldn't go?</summary>
+        <p>Then don't go. Waypoints are random points; they know nothing of fences, railways, water, or private land. Use common sense, respect private property, and when in doubt tap "Close as I can get": the walk accepts where you stood and moves on.</p>
       </details>
       <details>
-        <summary>What is the Voice all about?</summary>
-        <p>The voice you pick on the Go screen sets the character of the card you receive at each waypoint. Except for The Inner and My Voice, every voice works the same way: a formula converts the waypoint's coordinates into a title and three lines drawn from that voice's own pools of verse. The same place always says the same thing to the same voice — the words belong to the spot; you just walk to them.</p>
-        <ul>
-          <li><strong>The Crow</strong> — the appraising eye. Knows the difference between a thing that has been dropped and a thing that has been left.</li>
-          <li><strong>The Threshold</strong> — the place that is neither. Doorways, crossings, and the moment in between.</li>
-          <li><strong>The Lattice</strong> — the grid that does not fit. Imposes its own order on whatever it finds.</li>
-          <li><strong>The Inner</strong> — the oracle. Reads each waypoint as an I Ching hexagram (see the next question).</li>
-          <li><strong>The Stray</strong> — the animal that lives here. Found out where everything is by lying on it.</li>
-          <li><strong>The Small</strong> — the world under your feet. A whole landscape in every crack.</li>
-          <li><strong>The Slow</strong> — the thing with more time than you. Everything is moving; it is simply moving slower than you are.</li>
-          <li><strong>The Echo</strong> — the one that repeats you. Answers each waypoint with what you did at the last one.</li>
-          <li><strong>My Voice</strong> — your own words, or none. No cards on the walk. Attach a text file at export and each blank-line-separated block lands beneath a photo — or attach nothing and keep just the photos.</li>
-        </ul>
-        <p>Tip: it can be a good idea to pause and ponder the lines, because they can sometimes manifest a kind of magic synchronicity that only becomes apparent after you stop and consider — give it a go!</p>
+        <summary>What does the Surprise filter do?</summary>
+        <p>It doesn't pick a filter, it rolls one: a random stack of effects stored on that photo. Most rolls are ordinary, occasionally one is golden. Keep tapping until one clicks, then leave it alone: the next tap replaces it. It works on exactly one selected photo at a time.</p>
       </details>
       <details>
-        <summary>What is The Inner voice?</summary>
-        <p>The Inner is unlike the other voices. Instead of recombined verse, each waypoint of your walk is assigned one of the 64 hexagrams of the I Ching — the Book of Changes, an ancient Chinese philosophical classic and divinatory oracle — together with a haiku distilled from it.</p>
-        <p>The waypoints of a walk are chosen randomly, but each waypoint's hexagram is not: a formula converts the numerals contained in the spot's coordinates into one of the 64 hexagrams, so the same place always carries the same sign. The oracle is embedded in the ground itself — you walk to it; it does not come to you.</p>
-        <p>You can therefore use Aimless as an oracle: hold a situation or question in mind as you set out, and let the walk answer. Divination pairs naturally with walking — the hexagrams you receive belong to the places your feet carried you.</p>
+        <summary>What are the KML options?</summary>
+        <p>KML is the route format mapping apps understand. "Export Route" downloads a .kml; "Add KML link to footer" embeds the route inside the HTML artifact. Use the link knowingly: it contains the walk's real GPS coordinates, so if you started from your front door, anyone holding the file can find it.</p>
       </details>
       <details>
         <summary>Can I make my own photo filters?</summary>
-        <p>Yes — Aimless filters are portable "filter spec" JSON. Open a walk, tap <strong>+</strong> at the end of the Filter rail, and paste a spec or pick a .json file. Imported filters live on this device, appear at the end of the rail, and can be deleted from the same panel.</p>
-        <p>The easiest way to author one is Wobbletone: build a look, copy the spec from its Code tab, and paste it here.</p>
+        <p>Yes. Build a look in Wobbletone (wobbletone.com), copy the spec from its Code tab, and paste it into the filters sheet on a walk's detail page. Imported filters live on this device and join the rail.</p>
       </details>
       <details>
         <summary>Why is there no map?</summary>
-        <p>The absence is the design. Aimless is about being where you are, not navigating somewhere — you follow an arrow, not a route, and the shape of your walk is only revealed afterwards.</p>
+        <p>The absence is the design. Aimless is about being where you are, not navigating somewhere. You follow an arrow, not a route, and the shape of your walk is only revealed afterwards.</p>
       </details>
     </div>
   </section>
