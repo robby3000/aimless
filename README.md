@@ -2,8 +2,8 @@
 
 Go nowhere, on purpose.
 
-Press one button. Aimless picks five points at random bearings and distances, chained into a wander
-rather than scattered around you. It gives you a compass arrow and a distance — no map, no route,
+Press one button. Aimless picks points at random bearings and distances — five by default — chained
+into a wander rather than scattered around you. It gives you a compass arrow and a distance — no map, no route,
 no fastest way. When you get close to a point your phone sounds and the place speaks: a card whose
 text is drawn deterministically from the coordinates themselves, so the location is quite literally
 the author. You photograph something, or you don't. At the end you get an abstract drawing of the
