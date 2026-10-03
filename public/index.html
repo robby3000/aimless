@@ -1697,6 +1697,12 @@
         // index may coincide with the new selection's, and a stale match
         // would skip re-marking .selected on the fresh elements.
         refresh() { items = [...el.querySelectorAll('.rail-item')]; current = -1; },
+        // Nothing lit: used when a lit filter would claim an application
+        // that isn't true (no photos selected, or a mixed selection).
+        clearSelection() {
+          current = -1;
+          items.forEach((it) => it.classList.remove('selected'));
+        },
         setValue(value, scroll = true) {
           const i = Math.max(0, items.findIndex((it) => it.dataset.value === value));
           select(i, false);
@@ -1740,8 +1746,11 @@
         assignFilterToSelection(value);
         return;
       }
+      // Armed only: the tap stores it as last-used and nudges toward
+      // selection, but nothing is applied — so nothing stays lit.
       currentFilter = value;
       savePrefs();
+      detailRail.clearSelection();
       if (!selectToastShown) {
         selectToastShown = true;
         showToast('Long-press photos to select');
@@ -1759,7 +1768,8 @@
         ? SKINS.map((s) => `<div class="rail-item" data-value="${s.id}">${s.name}</div>`).join('')
         : visibleFilters().map((f) => `<div class="rail-item" data-value="${f.id}">${f.name}</div>`).join('') + SURPRISE_TOKEN + ADD_TOKEN;
       detailRail.refresh();
-      detailRail.setValue(railMode === 'skin' ? currentSkin : currentFilter);
+      if (railMode === 'skin') detailRail.setValue(currentSkin);
+      else syncFilterRailToSelection();
       railModeSkin.classList.toggle('active', railMode === 'skin');
       railModeFilter.classList.toggle('active', railMode === 'filter');
       if (railMode === 'filter') watchAddToken();
@@ -1769,9 +1779,6 @@
       if (mode === railMode) return;
       railMode = mode;
       renderDetailRail();
-      // Switching back to filters re-marks whatever the photo selection
-      // implies — the same rule as a rebuild.
-      if (mode === 'filter') syncFilterRailToSelection();
     }
     railModeSkin.addEventListener('click', () => setRailMode('skin'));
     railModeFilter.addEventListener('click', () => setRailMode('filter'));
@@ -3393,13 +3400,16 @@
       // The rail only carries filters in filter mode; in skin mode the
       // selection's state is re-marked when the user switches back.
       if (railMode !== 'filter') return;
-      if (!selectedPhotoSeqs.size) { detailRail.setValue(currentFilter); return; }
+      // Nothing selected, or a mixed selection: nothing is lit — a lit
+      // filter only ever means "this is what the selection has".
+      if (!selectedPhotoSeqs.size) { detailRail.clearSelection(); return; }
       const effs = new Set(currentDetailPhotos
         .filter((p) => selectedPhotoSeqs.has(p.stopSeq))
         .map((p) => (p.filterSpec ? 'surprise' : effectiveFilterId(p, 'original'))));
       // Highlight only — never scroll: the user may still be swiping, and a
       // programmatic re-centre reads as the rail snapping back.
       if (effs.size === 1) detailRail.setValue([...effs][0], false);
+      else detailRail.clearSelection();
     }
 
     function togglePhotoSelected(seq) {
@@ -3414,7 +3424,7 @@
       selectedPhotoSeqs.clear();
       detailContent.querySelectorAll('.photo-frame.selected')
         .forEach((f) => f.classList.remove('selected'));
-      if (railMode === 'filter') detailRail.setValue(currentFilter);
+      if (railMode === 'filter') detailRail.clearSelection();
     }
 
     // Long-press on an image invites the OS save/share sheet — suppress it.
