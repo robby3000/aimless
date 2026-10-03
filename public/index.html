@@ -48,8 +48,8 @@
     body {
       display: flex;
       flex-direction: column;
-      padding-top: var(--safe-top);
-      padding-bottom: var(--safe-bottom);
+      height: 100dvh;   /* dynamic vh: tracks iOS Safari chrome collapsing;
+                           plain 100% leaves the body short and the nav floating */
       transition: background-color 0.4s;
       /* The page itself never scrolls: the active screen scrolls internally,
          so the header and the bottom nav stay pinned at all times. */
@@ -75,7 +75,9 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 12px 20px;
+      /* safe-area inset lives inside the bar, not on body, so the header
+         background runs edge-to-edge into the notch zone */
+      padding: calc(12px + var(--safe-top)) 20px 12px;
       border-bottom: 1px solid var(--surface);
       flex-shrink: 0;
     }
@@ -731,6 +733,9 @@
     nav {
       display: flex;
       border-top: 1px solid var(--surface);
+      /* safe-area inset inside the bar: the nav reaches the screen edge while
+         the buttons stay above the home indicator */
+      padding-bottom: var(--safe-bottom);
       flex-shrink: 0;
     }
     nav button {
@@ -1278,12 +1283,20 @@
         <p>It doesn't pick a filter, it rolls one: a random stack of effects stored on that photo. Most rolls are ordinary, occasionally one is golden. Keep tapping until one clicks, then leave it alone: the next tap replaces it. It works on exactly one selected photo at a time.</p>
       </details>
       <details>
+        <summary>punk mode</summary>
+        <p>Use Aimless in punk mode: start a walk but don't follow the arrow. Capture a series of 3, 5 or 7 photos on the way: when you get to a good spot tap "Close as I can get", take a photo, OK, Continue. It's fine to turn your screen off between photos, but the GPS trace is only recorded while the app is open.</p>
+      </details>
+      <details>
         <summary>What are the KML options?</summary>
         <p>KML is the route format mapping apps understand. "Export Route" downloads a .kml; "Add KML link to footer" embeds the route inside the HTML artifact. Use the link knowingly: it contains the walk's real GPS coordinates, so if you started from your front door, anyone holding the file can find it.</p>
       </details>
       <details>
-        <summary>Can I make my own photo filters?</summary>
-        <p>Yes. Build a look in Wobbletone (<a href="https://wobbletone.com" target="_blank" rel="noopener">wobbletone.com</a>), copy the spec from its Code tab, and paste it into the filters sheet on a walk's detail page. Imported filters live on this device and join the rail.</p>
+        <summary>What is Wobbletone?</summary>
+        <p><a href="https://wobbletone.com" target="_blank" rel="noopener">Wobbletone</a> is an image effects playground that is easy to use for infinite creative possibilities. You build a stack of effects, each with its own settings; these are the same format as Aimless filters. Create a set of amazing custom filters and import them into Aimless.</p>
+      </details>
+      <details>
+        <summary>How do I import my own filters?</summary>
+        <p>Tap the + at the end of the Filter rail on a walk's detail page. You can copy and paste the code of a single Wobbletone filter you create, or save a set of presets and import them all at once. Get it at <a href="https://wobbletone.com" target="_blank" rel="noopener">wobbletone.com</a>.</p>
       </details>
       <details>
         <summary>Why is there no map?</summary>
