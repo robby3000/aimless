@@ -1,18 +1,21 @@
 # Aimless — Agent Notes
 
-A walking app with no map. Press Go, follow a compass arrow to five random points, get a card
-at each one, take a photo if you want, end up with a drawing of the shape you walked and a
-self-contained HTML file you can keep. Zero dependencies, zero build step, zero server.
+A walking app with no map. Press Go, follow a compass arrow to random points (5 stops / 45 min
+by default; stops, budget and voice are Go-screen wheels), get a card at each one, take a photo
+if you want, end up with a drawing of the shape you walked and a self-contained HTML file you
+can keep. Zero dependencies, zero build step, zero server.
 
 ## Start here
 
 **`docs/` is gitignored — everything in it is local-only.** The files exist on disk but not on
 GitHub; the links below resolve for whoever holds the working copy.
 
-1. `docs/roadmap.md` — the build plan. Executive summary, 12 decisions, six
+1. `docs/roadmap.md` — the build plan. Executive summary, 16 decisions (A1–A16), six
    steps. **It is short on purpose.**
 2. `docs/blueprint.md` — what and why.
-3. `docs/deck.md` — the card content. Binding. Read before touching `deck.js` or the voices.
+3. `docs/deck.md` — the original card grammar. Historical: the seeded deck is gone (cards now
+   come from oracle pools, see Conventions → Voice model). `deck.js` survives only for the SVG
+   walk trace (`drawWalk`) and recent-seed avoidance.
 4. `docs/verdict.md` — the template the human fills in after five real walks.
    Do not delete it and do not fill it in yourself.
 5. `docs/ignore/` — working drafts and discussion docs (voice pools, UI proposals). Nothing in
@@ -117,11 +120,12 @@ in the sibling `glyph-drift` repo at `docs/device-reality.md`.
 - **Reject fixes with `accuracy > 50` or older than 30s**, and require two consecutive in-radius
   fixes before firing arrival. GPS spikes cause phantom arrivals.
 - **Tear down `watchPosition`** on end, give-up and unload.
-- **The walk snapshots itself** to `prefs/activeWalk` on arrival, photo capture and every 30s;
-  `finishWalk` clears it. The Go screen's "Resume walk"/"Discard" UI was removed (round-2
-  enhancements) — the wake lock + re-acquire on `visibilitychange` keeps an interrupted walk
-  alive in practice, so the snapshot is retained but currently has no UI. True background GPS is
-  impossible for a PWA — the snapshot + wake lock is the mitigation.
+- **The walk snapshots itself** to `prefs/activeWalk` on arrival, photo capture, page hide and
+  every 30s; `finishWalk` clears it. The Go screen's "Resume walk"/"Discard" UI was removed
+  (round-2 enhancements) and this is now a **deliberate decision (roadmap A16)**: the wake lock +
+  re-acquire on `visibilitychange` keeps an interrupted walk alive in practice, and a suspended
+  app has no GPS anyway, so the snapshot stays dormant with no recovery UI. True background GPS
+  is impossible for a PWA — the wake lock is the mitigation.
 - **The focused walk state** (`body.walk-focused`, 10s idle) blanks everything but the compass and
   disables taps; it must never engage while a card is showing, and any interaction resets the clock.
 
@@ -172,9 +176,15 @@ paths (button, backdrop, Escape) must honor the checkbox.
 - Suppress native tap/selection feedback (`-webkit-tap-highlight-color: transparent`,
   `user-select:none`, `-webkit-touch-callout:none`) on photo frames, or iOS/Android paint their
   own blue over the coral selection ring.
+- **A lit filter means "the filter the current selection has"** — never "the last one used."
+  One photo selected → its filter lit; multiple selected with the same filter → that filter lit;
+  empty or mixed selection → nothing lit. Skins always light (a skin always applies). Scroll-settle
+  alone never lights a filter with no photos selected, and never fires action tokens (Surprise, +).
 
 Vanilla ES modules. Pure logic in `public/lib/*.js`, tested with `node --test`; anything touching
 the DOM, storage or geolocation stays in `public/index.html` or `sim.html` and is verified manually
 via the simulator. Inline CSS and UI JS in `index.html` (the `pomo-day-sync` pattern). Dark, high
-contrast — this is read outdoors in daylight. No emojis. One logical change per commit, prefixed
+contrast — this is read outdoors in daylight. No emojis. **No em dashes in shipped copy** —
+user-facing text stays short, dry and human; instructions may be explicit, mechanics stay
+unexplained. One logical change per commit, prefixed
 with the area (`detail:`, `walk:`, `filters:`, `echo:` …).
