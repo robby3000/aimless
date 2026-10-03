@@ -1882,12 +1882,14 @@
     const confirmOverlay = document.getElementById('confirm-overlay');
     const confirmText = document.getElementById('confirm-text');
     let confirmResolve = null;
-    function askConfirm(message) {
+    function askConfirm(message, confirmLabel = 'Delete') {
       return new Promise((resolve) => {
         confirmResolve = resolve;
         confirmText.textContent = message;
+        const yes = document.getElementById('btn-confirm-yes');
+        yes.textContent = confirmLabel;
         confirmOverlay.hidden = false;
-        document.getElementById('btn-confirm-yes').focus();
+        yes.focus();
       });
     }
     const settleConfirm = (answer) => {
@@ -2933,8 +2935,9 @@
     }
 
     // --- Give up ---
-    btnGiveUp.addEventListener('click', () => {
+    btnGiveUp.addEventListener('click', async () => {
       if (!walk) return;
+      if (!await askConfirm('Give up on this walk?', 'Give up')) return;
       finishWalk(true);
     });
 
