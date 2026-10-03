@@ -86,6 +86,9 @@
       color: var(--fg);
     }
     .logo span { color: var(--accent); }
+    /* Detail screen drops the header: the artifact frame keeps a uniform
+       teal border on all four sides, gaining a row of viewport. */
+    body.detail-active header { display: none; }
 
     /* --- Buttons --- */
     button {
@@ -457,6 +460,24 @@
       color: var(--fg-dim);
       flex-shrink: 0;
     }
+    /* Mode switcher: two stacked micro-caps in the rail's left gutter. Each
+       word is its own tap target; the active one reads as pressed (coral
+       text on the lighter teal). */
+    .rail-modes { display: flex; flex-direction: column; gap: 3px; flex-shrink: 0; }
+    .rail-mode {
+      font-family: inherit;
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--fg-dim);
+      background: transparent;
+      border: none;
+      border-radius: 2px;
+      padding: 3px 7px;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .rail-mode.active { color: var(--accent); background: var(--surface-2); }
     .filter-busy {
       font-size: 0.68rem;
       text-transform: uppercase;
@@ -503,6 +524,21 @@
     .rail-item.selected { color: var(--fg); opacity: 1; }
     /* Surprise's only flourish: a coral period, same as the logo. */
     .rail-item.rail-surprise span { color: var(--accent); }
+    /* Rail-end affordance: a boxed coral plus opens the filters sheet —
+       shaped differently from the bare-word items so it reads as a verb. */
+    .rail-item.rail-plus { opacity: 0.75; }
+    .rail-plus .plus-box {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      border: 1px solid var(--accent);
+      border-radius: 2px;
+      color: var(--accent);
+      font-size: 1.05rem;
+      line-height: 1;
+    }
     @media (prefers-reduced-motion: reduce) {
       .rail-item { transition: none; }
     }
@@ -1261,16 +1297,14 @@
     <div id="detail-content"></div>
     <div class="detail-controls">
       <div class="rail-row">
-        <span class="rail-label">Skin</span>
-        <div class="rail" id="rail-skin"></div>
-      </div>
-      <div class="rail-row">
-        <span class="rail-label">Filter</span>
-        <div class="rail" id="rail-filter"></div>
+        <div class="rail-modes">
+          <button class="rail-mode" id="rail-mode-skin" type="button">Skin</button>
+          <button class="rail-mode active" id="rail-mode-filter" type="button">Filter</button>
+        </div>
+        <div class="rail" id="rail-detail"></div>
         <span id="filter-busy" class="filter-busy" hidden></span>
       </div>
       <div class="detail-actions">
-        <button id="btn-filters" class="btn-export"><span>filters</span></button>
         <button id="btn-detail-export" class="btn-export"><span>export</span><span class="chev">&gt;&gt;&gt;</span></button>
       </div>
     </div>
@@ -1426,6 +1460,9 @@
       for (const [key, el] of Object.entries(navButtons)) {
         el.classList.toggle('active', key === name);
       }
+      // The detail screen drops the global header — the artifact frame
+      // keeps a uniform teal border on all four sides.
+      document.body.classList.toggle('detail-active', name === 'detail');
     }
 
     navButtons.go.addEventListener('click', () => {
@@ -1568,13 +1605,18 @@
     // --- Walk Result skins ---
     // The Skin and Filter rails' tokens are generated from SKINS and FILTERS,
     // so a rail can never drift from its source table.
-    const railSkin = document.getElementById('rail-skin');
-    railSkin.innerHTML = SKINS.map((s) => `<div class="rail-item" data-value="${s.id}">${s.name}</div>`).join('');
-    const railFilter = document.getElementById('rail-filter');
-    // Surprise always rides the last slot — it's an action (roll a random
-    // stack onto the one selected photo), not a stored filter.
+    const railDetail = document.getElementById('rail-detail');
+    const railModeSkin = document.getElementById('rail-mode-skin');
+    const railModeFilter = document.getElementById('rail-mode-filter');
+    // One rail, two modes: the stacked Skin/Filter switch in the left
+    // gutter swaps what the rail carries. Filter is the default — skin is
+    // set once, filters are auditioned repeatedly.
+    let railMode = 'filter';
+    // Surprise always rides the last content slot — it's an action (roll a
+    // random stack onto the one selected photo), not a stored filter. The
+    // boxed plus after it opens the filters sheet.
     const SURPRISE_TOKEN = '<div class="rail-item rail-surprise" data-action data-value="surprise">Surprise<span>.</span></div>';
-    railFilter.innerHTML = FILTERS.map((f) => `<div class="rail-item" data-value="${f.id}">${f.name}</div>`).join('') + SURPRISE_TOKEN;
+    const ADD_TOKEN = '<div class="rail-item rail-plus" data-action data-value="add"><span class="plus-box">+</span></div>';
     // The shared base result styles and the active skin are injected scoped
     // to the detail view so they cannot leak into the rest of the app; the
     // export embeds the same fragments unscoped. Base first, skin after it,
@@ -1660,15 +1702,22 @@
       };
     }
 
-    const skinRail = makeRail(railSkin, (value) => {
-      currentSkin = value;
-      applySkin();
-      savePrefs();
-      // The trace SVG's colours come from the skin too (they are attributes,
-      // not CSS), so the detail view must be re-rendered on a skin change.
-      if (currentDetailWalk) showWalkDetail(currentDetailWalk.id);
-    });
-    const filterRail = makeRail(railFilter, (value) => {
+    const detailRail = makeRail(railDetail, (value) => {
+      if (railMode === 'skin') {
+        currentSkin = value;
+        applySkin();
+        savePrefs();
+        // The trace SVG's colours come from the skin too (they are
+        // attributes, not CSS), so the detail view must re-render on a
+        // skin change.
+        if (currentDetailWalk) showWalkDetail(currentDetailWalk.id);
+        return;
+      }
+      if (value === 'add') {
+        renderManageList();
+        filtersSheetCtl.open();
+        return;
+      }
       // Surprise is an action: roll a random stack onto the one selected
       // photo. With anything else selected it explains itself and stops.
       if (value === 'surprise') {
@@ -1691,6 +1740,50 @@
       }
     });
 
+    // Rebuild the rail's contents for the active mode and reflect the mode
+    // on the gutter buttons (coral on lighter teal = pressed).
+    function renderDetailRail() {
+      railDetail.innerHTML = railMode === 'skin'
+        ? SKINS.map((s) => `<div class="rail-item" data-value="${s.id}">${s.name}</div>`).join('')
+        : visibleFilters().map((f) => `<div class="rail-item" data-value="${f.id}">${f.name}</div>`).join('') + SURPRISE_TOKEN + ADD_TOKEN;
+      detailRail.refresh();
+      detailRail.setValue(railMode === 'skin' ? currentSkin : currentFilter);
+      railModeSkin.classList.toggle('active', railMode === 'skin');
+      railModeFilter.classList.toggle('active', railMode === 'filter');
+      if (railMode === 'filter') watchAddToken();
+    }
+
+    function setRailMode(mode) {
+      if (mode === railMode) return;
+      railMode = mode;
+      renderDetailRail();
+      // Switching back to filters re-marks whatever the photo selection
+      // implies — the same rule as a rebuild.
+      if (mode === 'filter') syncFilterRailToSelection();
+    }
+    railModeSkin.addEventListener('click', () => setRailMode('skin'));
+    railModeFilter.addEventListener('click', () => setRailMode('filter'));
+
+    // The boxed plus explains itself once per detail entry, the first time
+    // it sits (or scrolls) into view.
+    let addFilterToastShown = false;
+    let addObserver = null;
+    function watchAddToken() {
+      addObserver?.disconnect();
+      const token = railDetail.querySelector('.rail-plus');
+      if (!token || addFilterToastShown || !('IntersectionObserver' in window)) return;
+      addObserver = new IntersectionObserver((entries) => {
+        for (const e of entries) {
+          if (e.intersectionRatio >= 0.8 && !addFilterToastShown) {
+            addFilterToastShown = true;
+            showToast('Add custom filters');
+            addObserver.disconnect();
+          }
+        }
+      }, { root: railDetail, threshold: 0.8 });
+      addObserver.observe(token);
+    }
+
     // --- Filter management ---
     // Imported filters persist in the 'filters' store and ride the picker
     // rail (visible = not hidden); built-ins can only be hidden, not
@@ -1710,9 +1803,9 @@
     }
 
     function renderFilterRail() {
-      railFilter.innerHTML = visibleFilters().map((f) => `<div class="rail-item" data-value="${f.id}">${f.name}</div>`).join('') + SURPRISE_TOKEN;
-      filterRail.refresh();
-      filterRail.setValue(currentFilter);
+      // Imported filters only ride the rail in filter mode — in skin mode
+      // the rebuild happens next time the user switches back.
+      if (railMode === 'filter') renderDetailRail();
     }
 
     function renderManageList() {
@@ -1746,7 +1839,7 @@
         await refreshImportedFilters();
         currentFilter = record.id;
         savePrefs();
-        filterRail.setValue(record.id);
+        detailRail.setValue(record.id);
         if (currentDetailWalk) showWalkDetail(currentDetailWalk.id);
         elFilterImportStatus.textContent = `Imported "${record.name}".`;
         elFilterJson.value = '';
@@ -1924,8 +2017,7 @@
       setHiddenFilters(prefs.hiddenFilters);
       if (isFilterHidden(currentFilter)) currentFilter = visibleFilters()[0]?.id || 'original';
       renderManageList();
-      skinRail.setValue(currentSkin);
-      filterRail.setValue(currentFilter);
+      renderDetailRail();
       applySkin();
       return prefs;
     }
@@ -3286,13 +3378,16 @@
     let suppressClick = false;
 
     function syncFilterRailToSelection() {
-      if (!selectedPhotoSeqs.size) { filterRail.setValue(currentFilter); return; }
+      // The rail only carries filters in filter mode; in skin mode the
+      // selection's state is re-marked when the user switches back.
+      if (railMode !== 'filter') return;
+      if (!selectedPhotoSeqs.size) { detailRail.setValue(currentFilter); return; }
       const effs = new Set(currentDetailPhotos
         .filter((p) => selectedPhotoSeqs.has(p.stopSeq))
         .map((p) => (p.filterSpec ? 'surprise' : effectiveFilterId(p, 'original'))));
       // Highlight only — never scroll: the user may still be swiping, and a
       // programmatic re-centre reads as the rail snapping back.
-      if (effs.size === 1) filterRail.setValue([...effs][0], false);
+      if (effs.size === 1) detailRail.setValue([...effs][0], false);
     }
 
     function togglePhotoSelected(seq) {
@@ -3307,7 +3402,7 @@
       selectedPhotoSeqs.clear();
       detailContent.querySelectorAll('.photo-frame.selected')
         .forEach((f) => f.classList.remove('selected'));
-      filterRail.setValue(currentFilter);
+      if (railMode === 'filter') detailRail.setValue(currentFilter);
     }
 
     // Long-press on an image invites the OS save/share sheet — suppress it.
@@ -3428,7 +3523,11 @@
       // Entry means the detail screen isn't already showing — internal
       // rebuilds (filter assign, skin change) call this while it is.
       const enteringDetail = !screens.detail.classList.contains('active');
-      if (enteringDetail) selectToastShown = false;
+      if (enteringDetail) {
+        selectToastShown = false;
+        addFilterToastShown = false;
+        railMode = 'filter';
+      }
       const db = await dbPromise;
       if (!db) return;
       const walk = await get(db, 'walks', walkId);
@@ -3553,8 +3652,8 @@
       // the screen was hidden so no anchor was found).
       scrollAnchor = anchorSeq != null ? { seq: anchorSeq, offset: anchorOffset } : null;
       restoreScrollAnchor();
-      // Sync the rails after the screen is visible so their geometry exists.
-      skinRail.setValue(currentSkin);
+      // Sync the rail after the screen is visible so its geometry exists.
+      renderDetailRail();
       // Re-mark the selection the rebuild just wiped (same walk only).
       for (const seq of selectedPhotoSeqs) {
         detailContent.querySelector(`.photo-frame[data-stopseq="${seq}"]`)
@@ -3766,10 +3865,6 @@
       if (db) await put(db, 'walks', currentDetailWalk);
       showWalkDetail(currentDetailWalk.id);
       showToast(`${blocks.length} text block${blocks.length === 1 ? '' : 's'} attached`);
-    });
-    document.getElementById('btn-filters').addEventListener('click', () => {
-      renderManageList();
-      filtersSheetCtl.open();
     });
     document.addEventListener('keydown', (e) => {
       if (e.key !== 'Escape') return;
