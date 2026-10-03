@@ -1637,7 +1637,7 @@
     // Horizontal scroll-snap rail: the centred token is the selected one.
     // Tapping a token selects it instantly and scrolls it to the centre;
     // swiping selects once the scroll settles. Same idea as makeWheel, flat.
-    function makeRail(el, onSelect) {
+    function makeRail(el, onSelect, canSettle = () => true) {
       let items = [...el.querySelectorAll('.rail-item')];
       let current = -1;
       let settle = null;
@@ -1663,12 +1663,18 @@
       el.addEventListener('scroll', () => {
         clearTimeout(settle);
         settle = setTimeout(() => {
+          // Settle-select can be suppressed by mode: a filter landing centre
+          // must not light (or arm) while no photo is selected.
+          if (!canSettle()) return;
           const mid = el.scrollLeft + el.clientWidth / 2;
           let best = 0, bestDist = Infinity;
           items.forEach((it, i) => {
             const d = Math.abs(centerOf(it) - mid);
             if (d < bestDist) { bestDist = d; best = i; }
           });
+          // Action tokens are verbs: a flick past Surprise or the plus must
+          // never fire them — they need a deliberate tap.
+          if (items[best].dataset.action !== undefined) return;
           select(best, true);
         }, 90);
       }, { passive: true });
@@ -1687,8 +1693,10 @@
       });
 
       return {
-        // Re-query items after innerHTML rebuilds.
-        refresh() { items = [...el.querySelectorAll('.rail-item')]; },
+        // Re-query items after innerHTML rebuilds. current resets too: the
+        // index may coincide with the new selection's, and a stale match
+        // would skip re-marking .selected on the fresh elements.
+        refresh() { items = [...el.querySelectorAll('.rail-item')]; current = -1; },
         setValue(value, scroll = true) {
           const i = Math.max(0, items.findIndex((it) => it.dataset.value === value));
           select(i, false);
@@ -1738,7 +1746,11 @@
         selectToastShown = true;
         showToast('Long-press photos to select');
       }
-    });
+      // Scroll-settle only selects in skin mode (a skin always applies) or
+      // in filter mode with photos selected (a lit filter means "applies
+      // to this selection"). Swiping filters with nothing selected changes
+      // nothing — deliberate taps still arm and light.
+    }, () => railMode === 'skin' || selectedPhotoSeqs.size > 0);
 
     // Rebuild the rail's contents for the active mode and reflect the mode
     // on the gutter buttons (coral on lighter teal = pressed).
