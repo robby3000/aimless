@@ -2,7 +2,7 @@
 // A walking app must work with no signal - precache the shell, fall back to
 // cache for everything else. No CDN, no external resources (roadmap A2).
 
-const CACHE = 'aimless-v0.2.0-e1b4c197';
+const CACHE = 'aimless-v0.2.0-2963c736';
 
 // Resolved against the worker's own URL, so the app works at a domain root
 // or under a subpath (GitHub Pages project sites) with no changes.
@@ -73,6 +73,7 @@ const PRECACHE = [
   './lib/engine/gl/blends.js',
   './lib/engine/gl/fusion.js',
   './lib/engine/gl/renderer.js',
+  './lib/engine/gl/support.js',
   './lib/engine/gl/effects/blur.js',
   './lib/engine/gl/effects/overlay.js',
   './lib/engine/gl/effects/procedural.js',
@@ -129,18 +130,16 @@ self.addEventListener('fetch', (event) => {
   // Only handle same-origin GET.
   if (url.origin !== self.location.origin || event.request.method !== 'GET') return;
 
-  // HTML and JSON: network-first so updates land, cache fallback offline.
-  if (url.pathname.endsWith('.html') || url.pathname === ROOT || url.pathname.endsWith('.json')) {
-    event.respondWith(networkFirst(event.request));
-    return;
-  }
-
-  // Everything else (icons, JS modules, data): cache-first.
+  // App-shell consistency: everything — navigations, JS modules, JSON —
+  // serves from this worker's cache version. Network-first HTML could feed a
+  // new index.html old modules (import skew) the moment a deploy lands; the
+  // whole point of the stamped cache + update toast is that a worker only
+  // ever serves the file set it precached. Updates land on SW activation.
   event.respondWith(cacheFirst(event.request));
 });
 
 async function cacheFirst(request) {
-  const cached = await caches.match(request);
+  const cached = await caches.match(request, { ignoreSearch: true });
   if (cached) return cached;
   try {
     const response = await fetch(request);
@@ -150,37 +149,13 @@ async function cacheFirst(request) {
     }
     return response;
   } catch {
-    return new Response('Offline', { status: 503, statusText: 'Offline' });
-  }
-}
-
-// How long network-first waits before serving the cache. With no reception a
-// fetch can hang for tens of seconds on a dead-but-not-refused connection,
-// which reads as "the app won't load" when launching offline.
-const NETWORK_TIMEOUT_MS = 3000;
-
-async function networkFirst(request) {
-  try {
-    const response = await withTimeout(fetch(request), NETWORK_TIMEOUT_MS);
-    if (response.ok) {
-      const cache = await caches.open(CACHE);
-      cache.put(request, response.clone());
+    // Offline and uncached: navigations fall back to the shell so the app
+    // still opens; anything else gets a clean 503.
+    if (request.mode === 'navigate') {
+      const fallback = await caches.match(ROOT)
+        ?? await caches.match(new URL('index.html', self.location).href);
+      if (fallback) return fallback;
     }
-    return response;
-  } catch {
-    const cached = (await caches.match(request))
-      ?? (request.mode === 'navigate' ? await caches.match(ROOT) : null);
-    if (cached) return cached;
     return new Response('Offline', { status: 503, statusText: 'Offline' });
   }
-}
-
-function withTimeout(promise, ms) {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('network timeout')), ms);
-    promise.then(
-      (value) => { clearTimeout(timer); resolve(value); },
-      (err) => { clearTimeout(timer); reject(err); }
-    );
-  });
 }
