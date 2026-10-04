@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { buildHTMLExport, voiceName, formatWalkDate, parseMyVoiceText } from '../public/lib/export.js';
+import { ogHeadHtml } from '../public/lib/publish.js';
 
 const WALK = {
   id: 'walk-1',
@@ -130,9 +131,46 @@ test('photos embed as plain img in a .photo-frame wrapper', async () => {
   assert.ok(html.includes('.photo-frame'));
 });
 
+test('without title/headHtml the head is the plain keepsake head', async () => {
+  const html = await buildHTMLExport(WALK, [], '<svg></svg>');
+  assert.ok(html.includes('<title>Aimless — Walk '));
+  assert.ok(!html.includes('og:'));
+  assert.ok(html.includes('initial-scale=1.0">\n<title>'));
+});
+
+test('opts.title and opts.headHtml reach the head', async () => {
+  const headHtml = '<meta property="og:title" content="x">';
+  const html = await buildHTMLExport(WALK, [], '<svg></svg>', '', 'sky', {
+    title: 'quiet "grammar" <of> fences',
+    headHtml,
+  });
+  assert.ok(html.includes('<title>quiet &quot;grammar&quot; &lt;of&gt; fences</title>'));
+  assert.ok(!html.includes('Aimless — Walk'));
+  assert.equal(html.split(headHtml).length - 1, 1);
+  assert.ok(html.indexOf(headHtml) < html.indexOf('<style'), 'headHtml not before <style>');
+});
+
 test('exported artifacts carry no script or filter machinery', async () => {
   const dataUrl = 'data:image/jpeg;base64,QUJD';
-  const html = await buildHTMLExport(WALK, [{ stopSeq: 0, dataUrl }], '<svg></svg>');
+  const photos = [{ stopSeq: 0, dataUrl }];
+  const headHtml = ogHeadHtml({
+    title: 'A walk',
+    description: 'A walk on a day.',
+    url: 'https://rob.neocities.org/aimless/walk-20261004-abc.html',
+    imageUrl: 'https://rob.neocities.org/aimless/walk-20261004-abc.jpg',
+    width: 1200,
+    height: 630,
+    alt: 'A walk trace',
+  });
+  for (const html of [
+    await buildHTMLExport(WALK, photos, '<svg></svg>'),
+    await buildHTMLExport(WALK, photos, '<svg></svg>', '', 'sky', { title: 'A walk', headHtml }),
+  ]) {
+    assertNoScriptOrFilters(html);
+  }
+});
+
+function assertNoScriptOrFilters(html) {
   assert.ok(!html.includes('<script'));
   assert.ok(!html.includes('filter:'));
   assert.ok(!html.includes('url(#'));
@@ -142,7 +180,7 @@ test('exported artifacts carry no script or filter machinery', async () => {
   assert.ok(!html.includes('filter-overlay'));
   assert.ok(html.includes('<body>'));
   assert.equal((html.match(/data:image\/jpeg;base64,QUJD/g) || []).length, 1);
-});
+}
 
 test('skin CSS filter declarations are stripped from the embedded styles', async () => {
   const skin = 'img { border: 2px solid #33ff33; border-radius: 0; filter: contrast(1.1); }';

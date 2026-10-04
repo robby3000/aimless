@@ -112,7 +112,10 @@ function myVoiceBlockHtml(block) {
  *   active skin's `icon` field, chosen for contrast against its background.
  * @param {object} [opts]  Options: `includeKml` embeds a KML data-URI link in
  *   the footer so the walk can be opened in mapping apps (opt-in - the link
- *   leaks the walked coordinates into every shared copy).
+ *   leaks the walked coordinates into every shared copy); `title` replaces
+ *   the default `<title>` text (escaped); `headHtml` is emitted verbatim on
+ *   its own line after the viewport meta, for caller-built OG tags
+ *   (see publish.js `ogHeadHtml`).
  */
 export async function buildHTMLExport(walk, photos, svgTrace, skinCss = '', icon = 'sky', opts = {}) {
   const photoDataUrls = new Map();
@@ -196,8 +199,8 @@ export async function buildHTMLExport(walk, photos, svgTrace, skinCss = '', icon
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Aimless — Walk ${walk.seed}</title>
-<style>
+<title>${opts.title ? esc(opts.title) : `Aimless — Walk ${walk.seed}`}</title>
+${opts.headHtml ? `${opts.headHtml}\n` : ''}<style>
 ${embeddedCss}
 </style>
 ${skinCss ? `<style id="skin">\n${stripFilterDeclarations(skinCss)}\n</style>` : ''}
