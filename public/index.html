@@ -809,8 +809,8 @@
     }
     #toast[hidden] { display: none; }
 
-    /* --- Confirm dialog (destructive actions) + filename dialog --- */
-    #confirm-overlay, #filename-overlay, #photo-hint-overlay {
+    /* --- Confirm dialog (destructive actions) + filename + publish dialogs --- */
+    #confirm-overlay, #filename-overlay, #photo-hint-overlay, #publish-overlay {
       position: fixed;
       inset: 0;
       background: rgba(0, 0, 0, 0.55);
@@ -820,8 +820,8 @@
       z-index: 70;   /* above bottom sheets (51) and toast (60) */
       padding: 24px;
     }
-    #confirm-overlay[hidden], #filename-overlay[hidden], #photo-hint-overlay[hidden] { display: none; }
-    #confirm-box, #filename-box, #photo-hint-box {
+    #confirm-overlay[hidden], #filename-overlay[hidden], #photo-hint-overlay[hidden], #publish-overlay[hidden] { display: none; }
+    #confirm-box, #filename-box, #photo-hint-box, #publish-box {
       background: var(--surface);
       border: 1px solid var(--surface-2);
       border-radius: 12px;
@@ -830,9 +830,10 @@
       width: 100%;
       box-shadow: 0 8px 32px rgba(0,0,0,0.5);
     }
+    #publish-box { max-width: 380px; }
     #confirm-text, #photo-hint-text { margin-bottom: 16px; font-size: 0.95rem; }
     #filename-label { margin-bottom: 10px; font-size: 0.95rem; }
-    #filename-input {
+    #filename-input, #neocities-sitename, #publish-desc {
       width: 100%;
       box-sizing: border-box;
       margin-bottom: 16px;
@@ -843,7 +844,34 @@
       border-radius: var(--radius);
       font: inherit;
     }
-    #filename-input:focus { border-color: var(--accent); outline: none; }
+    #filename-input:focus, #neocities-sitename:focus, #publish-desc:focus { border-color: var(--accent); outline: none; }
+    #publish-desc { resize: vertical; margin-bottom: 4px; }
+    .publish-heading { font-size: 0.95rem; font-weight: 600; margin-bottom: 12px; }
+    .publish-site-row { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; }
+    .publish-site-row #neocities-sitename { flex: 1; margin-bottom: 0; }
+    .publish-suffix { color: var(--fg-dim); font-size: 0.85rem; white-space: nowrap; }
+    .publish-note { font-size: 0.85rem; color: var(--fg-dim); margin: 8px 0 14px; }
+    .publish-note a { color: var(--accent); }
+    .publish-error { font-size: 0.85rem; color: var(--danger); margin: -6px 0 10px; }
+    .publish-error[hidden] { display: none; }
+    .publish-url { font-size: 0.85rem; color: var(--accent); word-break: break-all; margin-bottom: 4px; }
+    .link-btn { background: none; border: none; padding: 0; color: var(--fg-dim); font-size: 0.8rem; text-decoration: underline; cursor: pointer; margin-bottom: 12px; }
+    .publish-contents { margin: 0 0 14px 18px; padding: 0; font-size: 0.85rem; color: var(--fg-dim); }
+    .publish-contents li { margin-bottom: 2px; }
+    .publish-contents .warn { color: var(--danger); }
+    .publish-label { display: block; font-size: 0.85rem; color: var(--fg-dim); margin-bottom: 6px; }
+    .publish-count { font-size: 0.75rem; color: var(--fg-dim); text-align: right; margin-bottom: 12px; }
+    .publish-files { list-style: none; margin: 0 0 14px; padding: 0; font-size: 0.85rem; }
+    .publish-files li { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
+    .publish-files .file-name { word-break: break-all; }
+    .publish-files .file-size { color: var(--fg-dim); white-space: nowrap; }
+    .publish-share-row { display: flex; gap: 10px; margin-bottom: 14px; }
+    .publish-share-row button { flex: 1; }
+    .publish-steps { margin: 0 0 14px 18px; padding: 0; font-size: 0.85rem; color: var(--fg-dim); }
+    .publish-steps li { margin-bottom: 4px; }
+    .publish-steps code { color: var(--fg); }
+    #publish-download { width: 100%; margin-bottom: 10px; }
+    #publish-open-dashboard { width: 100%; margin-bottom: 14px; }
     .confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
     .confirm-actions button { min-width: 76px; }
     #photo-hint-box .hint-never {
@@ -1357,6 +1385,7 @@
       <span class="row-ico">&#9993;</span>
       <span class="row-text"><span class="row-title">Card</span><span class="row-sub">Send a card via the share menu</span></span>
     </button>
+    <button class="sheet-row" data-export="neocities" id="row-neocities"><span class="row-ico">&#9741;</span><span class="row-text"><span class="row-title">Neocities page</span><span class="row-sub" id="neocities-sub">Build a page for your Neocities site</span></span></button>
     <!-- TEMP Stage 2.1 debug, removed in Stage 3.3 -->
     <button class="sheet-row" data-export="og-card-debug" hidden id="row-og-debug">
       <span class="row-ico">&#9734;</span>
@@ -1422,6 +1451,57 @@
     </div>
   </div>
 
+  <!-- Publish dialog (Neocities hand-off) -->
+  <div id="publish-overlay" hidden>
+    <div id="publish-box" role="dialog" aria-modal="true" aria-labelledby="publish-heading-site">
+      <div class="publish-step" id="publish-step-site" hidden>
+        <div class="publish-heading" id="publish-heading-site">Your Neocities site</div>
+        <div class="publish-site-row">
+          <input id="neocities-sitename" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" inputmode="url" placeholder="yourname">
+          <span class="publish-suffix">.neocities.org</span>
+        </div>
+        <p class="publish-note">Aimless only needs the site name. Your Neocities password and API key stay out of it. <a href="https://neocities.org" target="_blank" rel="noopener">neocities.org</a></p>
+        <div class="publish-error" id="neocities-error" hidden>Letters, numbers and hyphens only</div>
+        <div class="confirm-actions">
+          <button id="btn-publish-site-cancel">Cancel</button>
+          <button id="btn-publish-site-save" class="btn-primary">Save</button>
+        </div>
+      </div>
+      <div class="publish-step" id="publish-step-consent" hidden>
+        <div class="publish-heading" id="publish-heading-consent">Publish to Neocities</div>
+        <div class="publish-url" id="publish-url"></div>
+        <button class="link-btn" id="publish-change-site">change site</button>
+        <ul class="publish-contents" id="publish-contents"></ul>
+        <label class="publish-label" for="publish-desc">Description</label>
+        <textarea id="publish-desc" rows="3" maxlength="200"></textarea>
+        <div class="publish-count" id="publish-count">0/200</div>
+        <p class="publish-note">Anyone with the link can see this page.</p>
+        <div class="confirm-actions">
+          <button id="btn-publish-consent-cancel">Cancel</button>
+          <button id="btn-publish-build" class="btn-primary">Build files</button>
+        </div>
+      </div>
+      <div class="publish-step" id="publish-step-handoff" hidden>
+        <div class="publish-heading" id="publish-heading-handoff">Files ready</div>
+        <ul class="publish-files" id="publish-files"></ul>
+        <button class="btn-primary" id="publish-download">Download both</button>
+        <div class="publish-share-row" id="publish-share-row" hidden>
+          <button id="publish-share-html">Share HTML</button>
+          <button id="publish-share-image">Share image</button>
+        </div>
+        <ol class="publish-steps">
+          <li>Open neocities.org/dashboard</li>
+          <li>Open the folder <code>aimless</code>, or create it</li>
+          <li>Upload both files</li>
+        </ol>
+        <button id="publish-open-dashboard">Open Neocities dashboard</button>
+        <div class="confirm-actions">
+          <button id="btn-publish-done" class="btn-primary">Done</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Hint: long-press selects photos for per-photo filters. Shows on every
        walk-detail open until "do not show again" is checked. -->
   <div id="photo-hint-overlay" hidden>
@@ -1454,6 +1534,7 @@
     import { renderToCanvas } from './lib/engine/canvas.js';
     import { renderPhotoToCanvas } from './lib/filter-renderer.js';
     import { resolveNavTarget, canStartNewWalk } from './lib/walk-nav.js';
+    import { walkSlug, normalizeSitename, neocitiesTargets, walkDescription, ogHeadHtml } from './lib/publish.js';
 
     // --- Screen navigation ---
     const screens = {
@@ -1647,6 +1728,7 @@
     let currentSkin = 'default';
     let currentFilter = 'original';
     let seenPhotoSelectHint = false;
+    let neocitiesSitename = '';
 
     function applySkin() {
       skinStyle.textContent = scopeCSS(getSkin(currentSkin).css, '#detail-content');
@@ -1957,6 +2039,200 @@
       if (e.key === 'Escape' && !filenameOverlay.hidden) settleFilename(null);
     });
 
+    // --- Publish dialog (Neocities hand-off) ---
+    // One modal, three steps: site name, consent + description, hand-off.
+    const publishOverlay = document.getElementById('publish-overlay');
+    const publishBox = document.getElementById('publish-box');
+    const publishSteps = {
+      site: document.getElementById('publish-step-site'),
+      consent: document.getElementById('publish-step-consent'),
+      handoff: document.getElementById('publish-step-handoff'),
+    };
+    const sitenameInput = document.getElementById('neocities-sitename');
+    const sitenameError = document.getElementById('neocities-error');
+    const publishDesc = document.getElementById('publish-desc');
+    const publishCount = document.getElementById('publish-count');
+    let publishBuilt = null;   // { htmlName, imageName, htmlBlob, jpgBlob }
+
+    function showPublishStep(step) {
+      for (const [name, el] of Object.entries(publishSteps)) el.hidden = name !== step;
+      publishBox.setAttribute('aria-labelledby', `publish-heading-${step}`);
+      if (step === 'site') {
+        sitenameError.hidden = true;
+        sitenameInput.focus();
+      }
+      if (step === 'consent') renderPublishConsent();
+    }
+
+    function openPublish(step) {
+      showPublishStep(step);
+      publishOverlay.hidden = false;
+    }
+    function closePublish() {
+      publishOverlay.hidden = true;
+    }
+    publishOverlay.addEventListener('click', (e) => {
+      if (e.target === publishOverlay) closePublish();   // backdrop closes
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !publishOverlay.hidden) closePublish();
+    });
+
+    // Site step: validate, persist, go straight on to consent.
+    function savePublishSite() {
+      const name = normalizeSitename(sitenameInput.value);
+      if (!name) { sitenameError.hidden = false; return; }
+      sitenameError.hidden = true;
+      neocitiesSitename = name;
+      savePrefs();
+      showPublishStep('consent');
+    }
+    document.getElementById('btn-publish-site-save').addEventListener('click', savePublishSite);
+    document.getElementById('btn-publish-site-cancel').addEventListener('click', closePublish);
+    sitenameInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') savePublishSite();
+    });
+
+    // Consent step: the URL, what the page contains, the editable description.
+    function renderPublishConsent() {
+      const walk = currentDetailWalk;
+      if (!walk) return;
+      const targets = neocitiesTargets(neocitiesSitename, walkSlug(walk));
+      document.getElementById('publish-url').textContent = targets.pageUrl;
+      const contents = document.getElementById('publish-contents');
+      contents.replaceChildren(...['Your photos', 'The route drawing', 'The words'].map((t) => {
+        const li = document.createElement('li');
+        li.textContent = t;
+        return li;
+      }));
+      if (document.getElementById('opt-kml-link').checked) {
+        const li = document.createElement('li');
+        li.className = 'warn';
+        li.textContent = 'Includes the GPS link to the real route';
+        contents.appendChild(li);
+      }
+      publishDesc.value = walk.neocities?.description ?? walkDescription(walk);
+      publishCount.textContent = `${publishDesc.value.length}/200`;
+    }
+    publishDesc.addEventListener('input', () => {
+      publishCount.textContent = `${publishDesc.value.length}/200`;
+    });
+    document.getElementById('publish-change-site').addEventListener('click', () => {
+      sitenameInput.value = neocitiesSitename;
+      showPublishStep('site');
+    });
+    document.getElementById('btn-publish-consent-cancel').addEventListener('click', closePublish);
+
+    function formatFileSize(bytes) {
+      return bytes < 1024 * 1024
+        ? `${Math.round(bytes / 1024)} KB`
+        : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
+    // Build files: OG JPEG + keepsake HTML with the OG head, then hand off.
+    document.getElementById('btn-publish-build').addEventListener('click', async () => {
+      const walk = currentDetailWalk;
+      if (!walk) return;
+      const slug = walkSlug(walk);
+      const targets = neocitiesTargets(neocitiesSitename, slug);
+      let description = publishDesc.value.replace(/\s+/g, ' ').trim().slice(0, 200);
+      if (!description) description = walkDescription(walk);
+      const kmlIncluded = document.getElementById('opt-kml-link').checked;
+
+      // Same "rendering…" toast as the HTML export - the engine render of
+      // the card photo and the keepsake takes a beat.
+      clearTimeout(toastTimer);
+      const msg = document.createElement('span');
+      msg.textContent = 'rendering…';
+      elToast.replaceChildren(msg);
+      elToast.hidden = false;
+      await new Promise((r) => requestAnimationFrame(r));
+      try {
+        const db = await dbPromise;
+        const photos = db ? await byIndex(db, 'photos', 'walkId', walk.id) : [];
+        photos.sort((a, b) => a.stopSeq - b.stopSeq);
+        const jpgBlob = await buildOgCard(walk, photos[0] ?? null);
+        const title = walk.seed;
+        const headHtml = ogHeadHtml({
+          title,
+          description,
+          url: targets.pageUrl,
+          imageUrl: targets.imageUrl,
+          width: 1200,
+          height: 630,
+          alt: `The route of an Aimless walk on ${formatWalkDate(walk.started)}`,
+        });
+        const html = await buildCurrentDetailHTML({ title, headHtml });
+
+        walk.neocities = {
+          sitename: neocitiesSitename,
+          slug,
+          pageUrl: targets.pageUrl,
+          imageUrl: targets.imageUrl,
+          builtAt: Date.now(),
+          kmlIncluded,
+          description,
+        };
+        currentDetailWalk = walk;
+        if (db) await put(db, 'walks', walk);
+
+        publishBuilt = {
+          htmlName: targets.htmlName,
+          imageName: targets.imageName,
+          htmlBlob: new Blob([html], { type: 'text/html' }),
+          jpgBlob,
+        };
+        const files = document.getElementById('publish-files');
+        files.replaceChildren(...[
+          [targets.htmlName, publishBuilt.htmlBlob.size],
+          [targets.imageName, jpgBlob.size],
+        ].map(([name, size]) => {
+          const li = document.createElement('li');
+          const nameEl = document.createElement('span');
+          nameEl.className = 'file-name';
+          nameEl.textContent = name;
+          const sizeEl = document.createElement('span');
+          sizeEl.className = 'file-size';
+          sizeEl.textContent = formatFileSize(size);
+          li.append(nameEl, sizeEl);
+          return li;
+        }));
+        const canShareFile = navigator.canShare
+          && navigator.canShare({ files: [new File([jpgBlob], targets.imageName, { type: 'image/jpeg' })] });
+        document.getElementById('publish-share-row').hidden = !canShareFile;
+        document.getElementById('neocities-sub').textContent = targets.pageUrl.replace(/^https:\/\//, '');
+        showPublishStep('handoff');
+      } finally {
+        elToast.hidden = true;
+      }
+    });
+
+    // Hand-off step: download both (staggered - two immediate clicks get the
+    // second swallowed by some browsers), or single-file shares.
+    document.getElementById('publish-download').addEventListener('click', () => {
+      if (!publishBuilt) return;
+      downloadFile(publishBuilt.htmlName, publishBuilt.htmlBlob, 'text/html');
+      setTimeout(() => downloadFile(publishBuilt.imageName, publishBuilt.jpgBlob, 'image/jpeg'), 300);
+    });
+    async function sharePublishFile(name, blob, type) {
+      const file = new File([blob], name, { type });
+      try {
+        await navigator.share({ files: [file] });
+      } catch (err) {
+        if (err.name !== 'AbortError') console.warn('Share failed:', err);
+      }
+    }
+    document.getElementById('publish-share-html').addEventListener('click', () => {
+      if (publishBuilt) sharePublishFile(publishBuilt.htmlName, publishBuilt.htmlBlob, 'text/html');
+    });
+    document.getElementById('publish-share-image').addEventListener('click', () => {
+      if (publishBuilt) sharePublishFile(publishBuilt.imageName, publishBuilt.jpgBlob, 'image/jpeg');
+    });
+    document.getElementById('publish-open-dashboard').addEventListener('click', () => {
+      window.open('https://neocities.org/dashboard', '_blank', 'noopener');
+    });
+    document.getElementById('btn-publish-done').addEventListener('click', closePublish);
+
     elManageList.addEventListener('click', async (e) => {
       const t = e.target.closest('.filter-action');
       if (!t) return;
@@ -1990,7 +2266,7 @@
     const elStops = document.getElementById('setting-stops');
     const elBudget = document.getElementById('setting-budget');
     const elVoice = document.getElementById('setting-voice');
-    const DEFAULT_PREFS = { stops: 5, budgetMin: 45, voice: 'crow', skin: 'default', filter: 'original', hiddenFilters: [], kmlLink: false, seenPhotoSelectHint: false };
+    const DEFAULT_PREFS = { stops: 5, budgetMin: 45, voice: 'crow', skin: 'default', filter: 'original', hiddenFilters: [], kmlLink: false, seenPhotoSelectHint: false, neocitiesSitename: '' };
 
     // Scroll-snap wheel: keeps `input` (a hidden input carrying the setting's
     // value) in sync with the centred item, and saves prefs on user scrolls.
@@ -2053,6 +2329,7 @@
       currentFilter = prefs.filter ?? DEFAULT_PREFS.filter;
       document.getElementById('opt-kml-link').checked = prefs.kmlLink ?? DEFAULT_PREFS.kmlLink;
       seenPhotoSelectHint = prefs.seenPhotoSelectHint ?? DEFAULT_PREFS.seenPhotoSelectHint;
+      neocitiesSitename = prefs.neocitiesSitename ?? DEFAULT_PREFS.neocitiesSitename;
       setHiddenFilters(prefs.hiddenFilters);
       if (isFilterHidden(currentFilter)) currentFilter = visibleFilters()[0]?.id || 'original';
       renderManageList();
@@ -2073,6 +2350,7 @@
         hiddenFilters: hiddenFilters(),
         kmlLink: document.getElementById('opt-kml-link').checked,
         seenPhotoSelectHint,
+        neocitiesSitename,
       });
     }
 
@@ -3718,8 +3996,9 @@
     }
 
     // Build the current walk's self-contained HTML export (shared by the
-    // Export and Share buttons).
-    async function buildCurrentDetailHTML() {
+    // Export and Share buttons). extraOpts merges into buildHTMLExport's
+    // opts - the publish flow passes title/headHtml for the OG head.
+    async function buildCurrentDetailHTML(extraOpts = {}) {
       const db = await dbPromise;
       const photos = await byIndex(db, 'photos', 'walkId', currentDetailWalk.id);
       const trace = currentDetailWalk.trace || [];
@@ -3734,6 +4013,7 @@
       }
       return buildHTMLExport(currentDetailWalk, rendered, svg, skin.css, skin.icon, {
         includeKml: document.getElementById('opt-kml-link').checked,
+        ...extraOpts,
       });
     }
 
@@ -3906,6 +4186,10 @@
       document.getElementById('row-add-text').hidden = !eligible;
       document.getElementById('row-remove-text').hidden = !(eligible && hasText);
       document.getElementById('add-text-title').textContent = hasText ? 'Replace text' : 'Add text';
+      const published = currentDetailWalk.neocities?.pageUrl;
+      document.getElementById('neocities-sub').textContent = published
+        ? published.replace(/^https:\/\//, '')
+        : 'Build a page for your Neocities site';
       // TEMP Stage 2.1 debug, removed in Stage 3.3
       document.getElementById('row-og-debug').hidden = !location.search.includes('debug');
       exportSheetCtl.open();
@@ -3995,6 +4279,9 @@
         } else {
           downloadFile(filename, cardBlob, 'image/png');
         }
+      } else if (action === 'neocities') {
+        sitenameInput.value = neocitiesSitename;
+        openPublish(neocitiesSitename ? 'consent' : 'site');
       } else if (action === 'og-card-debug') {
         // TEMP Stage 2.1 debug, removed in Stage 3.3
         const walk = currentDetailWalk;
