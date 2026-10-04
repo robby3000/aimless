@@ -63,6 +63,7 @@ public/
     walk-nav.js         # navigation guard: prevents bottom-nav taps from canceling a walk
     surprise.js         # Surprise rail action: seeded-random effect stack onto one photo
     oracle.js           # oracle voices: coordinate -> 4 pool indices (titles/l1/l2/l3)
+    publish.js          # Neocities hand-off: slug, sitename, OG head, target URLs
   data/
     crow.json  threshold.json  lattice.json    # oracle pools (the seeded-deck format is replaced)
     stray.json small.json slow.json echo.json  # oracle pools
@@ -71,6 +72,7 @@ test/
   geo.test.js  rng.test.js  walk.test.js  deck.test.js  proximity.test.js  skins.test.js
   platform.test.js  export.test.js  inner.test.js  filters.test.js  filter-renderer.test.js
   kml.test.js  walk-nav.test.js  engine.test.js  surprise.test.js  oracle.test.js
+  publish.test.js
 scripts/
   make-icons.mjs      # npm run icons
   stamp-sw.mjs        # npm run stamp -- rewrites the sw.js cache name
@@ -145,7 +147,9 @@ Photo filters are Filter Specs (`{id, name, spec}` in `filters.js`), rendered to
 `engine/` submodule (`renderToCanvas`). Preview, share cards, and export all use baked pixels —
 there is no CSS/SVG filter pipeline. Runtime-imported specs persist in the `filters` store (Dexie
 schema v2) and resolve through `getFilter` after the built-ins. Exported keepsakes must stay free
-of scripts and filter machinery — `export.test.js` asserts it.
+of scripts and filter machinery — `export.test.js` asserts it. Published
+Neocities pages are the same artifact plus OpenGraph head tags (`opts.title` /
+`opts.headHtml`); still script-free, still covered by the same test.
 
 **Per-photo filter resolution** is `effectiveSpec(photo, fallback)`: `photo.filterSpec`
 (a Surprise roll) beats `photo.filterId` (a named pick) beats the global pref. Detail render,

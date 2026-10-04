@@ -727,6 +727,7 @@
     .info-content summary { cursor: pointer; font-size: 0.95rem; font-weight: 600; padding: 4px 0; }
     .info-content a { color: var(--accent); }
     .info-content details p { margin: 6px 0; }
+    .info-content code { color: var(--fg); }
     .info-content details ul { color: var(--fg-dim); font-size: 0.95rem; padding-left: 20px; margin: 6px 0; }
 
     /* --- Bottom nav --- */
@@ -872,6 +873,8 @@
     .publish-steps code { color: var(--fg); }
     #publish-download { width: 100%; margin-bottom: 10px; }
     #publish-open-dashboard { width: 100%; margin-bottom: 14px; }
+    .publish-actions-col { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+    .publish-actions-col button { width: 100%; }
     .confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
     .confirm-actions button { min-width: 76px; }
     #photo-hint-box .hint-never {
@@ -1327,6 +1330,11 @@
         <p>Tap the + at the end of the Filter rail on a walk's detail page. You can copy and paste the code of a single Wobbletone filter you create, or save a set of presets and import them all at once. Get it at <a href="https://wobbletone.com" target="_blank" rel="noopener">wobbletone.com</a>.</p>
       </details>
       <details>
+        <summary>Can I put a walk on my Neocities site?</summary>
+        <p>Yes. Open a walk from the Archive, tap export, then Neocities page. Aimless asks for your site name once, then builds two files: the page and a preview image. Upload both to a folder called <code>aimless</code> on your site, and the page is live with a proper preview when you share the link.</p>
+        <p>Anyone with the link can see the page, so publish the walks you want seen. Your Neocities password and API key are never asked for.</p>
+      </details>
+      <details>
         <summary>Why is there no map?</summary>
         <p>The absence is the design. Aimless is about being where you are, not navigating somewhere. You follow an arrow, not a route, and the shape of your walk is only revealed afterwards.</p>
       </details>
@@ -1386,11 +1394,6 @@
       <span class="row-text"><span class="row-title">Card</span><span class="row-sub">Send a card via the share menu</span></span>
     </button>
     <button class="sheet-row" data-export="neocities" id="row-neocities"><span class="row-ico">&#9741;</span><span class="row-text"><span class="row-title">Neocities page</span><span class="row-sub" id="neocities-sub">Build a page for your Neocities site</span></span></button>
-    <!-- TEMP Stage 2.1 debug, removed in Stage 3.3 -->
-    <button class="sheet-row" data-export="og-card-debug" hidden id="row-og-debug">
-      <span class="row-ico">&#9734;</span>
-      <span class="row-text"><span class="row-title">OG card (debug)</span><span class="row-sub">Download the 1200x630 JPEG</span></span>
-    </button>
     <button class="sheet-row" data-export="add-text" id="row-add-text" hidden>
       <span class="row-ico">&#9998;</span>
       <span class="row-text"><span class="row-title" id="add-text-title">Add text</span><span class="row-sub">Select a text file — blocks map to photos in order</span></span>
@@ -1497,6 +1500,19 @@
         <button id="publish-open-dashboard">Open Neocities dashboard</button>
         <div class="confirm-actions">
           <button id="btn-publish-done" class="btn-primary">Done</button>
+        </div>
+      </div>
+      <div class="publish-step" id="publish-step-published" hidden>
+        <div class="publish-heading" id="publish-heading-published">Neocities page</div>
+        <div class="publish-url" id="publish-url-published"></div>
+        <p class="publish-note">Built <span id="publish-built-when"></span>.</p>
+        <div class="publish-actions-col">
+          <button id="publish-share-link">Share link</button>
+          <button id="publish-open">Open</button>
+          <button id="publish-rebuild">Rebuild files</button>
+        </div>
+        <div class="confirm-actions">
+          <button id="btn-publish-published-done" class="btn-primary">Done</button>
         </div>
       </div>
     </div>
@@ -2047,6 +2063,7 @@
       site: document.getElementById('publish-step-site'),
       consent: document.getElementById('publish-step-consent'),
       handoff: document.getElementById('publish-step-handoff'),
+      published: document.getElementById('publish-step-published'),
     };
     const sitenameInput = document.getElementById('neocities-sitename');
     const sitenameError = document.getElementById('neocities-error');
@@ -2062,6 +2079,7 @@
         sitenameInput.focus();
       }
       if (step === 'consent') renderPublishConsent();
+      if (step === 'published') renderPublishedStep();
     }
 
     function openPublish(step) {
@@ -2232,6 +2250,40 @@
       window.open('https://neocities.org/dashboard', '_blank', 'noopener');
     });
     document.getElementById('btn-publish-done').addEventListener('click', closePublish);
+
+    // Published step: the walk already has a page - link, open, or rebuild.
+    function renderPublishedStep() {
+      const pub = currentDetailWalk?.neocities;
+      if (!pub) return;
+      document.getElementById('publish-url-published').textContent = pub.pageUrl;
+      document.getElementById('publish-built-when').textContent = pub.builtAt ? formatWalkDate(pub.builtAt) : 'earlier';
+    }
+    document.getElementById('publish-share-link').addEventListener('click', async () => {
+      const url = currentDetailWalk?.neocities?.pageUrl;
+      if (!url) return;
+      if (navigator.share) {
+        try {
+          await navigator.share({ title: currentDetailWalk.seed, url });
+        } catch (err) {
+          if (err.name !== 'AbortError') console.warn('Share failed:', err);
+        }
+        return;
+      }
+      try {
+        await navigator.clipboard.writeText(url);
+        showToast('Link copied');
+      } catch {
+        showToast('Could not copy link');
+      }
+    });
+    document.getElementById('publish-open').addEventListener('click', () => {
+      const url = currentDetailWalk?.neocities?.pageUrl;
+      if (url) window.open(url, '_blank', 'noopener');
+    });
+    document.getElementById('publish-rebuild').addEventListener('click', () => {
+      showPublishStep('consent');
+    });
+    document.getElementById('btn-publish-published-done').addEventListener('click', closePublish);
 
     elManageList.addEventListener('click', async (e) => {
       const t = e.target.closest('.filter-action');
@@ -4190,8 +4242,6 @@
       document.getElementById('neocities-sub').textContent = published
         ? published.replace(/^https:\/\//, '')
         : 'Build a page for your Neocities site';
-      // TEMP Stage 2.1 debug, removed in Stage 3.3
-      document.getElementById('row-og-debug').hidden = !location.search.includes('debug');
       exportSheetCtl.open();
     });
     document.getElementById('opt-kml-link').addEventListener('change', savePrefs);
@@ -4281,15 +4331,7 @@
         }
       } else if (action === 'neocities') {
         sitenameInput.value = neocitiesSitename;
-        openPublish(neocitiesSitename ? 'consent' : 'site');
-      } else if (action === 'og-card-debug') {
-        // TEMP Stage 2.1 debug, removed in Stage 3.3
-        const walk = currentDetailWalk;
-        const db = await dbPromise;
-        const photos = db ? await byIndex(db, 'photos', 'walkId', walk.id) : [];
-        photos.sort((a, b) => a.stopSeq - b.stopSeq);
-        const blob = await buildOgCard(walk, photos[0] ?? null);
-        downloadFile(`og-${walk.seed}.jpg`, blob, 'image/jpeg');
+        openPublish(neocitiesSitename ? (currentDetailWalk.neocities?.pageUrl ? 'published' : 'consent') : 'site');
       } else if (action === 'add-text') {
         myVoiceFile.click();
       } else if (action === 'remove-text') {
