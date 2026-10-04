@@ -3231,7 +3231,7 @@
         item.addEventListener('click', () => showWalkDetail(w.id));
         item.querySelector('.walk-delete').addEventListener('click', async (e) => {
           e.stopPropagation();
-          if (!confirm('Delete this walk? This cannot be undone.')) return;
+          if (!await askConfirm('Delete this walk? This cannot be undone.')) return;
           const photos = await byIndex(db, 'photos', 'walkId', w.id);
           for (const p of photos) await del(db, 'photos', p.id);
           await del(db, 'walks', w.id);
@@ -3982,6 +3982,8 @@
         showToast('Text removed');
       } else if (action === 'route') {
         // KML route export: plan path + walked trace + stop placemarks.
+        // The file carries real coordinates, so confirm first.
+        if (!await askConfirm("Export KML route? It contains the walk's real GPS coordinates.", 'Export')) return;
         const kml = buildKmlString(currentDetailWalk);
         const filename = `aimless-${currentDetailWalk.seed}.kml`;
         const file = new File([kml], filename, { type: 'application/vnd.google-earth.kml+xml' });
