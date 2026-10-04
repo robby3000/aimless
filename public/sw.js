@@ -106,19 +106,16 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
-    // Purge old caches only when the new one holds the complete shell.
-    // Precache misses are tolerated at install (a missing icon must not block
-    // the shell), but deleting the old cache after a partial fill would
-    // strand an installed phone with no working offline copy at all.
+    // Old caches are never read (cacheFirst only looks in CACHE), so they
+    // go unconditionally. Anything the install missed is fetched from the
+    // network on first use and cached then; log it so a persistent miss is
+    // visible in devtools.
     const cache = await caches.open(CACHE);
     const missing = [];
     for (const u of PRECACHE) {
       if (!(await cache.match(new URL(u, self.location).href))) missing.push(u);
     }
-    if (missing.length > 0) {
-      console.warn('[sw] precache incomplete, keeping old caches:', missing);
-      return;
-    }
+    if (missing.length > 0) console.warn('[sw] precache incomplete:', missing);
     const keys = await caches.keys();
     await Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k)));
   })());
@@ -140,21 +137,22 @@ self.addEventListener('fetch', (event) => {
 });
 
 async function cacheFirst(request) {
-  const cached = await caches.match(request, { ignoreSearch: true });
+  // This worker's cache only. The global caches.match() searches every cache
+  // on the origin, oldest first, so a surviving old cache would keep serving
+  // the previous build after an update.
+  const cache = await caches.open(CACHE);
+  const cached = await cache.match(request, { ignoreSearch: true });
   if (cached) return cached;
   try {
     const response = await fetch(request);
-    if (response.ok) {
-      const cache = await caches.open(CACHE);
-      cache.put(request, response.clone());
-    }
+    if (response.ok) cache.put(request, response.clone());
     return response;
   } catch {
     // Offline and uncached: navigations fall back to the shell so the app
     // still opens; anything else gets a clean 503.
     if (request.mode === 'navigate') {
-      const fallback = await caches.match(ROOT)
-        ?? await caches.match(new URL('index.html', self.location).href);
+      const fallback = await cache.match(ROOT)
+        ?? await cache.match(new URL('index.html', self.location).href);
       if (fallback) return fallback;
     }
     return new Response('Offline', { status: 503, statusText: 'Offline' });
