@@ -48,8 +48,10 @@
     body {
       display: flex;
       flex-direction: column;
-      height: 100dvh;   /* dynamic vh: tracks iOS Safari chrome collapsing;
-                           plain 100% leaves the body short and the nav floating */
+      /* Height comes from the html, body { height: 100% } rule above. Not
+         100dvh: inside an installed app a reload can evaluate dvh taller than
+         the visible screen and nothing re-lays it out until a viewport
+         gesture, so the nav sits below the bottom edge, clipped. */
       transition: background-color 0.4s;
       /* The page itself never scrolls: the active screen scrolls internally,
          so the header and the bottom nav stay pinned at all times. */
