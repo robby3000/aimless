@@ -1357,6 +1357,11 @@
       <span class="row-ico">&#9993;</span>
       <span class="row-text"><span class="row-title">Card</span><span class="row-sub">Send a card via the share menu</span></span>
     </button>
+    <!-- TEMP Stage 2.1 debug, removed in Stage 3.3 -->
+    <button class="sheet-row" data-export="og-card-debug" hidden id="row-og-debug">
+      <span class="row-ico">&#9734;</span>
+      <span class="row-text"><span class="row-title">OG card (debug)</span><span class="row-sub">Download the 1200x630 JPEG</span></span>
+    </button>
     <button class="sheet-row" data-export="add-text" id="row-add-text" hidden>
       <span class="row-ico">&#9998;</span>
       <span class="row-text"><span class="row-title" id="add-text-title">Add text</span><span class="row-sub">Select a text file — blocks map to photos in order</span></span>
@@ -3765,44 +3770,40 @@
       });
     }
 
-    async function buildShareCard(walk, photo) {   // photo: { dataUrl?, blob? } | null
-      const { card } = getSkin(currentSkin);
-      const canvas = document.createElement('canvas');
-      canvas.width = CARD_SIZE;
-      canvas.height = CARD_SIZE;
-      const ctx = canvas.getContext('2d');
-
+    // The shared card body: background, cover-fit photo, projected route.
+    // w x h is 1080x1080 for the share PNG, 1200x630 for the OG JPEG.
+    async function drawCard(ctx, w, h, walk, photo, card) {   // photo: { dataUrl?, blob? } | null
       ctx.fillStyle = card.bg;
-      ctx.fillRect(0, 0, CARD_SIZE, CARD_SIZE);
+      ctx.fillRect(0, 0, w, h);
 
       if (photo) {
-        // Cover-fit the photo to fill the square. A legacy IndexedDB blob
+        // Cover-fit the photo to fill the canvas. A legacy IndexedDB blob
         // may be unreadable on iOS (WebKit corrupts them after restart) -
         // then the card is drawn without a photo rather than failing.
         const src = photo.dataUrl || URL.createObjectURL(photo.blob);
         let img = null;
         try { img = await loadImage(src); } catch { /* photo unreadable - card goes out bare */ }
         if (img) {
-          const rendered = await renderPhotoToCanvas(img, { spec: effectiveSpec(photo, 'original') }, CARD_SIZE, CARD_SIZE);
+          const rendered = await renderPhotoToCanvas(img, { spec: effectiveSpec(photo, 'original') }, w, h);
           ctx.drawImage(rendered, 0, 0);
         }
         if (!photo.dataUrl) URL.revokeObjectURL(src);
       }
 
-      // Project walk geometry into the square (same mapping as traceSVG).
+      // Project walk geometry into the canvas (same mapping as traceSVG).
       const plan = [walk.origin, ...(walk.stops || [])].filter(Boolean);
       const trace = walk.trace || [];
       const all = [...trace, ...plan];
-      if (!all.length) return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+      if (!all.length) return;
       const b = bounds(all);
       const rangeLat = (b.maxLat - b.minLat) || 0.001;
       const rangeLng = (b.maxLng - b.minLng) || 0.001;
-      const geoScale = Math.min(CARD_SIZE / rangeLng, CARD_SIZE / rangeLat) * 0.8;
+      const geoScale = Math.min(w / rangeLng, h / rangeLat) * 0.8;
       const midLat = (b.minLat + b.maxLat) / 2;
       const midLng = (b.minLng + b.maxLng) / 2;
       const project = (p) => ({
-        x: CARD_SIZE / 2 + (p.lng - midLng) * geoScale,
-        y: CARD_SIZE / 2 - (p.lat - midLat) * geoScale,   // invert: north is up
+        x: w / 2 + (p.lng - midLng) * geoScale,
+        y: h / 2 - (p.lat - midLat) * geoScale,   // invert: north is up
       });
 
       // Routes get a dark halo pass underneath so they read over any photo.
@@ -3840,8 +3841,28 @@
         ctx.fillStyle = i === 0 ? card.accent : card.fg;
         ctx.fill();
       });
+    }
 
+    async function buildShareCard(walk, photo) {   // photo: { dataUrl?, blob? } | null
+      const { card } = getSkin(currentSkin);
+      const canvas = document.createElement('canvas');
+      canvas.width = CARD_SIZE;
+      canvas.height = CARD_SIZE;
+      const ctx = canvas.getContext('2d');
+      await drawCard(ctx, CARD_SIZE, CARD_SIZE, walk, photo, card);
       return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+    }
+
+    // Landscape 1200x630 JPEG for the published page's og:image - same
+    // drawing as the share card, different frame and codec.
+    async function buildOgCard(walk, photo) {   // photo: { dataUrl?, blob? } | null
+      const { card } = getSkin(currentSkin);
+      const canvas = document.createElement('canvas');
+      canvas.width = 1200;
+      canvas.height = 630;
+      const ctx = canvas.getContext('2d');
+      await drawCard(ctx, 1200, 630, walk, photo, card);
+      return new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85));
     }
 
     // --- Bottom sheets (Walk Detail) ---
@@ -3885,6 +3906,8 @@
       document.getElementById('row-add-text').hidden = !eligible;
       document.getElementById('row-remove-text').hidden = !(eligible && hasText);
       document.getElementById('add-text-title').textContent = hasText ? 'Replace text' : 'Add text';
+      // TEMP Stage 2.1 debug, removed in Stage 3.3
+      document.getElementById('row-og-debug').hidden = !location.search.includes('debug');
       exportSheetCtl.open();
     });
     document.getElementById('opt-kml-link').addEventListener('change', savePrefs);
@@ -3972,6 +3995,14 @@
         } else {
           downloadFile(filename, cardBlob, 'image/png');
         }
+      } else if (action === 'og-card-debug') {
+        // TEMP Stage 2.1 debug, removed in Stage 3.3
+        const walk = currentDetailWalk;
+        const db = await dbPromise;
+        const photos = db ? await byIndex(db, 'photos', 'walkId', walk.id) : [];
+        photos.sort((a, b) => a.stopSeq - b.stopSeq);
+        const blob = await buildOgCard(walk, photos[0] ?? null);
+        downloadFile(`og-${walk.seed}.jpg`, blob, 'image/jpeg');
       } else if (action === 'add-text') {
         myVoiceFile.click();
       } else if (action === 'remove-text') {
