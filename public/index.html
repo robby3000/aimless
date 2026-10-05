@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#062a35">
+  <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
+       excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
+  <meta name="aimless-build" content="aimless-v0.2.0-3d497c7a">
   <meta name="description" content="Go nowhere. Somewhere.">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/favicon-16.png" type="image/png" sizes="16x16">
@@ -859,6 +862,7 @@
     .publish-error[hidden] { display: none; }
     .publish-url { font-size: 0.85rem; color: var(--accent); word-break: break-all; margin-bottom: 4px; }
     .publish-url-index { font-size: 0.75rem; color: var(--fg-dim); }
+    .info-version { font-size: 0.7rem; color: var(--fg-dim); text-align: center; margin-top: 32px; opacity: 0.65; cursor: pointer; }
     .link-btn { background: none; border: none; padding: 0; color: var(--fg-dim); font-size: 0.8rem; text-decoration: underline; cursor: pointer; margin-bottom: 12px; }
     .publish-contents { margin: 0 0 14px 18px; padding: 0; font-size: 0.85rem; color: var(--fg-dim); }
     .publish-contents li { margin-bottom: 2px; }
@@ -1343,6 +1347,7 @@
         <summary>Why is there no map?</summary>
         <p>The absence is the design. Aimless is about being where you are, not navigating somewhere. You follow an arrow, not a route, and the shape of your walk is only revealed afterwards.</p>
       </details>
+      <div id="info-version" class="info-version" role="button" tabindex="0"></div>
     </div>
   </section>
 
@@ -1618,11 +1623,14 @@
     // --- Service worker registration + update detection ---
     // Three overlapping signals — a fast network can complete install→activate
     // →claim before register()'s promise resolves, so no single one suffices.
+    let swReg = null;
+    let swUpdateFound = false;
     if ('serviceWorker' in navigator) {
       let notified = false;
       const notifyUpdate = () => {
         if (notified) return;
         notified = true;
+        swUpdateFound = true;
         showToast('New version available', { label: 'Reload', sticky: true, run: () => location.reload() });
       };
       // controllerchange only counts as an update if the page already had a
@@ -1635,6 +1643,7 @@
         if (sw.state === 'installed' && navigator.serviceWorker.controller) notifyUpdate();
       });
       navigator.serviceWorker.register('./sw.js').then((reg) => {
+        swReg = reg;
         if (reg.waiting) notifyUpdate();
         watchInstalling(reg.installing);
         reg.addEventListener('updatefound', () => watchInstalling(reg.installing));
@@ -1647,6 +1656,22 @@
         console.warn('SW registration failed:', err);
       });
     }
+
+    // Info screen foot: the running build stamp (stamped into the meta tag
+    // by scripts/stamp-sw.mjs, so it always says what THIS copy is, offline
+    // included), and a manual update check on tap. Android Chrome's
+    // installed-app checks can lag hours behind a deploy — this makes it
+    // one tap instead of background/foreground juggling.
+    const infoVersion = document.getElementById('info-version');
+    const buildStamp = document.querySelector('meta[name="aimless-build"]')?.content;
+    infoVersion.textContent = buildStamp ? `${buildStamp} · tap to check for updates` : '';
+    if (!buildStamp) infoVersion.hidden = true;
+    infoVersion.addEventListener('click', () => {
+      if (!swReg) { showToast('No service worker'); return; }
+      showToast('Checking for update…');
+      swReg.update().catch(() => {});
+      setTimeout(() => { if (!swUpdateFound) showToast('You have the latest'); }, 3000);
+    });
 
     // --- Storage persistence ---
     // Ask the browser to mark this origin's storage as persistent so IndexedDB

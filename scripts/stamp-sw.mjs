@@ -35,13 +35,23 @@ function walk(dir) {
   return out.sort();
 }
 
+// index.html carries the stamp in <meta name="aimless-build" content="…">,
+// which must not feed back into the hash — hash it with the marker empty.
+function bytes(abs) {
+  let b = readFileSync(abs, 'utf8');
+  if (relative(PUBLIC, abs) === 'index.html') {
+    b = b.replace(/<meta name="aimless-build" content="[^"]*">/, '<meta name="aimless-build" content="">');
+  }
+  return b;
+}
+
 /** Hash of the whole shell: paths as well as bytes, so a rename counts. */
 function fingerprint() {
   const h = createHash('sha256');
   for (const abs of walk(PUBLIC)) {
     h.update(relative(PUBLIC, abs).split(sep).join('/'));
     h.update('\0');
-    h.update(readFileSync(abs));
+    h.update(bytes(abs));
     h.update('\0');
   }
   return h.digest('hex').slice(0, 8);
@@ -58,7 +68,12 @@ if (!found) {
   process.exit(2);
 }
 
-if (found[1] === wanted) {
+const INDEX = join(PUBLIC, 'index.html');
+const META = /<meta name="aimless-build" content="([^"]*)">/;
+const indexSrc = readFileSync(INDEX, 'utf8');
+const metaFound = indexSrc.match(META);
+
+if (found[1] === wanted && metaFound && metaFound[1] === wanted) {
   console.log(`stamp-sw: up to date (${wanted})`);
   process.exit(0);
 }
@@ -69,4 +84,8 @@ if (process.argv.includes('--check')) {
 }
 
 writeFileSync(SW, src.replace(LINE, `const CACHE = '${wanted}';`));
+// The same stamp goes into index.html as a meta tag so the running page
+// can show its own build. The fingerprint normalizes it to the empty
+// marker value, so the file's hash does not depend on the stamp itself.
+if (metaFound) writeFileSync(INDEX, indexSrc.replace(META, `<meta name="aimless-build" content="${wanted}">`));
 console.log(`stamp-sw: ${found[1]} -> ${wanted}`);
