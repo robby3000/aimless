@@ -175,9 +175,9 @@ export function indexHtml(entries, opts = {}) {
 ${iconsHeadHtml()}
 <style>
 ${BASE_CSS}
-.idx-list { display: flex; flex-direction: column; gap: 18px; margin-top: 20px; }
-.idx-walk { display: flex; gap: 14px; align-items: flex-start; }
-.idx-thumb img { width: 120px; height: 63px; object-fit: cover; border-radius: 8px; display: block; }
+.idx-list { display: flex; flex-direction: column; gap: 28px; margin-top: 20px; }
+.idx-walk { display: flex; flex-direction: column; gap: 8px; }
+.idx-thumb img { width: 100%; height: auto; aspect-ratio: 40 / 21; object-fit: cover; border-radius: 8px; display: block; }
 .idx-title { font-family: monospace; color: var(--accent); text-decoration: none; font-size: 0.95rem; }
 .idx-meta .date { margin-bottom: 4px; }
 .idx-empty { color: var(--fg-dim); margin-top: 20px; }
