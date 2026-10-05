@@ -270,10 +270,11 @@ test('indexHtml is a script-free document with relative links and thumbs', () =>
   assert.ok(!html.includes('neocities.org/aimless')); // no absolute URLs in the body
 });
 
-test('indexHtml escapes titles and descriptions', () => {
+test('indexHtml escapes titles and renders no descriptions', () => {
   const html = indexHtml([{ slug: 's', title: 'a<b>"c"', started: STARTED, builtAt: 1, description: 'x < y' }]);
   assert.ok(!html.includes('a<b>'));
   assert.ok(html.includes('a&lt;b&gt;'));
+  assert.ok(!html.includes('x < y') && !html.includes('x &lt; y'));
 });
 
 test('indexHtml head carries the app icon link tags', () => {

@@ -161,7 +161,6 @@ export function indexHtml(entries, opts = {}) {
       <div class="idx-meta">
         <a class="idx-title" href="${esc(e.slug)}.html">${esc(e.title)}</a>
         <div class="date">${esc(formatWalkDate(e.started))}</div>
-        ${e.description ? `<div class="idx-desc">${esc(e.description)}</div>` : ''}
       </div>
     </div>`).join('');
   const body = entries.length
@@ -181,7 +180,6 @@ ${BASE_CSS}
 .idx-thumb img { width: 120px; height: 63px; object-fit: cover; border-radius: 8px; display: block; }
 .idx-title { font-family: monospace; color: var(--accent); text-decoration: none; font-size: 0.95rem; }
 .idx-meta .date { margin-bottom: 4px; }
-.idx-desc { font-size: 0.8rem; color: var(--fg-dim); }
 .idx-empty { color: var(--fg-dim); margin-top: 20px; }
 </style>
 </head>
