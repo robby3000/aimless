@@ -3617,7 +3617,7 @@
 
     // Lazy fill: empty frames mount instantly; each photo renders only as
     // its card scrolls into (or near) view, at full preview res in one
-    // pass. Filter switches therefore cost ~the visible frames, not the
+    // pass. Rebuilds therefore cost ~the visible frames, not the
     // whole set, and rendered canvases are shared with the export path.
     let detailRenderToken = 0;
     let detailObserver = null;
@@ -3658,6 +3658,9 @@
         busy.textContent = `rendering ${finished + 1}/${queued}`;
       };
       const renderOne = async (p) => {
+        // Capture before the awaits: a filter assign while this render is
+        // in flight bumps specEpoch, and the stale pixels must not land.
+        const epoch = p.specEpoch || 0;
         queued++;
         tick();
         // Let the indicator paint before the synchronous render blocks the
@@ -3678,7 +3681,9 @@
             document.querySelector(`.photo-frame[data-stopseq="${p.stopSeq}"]`);
           if (!frame) return;
           if (!img) {
-            if (rawSrc) frame.innerHTML = `<img src="${rawSrc}" alt="photo">`;
+            if (rawSrc && (p.specEpoch || 0) === epoch) {
+              frame.innerHTML = `<img src="${rawSrc}" alt="photo">`;
+            }
             return;
           }
           const canvas = document.createElement('canvas');
@@ -3688,6 +3693,7 @@
             canvas.height = rendered.height;
             canvas.getContext('2d').drawImage(rendered, 0, 0);
           } catch { canvas.width = canvas.height = 0; }
+          if ((p.specEpoch || 0) !== epoch) return;
           frame.replaceChildren(canvas);
         } catch { /* unreadable photo — leave shimmer */ }
         finally { finished++; tick(); restoreScrollAnchor(); }
@@ -3803,8 +3809,50 @@
       else clearPhotoSelection();
     });
 
+    // Re-render only the selected photo frames in place. A filter apply
+    // must not rebuild the whole detail: that remounts the trace SVG and
+    // flashes every frame back to its loading shimmer. Frames still
+    // queued in the lazy fill are left alone: effectiveSpec reads fresh
+    // at render time, and the specEpoch guard in renderOne keeps an
+    // in-flight render from stamping pre-assign pixels over this refresh.
+    async function refreshSelectedPhotoFrames() {
+      const busy = document.getElementById('filter-busy');
+      busy.dataset.token = 'busy';
+      busy.textContent = 'rendering…';
+      busy.hidden = false;
+      try {
+        for (const p of currentDetailPhotos) {
+          if (!selectedPhotoSeqs.has(p.stopSeq)) continue;
+          const frame = detailContent.querySelector(`.photo-frame[data-stopseq="${p.stopSeq}"]`);
+          if (!frame) continue;
+          const epoch = p.specEpoch || 0;
+          // Let the indicator paint before the synchronous render blocks.
+          await new Promise((r) => requestAnimationFrame(r));
+          const { img, rawSrc } = await photoSource(p);
+          if ((p.specEpoch || 0) !== epoch) continue;
+          if (img) {
+            const canvas = document.createElement('canvas');
+            try {
+              const rendered = renderDetailCanvas(img, p, effectiveSpec(p, 'original'), PREVIEW_MAX_DIM);
+              canvas.width = rendered.width;
+              canvas.height = rendered.height;
+              canvas.getContext('2d').drawImage(rendered, 0, 0);
+            } catch { canvas.width = canvas.height = 0; }
+            frame.replaceChildren(canvas);
+          } else if (rawSrc) {
+            frame.innerHTML = `<img src="${rawSrc}" alt="photo">`;
+          }
+          // No source at all: leave the frame. A placeholder still
+          // decoding is filled by fillDetailPhotos, which resolves
+          // effectiveSpec fresh when its turn comes.
+        }
+      } finally {
+        if (busy.dataset.token === 'busy') busy.hidden = true;
+      }
+    }
+
     // Selection-mode rail action: pin the chosen filter onto the selected
-    // photo records, then rebuild the detail (visible frames re-render).
+    // photo records, then re-render just those frames in place.
     // Choosing a named filter clears any Surprise spec on the photo.
     async function assignFilterToSelection(filterId) {
       const busy = document.getElementById('filter-busy');
@@ -3816,13 +3864,16 @@
         if (!selectedPhotoSeqs.has(p.stopSeq)) continue;
         p.filterId = filterId;
         delete p.filterSpec;
+        // Invalidate any in-flight lazy render of this photo; its stale
+        // pixels must not land over the refresh below.
+        p.specEpoch = (p.specEpoch || 0) + 1;
         if (db) await put(db, 'photos', p);
       }
       // Assigning counts as "used" — the rail highlights it next time the
       // screen opens with nothing selected.
       currentFilter = filterId;
       savePrefs();
-      showWalkDetail(currentDetailWalk.id);
+      await refreshSelectedPhotoFrames();
     }
 
     // Rail tail action: exactly one photo must be selected. The rolled spec
@@ -3853,11 +3904,13 @@
         p.filterSpec = surpriseSpec(makeRng(seed));
       } catch {
         showToast('Surprise roll failed');
+        busy.hidden = true;
         return;
       }
+      p.specEpoch = (p.specEpoch || 0) + 1;
       const db = await dbPromise;
       if (db) await put(db, 'photos', p);
-      showWalkDetail(currentDetailWalk.id);
+      await refreshSelectedPhotoFrames();
     }
 
     // Instruction modal — long-press isn't discoverable otherwise. Shows on
@@ -3878,7 +3931,8 @@
 
     async function showWalkDetail(walkId) {
       // Entry means the detail screen isn't already showing — internal
-      // rebuilds (filter assign, skin change) call this while it is.
+      // rebuilds (skin change, filter import, text attach) call this
+      // while it is.
       const enteringDetail = !screens.detail.classList.contains('active');
       if (enteringDetail) {
         selectToastShown = false;
@@ -3890,7 +3944,7 @@
       const walk = await get(db, 'walks', walkId);
       if (!walk) return;
       // A different walk drops any in-progress selection; re-renders of the
-      // same walk (filter assign, skin change) keep it.
+      // same walk (skin change, management actions) keep it.
       if (currentDetailWalk?.id !== walk.id) selectedPhotoSeqs.clear();
       currentDetailWalk = walk;
 
@@ -3907,8 +3961,8 @@
 
       // Build trace SVG in the active skin's palette (its dots and strokes
       // are attributes, so they cannot be skinned with CSS). The draw-on
-      // animation plays once per walk view — re-renders on filter/skin
-      // changes would otherwise replay it every tap.
+      // animation plays once per walk view; re-renders on skin changes
+      // would otherwise replay it every tap.
       const trace = walk.trace || [];
       const animateTrace = lastAnimatedDetailWalk !== walkId;
       lastAnimatedDetailWalk = walkId;
@@ -4026,7 +4080,7 @@
         }
         fillDetailPhotos(photos, walk.id);
       } else {
-        // Filter tap showed the indicator but there's nothing to render.
+        // No photos means no lazy fill to take the indicator over.
         document.getElementById('filter-busy').hidden = true;
       }
     }
