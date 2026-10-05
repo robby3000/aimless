@@ -127,13 +127,15 @@ export function ogHeadHtml({ title, description, url, imageUrl, width, height, a
 }
 
 /**
- * Walks that carry a `neocities` block, newest build first. The slug used
- * for links and thumbnails is the stored (latest-build) slug, so the index
- * always points at the -N filenames the last rebuild produced.
+ * Walks listed on the site index: a `neocities` block built the files,
+ * `indexed === true` is the user's "list it" choice (absent = unlisted -
+ * blocks from before the field existed drop out until re-enabled).
+ * The slug used for links and thumbnails is the stored (latest-build)
+ * slug, so the index always points at the -N filenames a rebuild made.
  */
 export function publishedEntries(walks) {
   return walks
-    .filter((w) => w.neocities?.slug)
+    .filter((w) => w.neocities?.slug && w.neocities.indexed === true)
     .map((w) => ({
       slug: w.neocities.slug,
       title: w.seed,

@@ -239,19 +239,22 @@ test('ogHeadHtml emits og:url alone when only url is supplied', () => {
   assert.ok(!html.includes('name="twitter:image"'));
 });
 
-const PUB = { sitename: 'rob', slug: walkSlug(WALK), builds: 1, builtAt: STARTED + 999999 };
+const PUB = { sitename: 'rob', slug: walkSlug(WALK), builds: 1, builtAt: STARTED + 999999, indexed: true };
 
-test('publishedEntries keeps only walks with a neocities slug, newest first', () => {
+test('publishedEntries keeps only indexed walks, newest first', () => {
   const older = { ...WALK, id: 'walk-1796941200001', neocities: { ...PUB, slug: 'walk-a', builtAt: 100 } };
   const newer = { ...WALK, id: 'walk-1796941200002', neocities: { ...PUB, slug: 'walk-b', builtAt: 200 } };
   const unpublished = { ...WALK, id: 'walk-1796941200003' };
-  const entries = publishedEntries([unpublished, older, newer]);
+  const builtButUnlisted = { ...WALK, id: 'walk-1796941200004', neocities: { ...PUB, slug: 'walk-c', indexed: false } };
+  const legacyBlock = { ...WALK, id: 'walk-1796941200005', neocities: { ...PUB, slug: 'walk-d' } };
+  delete legacyBlock.neocities.indexed;
+  const entries = publishedEntries([unpublished, builtButUnlisted, legacyBlock, older, newer]);
   assert.deepEqual(entries.map((e) => e.slug), ['walk-b', 'walk-a']);
   assert.equal(entries[0].title, WALK.seed);
 });
 
 test('publishedEntries falls back to started and to defaultDescription', () => {
-  const noBuilds = { ...WALK, neocities: { slug: 'walk-x' } };
+  const noBuilds = { ...WALK, neocities: { slug: 'walk-x', indexed: true } };
   const [entry] = publishedEntries([noBuilds]);
   assert.equal(entry.builtAt, STARTED);
   assert.equal(entry.description, defaultDescription(WALK));
@@ -279,15 +282,19 @@ test('indexHtml renders an empty state with no entries', () => {
   assert.ok(!html.includes('class="idx-walk"'));
 });
 
-test('manifestText lists relative page and image paths per published walk', () => {
+test('manifestText lists relative page and image paths per listed walk', () => {
   const text = manifestText([{ ...WALK, neocities: PUB }]);
   assert.ok(text.startsWith('All paths relative to site root.'));
   assert.ok(text.includes(`aimless/${PUB.slug}.html | ${WALK.seed} | October 4, 2026`));
   assert.ok(text.includes(`aimless/${PUB.slug}.jpg (preview image)`));
 });
 
-test('manifestText skips unpublished walks and keeps one line per field', () => {
-  const text = manifestText([{ ...WALK }, { ...WALK, id: 'walk-1', neocities: { ...PUB, description: 'multi\nline  desc' } }]);
+test('manifestText skips unlisted and unpublished walks, one line per field', () => {
+  const text = manifestText([
+    { ...WALK },
+    { ...WALK, id: 'walk-0', neocities: { ...PUB, slug: 'walk-unlisted', indexed: false } },
+    { ...WALK, id: 'walk-1', neocities: { ...PUB, description: 'multi\nline  desc' } },
+  ]);
   const lines = text.split('\n');
   assert.equal(lines.length, 3); // header + html line + jpg line
   assert.ok(lines.every((l) => !/\n/.test(l)));

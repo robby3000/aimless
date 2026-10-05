@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-3d497c7a">
+  <meta name="aimless-build" content="aimless-v0.2.0-cfcae4b1">
   <meta name="description" content="Go nowhere. Somewhere.">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/favicon-16.png" type="image/png" sizes="16x16">
@@ -862,6 +862,8 @@
     .publish-error[hidden] { display: none; }
     .publish-url { font-size: 0.85rem; color: var(--accent); word-break: break-all; margin-bottom: 4px; }
     .publish-url-index { font-size: 0.75rem; color: var(--fg-dim); }
+    .publish-check { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--fg-dim); margin-bottom: 10px; }
+    .publish-check input { accent-color: var(--accent); }
     .info-version { font-size: 0.7rem; color: var(--fg-dim); text-align: center; margin-top: 32px; opacity: 0.65; cursor: pointer; }
     .link-btn { background: none; border: none; padding: 0; color: var(--fg-dim); font-size: 0.8rem; text-decoration: underline; cursor: pointer; margin-bottom: 12px; }
     .publish-contents { margin: 0 0 14px 18px; padding: 0; font-size: 0.85rem; color: var(--fg-dim); }
@@ -1488,6 +1490,7 @@
         <label class="publish-label" for="publish-desc">Description</label>
         <textarea id="publish-desc" rows="3" maxlength="200"></textarea>
         <div class="publish-count" id="publish-count">0/200</div>
+        <label class="publish-check"><input type="checkbox" id="publish-indexed" checked> Also list on your site index</label>
         <p class="publish-note">Anyone with the link can see this page.</p>
         <div class="confirm-actions">
           <button id="btn-publish-consent-cancel">Cancel</button>
@@ -1513,11 +1516,13 @@
         <div class="publish-url" id="publish-url-published"></div>
         <div class="publish-url publish-url-index" id="publish-index-url" hidden></div>
         <p class="publish-note">Built <span id="publish-built-when"></span>.</p>
+        <label class="publish-check"><input type="checkbox" id="publish-listed"> Listed on the site index</label>
         <div class="publish-actions-col">
           <button id="publish-share-link">Share link</button>
           <button id="publish-open">Open</button>
           <button id="publish-rebuild">Rebuild files</button>
           <button id="publish-copy-manifest">Copy file list</button>
+          <button id="publish-update-index">Update index</button>
         </div>
         <div class="confirm-actions">
           <button id="btn-publish-published-done" class="btn-primary">Done</button>
@@ -2160,6 +2165,8 @@
       }
       publishDesc.value = walk.neocities?.description ?? defaultDescription(walk);
       publishCount.textContent = `${publishDesc.value.length}/200`;
+      // New builds default to listed; a previously-built walk keeps its choice.
+      document.getElementById('publish-indexed').checked = walk.neocities?.indexed ?? true;
     }
     publishDesc.addEventListener('input', () => {
       publishCount.textContent = `${publishDesc.value.length}/200`;
@@ -2174,6 +2181,21 @@
       return bytes < 1024 * 1024
         ? `${Math.round(bytes / 1024)} KB`
         : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    }
+
+    // Regenerate the site index from every walk marked for it. Returns the
+    // emitted string, its blob, and whether it matches the last emission
+    // (stored in prefs - drives the hand-off's "unchanged" tag).
+    async function buildIndexHtml() {
+      const db = await dbPromise;
+      const walks = db ? await all(db, 'walks') : [currentDetailWalk].filter(Boolean);
+      const str = indexHtml(publishedEntries(walks), {
+        subtitle: `walks on ${neocitiesSitename}.neocities.org`,
+      });
+      const unchanged = str === neocitiesIndex;
+      neocitiesIndex = str;
+      savePrefs();
+      return { str, blob: new Blob([str], { type: 'text/html' }), unchanged };
     }
 
     // Build files: OG JPEG + keepsake HTML with the OG head, then hand off.
@@ -2221,21 +2243,16 @@
           builtAt: Date.now(),
           kmlIncluded,
           description,
+          indexed: document.getElementById('publish-indexed').checked,
         };
         currentDetailWalk = walk;
         if (db) await put(db, 'walks', walk);
 
-        // The index lists every published walk on this device, not just
-        // this one - it must chase the latest -N filenames, so it is
-        // regenerated on every build. Tag it "(unchanged)" when the
-        // output is identical to the last emission so the user knows the
-        // upload is skippable.
-        const indexStr = indexHtml(publishedEntries(db ? await all(db, 'walks') : [walk]), {
-          subtitle: `walks on ${neocitiesSitename}.neocities.org`,
-        });
-        const indexUnchanged = indexStr === neocitiesIndex;
-        neocitiesIndex = indexStr;
-        savePrefs();
+        // The index lists only walks the user marked for it, and must chase
+        // the latest -N filenames - so it regenerates on every build. The
+        // "unchanged" tag is mostly dormant (rebuilds renumber the slug),
+        // but correct if the numbering ever stops.
+        const index = await buildIndexHtml();
 
         publishBuilt = {
           htmlName: targets.htmlName,
@@ -2243,13 +2260,13 @@
           indexName: 'index.html',
           htmlBlob: new Blob([html], { type: 'text/html' }),
           jpgBlob,
-          indexBlob: new Blob([indexStr], { type: 'text/html' }),
+          indexBlob: index.blob,
         };
         const files = document.getElementById('publish-files');
         files.replaceChildren(...[
           [targets.htmlName, publishBuilt.htmlBlob.size, ''],
           [targets.imageName, jpgBlob.size, ''],
-          [publishBuilt.indexName, publishBuilt.indexBlob.size, indexUnchanged ? 'unchanged' : ''],
+          [publishBuilt.indexName, publishBuilt.indexBlob.size, index.unchanged ? 'unchanged' : ''],
         ].map(([name, size, note]) => {
           const li = document.createElement('li');
           const nameEl = document.createElement('span');
@@ -2290,7 +2307,26 @@
       indexEl.hidden = !pub.sitename;
       if (pub.sitename) indexEl.textContent = `index: https://${pub.sitename}.neocities.org/aimless/`;
       document.getElementById('publish-built-when').textContent = pub.builtAt ? formatWalkDate(pub.builtAt) : 'earlier';
+      document.getElementById('publish-listed').checked = pub.indexed === true;
     }
+    // "Listed on the site index" is curation, not decoration: the index
+    // file is regenerated and downloaded on the spot, because the toggle
+    // means nothing until the new index.html reaches the site.
+    document.getElementById('publish-listed').addEventListener('change', async (e) => {
+      const walk = currentDetailWalk;
+      if (!walk?.neocities) return;
+      walk.neocities.indexed = e.target.checked;
+      const db = await dbPromise;
+      if (db) await put(db, 'walks', walk);
+      const index = await buildIndexHtml();
+      downloadFile('index.html', index.blob, 'text/html');
+      showToast('index.html updated - upload it to your aimless folder');
+    });
+    document.getElementById('publish-update-index').addEventListener('click', async () => {
+      const index = await buildIndexHtml();
+      downloadFile('index.html', index.blob, 'text/html');
+      showToast(index.unchanged ? 'index.html unchanged - nothing new to upload' : 'index.html downloaded');
+    });
     // "Copy file list": a plain-text manifest of every published walk's
     // relative paths + titles, for pasting into an LLM to hand-build a
     // custom index page.
