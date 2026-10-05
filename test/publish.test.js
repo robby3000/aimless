@@ -10,6 +10,9 @@ import {
   walkDescription,
   defaultDescription,
   ogHeadHtml,
+  publishedEntries,
+  indexHtml,
+  manifestText,
 } from '../public/lib/publish.js';
 
 // Local-time constructors keep these fixtures timezone-independent.
@@ -234,4 +237,58 @@ test('ogHeadHtml emits og:url alone when only url is supplied', () => {
   assert.equal(html.split('property="og:url"').length - 1, 1);
   assert.ok(!html.includes('property="og:image"'));
   assert.ok(!html.includes('name="twitter:image"'));
+});
+
+const PUB = { sitename: 'rob', slug: walkSlug(WALK), builds: 1, builtAt: STARTED + 999999 };
+
+test('publishedEntries keeps only walks with a neocities slug, newest first', () => {
+  const older = { ...WALK, id: 'walk-1796941200001', neocities: { ...PUB, slug: 'walk-a', builtAt: 100 } };
+  const newer = { ...WALK, id: 'walk-1796941200002', neocities: { ...PUB, slug: 'walk-b', builtAt: 200 } };
+  const unpublished = { ...WALK, id: 'walk-1796941200003' };
+  const entries = publishedEntries([unpublished, older, newer]);
+  assert.deepEqual(entries.map((e) => e.slug), ['walk-b', 'walk-a']);
+  assert.equal(entries[0].title, WALK.seed);
+});
+
+test('publishedEntries falls back to started and to defaultDescription', () => {
+  const noBuilds = { ...WALK, neocities: { slug: 'walk-x' } };
+  const [entry] = publishedEntries([noBuilds]);
+  assert.equal(entry.builtAt, STARTED);
+  assert.equal(entry.description, defaultDescription(WALK));
+});
+
+test('indexHtml is a script-free document with relative links and thumbs', () => {
+  const entries = publishedEntries([{ ...WALK, neocities: PUB }]);
+  const html = indexHtml(entries);
+  assert.ok(!html.includes('<script'));
+  assert.ok(html.startsWith('<!DOCTYPE html>'));
+  assert.ok(html.includes(`href="${PUB.slug}.html"`));
+  assert.ok(html.includes(`src="${PUB.slug}.jpg"`));
+  assert.ok(!html.includes('neocities.org/aimless')); // no absolute URLs in the body
+});
+
+test('indexHtml escapes titles and descriptions', () => {
+  const html = indexHtml([{ slug: 's', title: 'a<b>"c"', started: STARTED, builtAt: 1, description: 'x < y' }]);
+  assert.ok(!html.includes('a<b>'));
+  assert.ok(html.includes('a&lt;b&gt;'));
+});
+
+test('indexHtml renders an empty state with no entries', () => {
+  const html = indexHtml([]);
+  assert.ok(html.includes('No walks yet.'));
+  assert.ok(!html.includes('class="idx-walk"'));
+});
+
+test('manifestText lists relative page and image paths per published walk', () => {
+  const text = manifestText([{ ...WALK, neocities: PUB }]);
+  assert.ok(text.startsWith('All paths relative to site root.'));
+  assert.ok(text.includes(`aimless/${PUB.slug}.html | ${WALK.seed} | October 4, 2026`));
+  assert.ok(text.includes(`aimless/${PUB.slug}.jpg (preview image)`));
+});
+
+test('manifestText skips unpublished walks and keeps one line per field', () => {
+  const text = manifestText([{ ...WALK }, { ...WALK, id: 'walk-1', neocities: { ...PUB, description: 'multi\nline  desc' } }]);
+  const lines = text.split('\n');
+  assert.equal(lines.length, 3); // header + html line + jpg line
+  assert.ok(lines.every((l) => !/\n/.test(l)));
 });
