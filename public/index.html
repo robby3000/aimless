@@ -858,6 +858,7 @@
     .publish-error { font-size: 0.85rem; color: var(--danger); margin: -6px 0 10px; }
     .publish-error[hidden] { display: none; }
     .publish-url { font-size: 0.85rem; color: var(--accent); word-break: break-all; margin-bottom: 4px; }
+    .publish-url-index { font-size: 0.75rem; color: var(--fg-dim); }
     .link-btn { background: none; border: none; padding: 0; color: var(--fg-dim); font-size: 0.8rem; text-decoration: underline; cursor: pointer; margin-bottom: 12px; }
     .publish-contents { margin: 0 0 14px 18px; padding: 0; font-size: 0.85rem; color: var(--fg-dim); }
     .publish-contents li { margin-bottom: 2px; }
@@ -1336,6 +1337,7 @@
         <p>Yes. Open a walk from the Archive, tap export, then Neocities page. Aimless asks for your site name once, then builds two files: the page and a preview image. Upload both to a folder called <code>aimless</code> on your site, and the page is live with a proper preview when you share the link.</p>
         <p>Anyone with the link can see the page, so publish the walks you want seen. Your Neocities password and API key are never asked for.</p>
         <p>The preview only knows where your page lives because of the folder: keep both files together in <code>aimless</code>, or the link preview loses its image.</p>
+        <p>The third file, <code>index.html</code>, is a ready-made list of your published walks. Neocities serves it at <code>/aimless/</code>: link to it from your homepage, or upload it as your homepage if the site is walks only. It lists walks published from this device.</p>
       </details>
       <details>
         <summary>Why is there no map?</summary>
@@ -1490,11 +1492,11 @@
       <div class="publish-step" id="publish-step-handoff" hidden>
         <div class="publish-heading" id="publish-heading-handoff">Files ready</div>
         <ul class="publish-files" id="publish-files"></ul>
-        <button class="btn-primary" id="publish-download">Download both</button>
+        <button class="btn-primary" id="publish-download">Download all</button>
         <ol class="publish-steps">
           <li>Open neocities.org/dashboard</li>
           <li>Open the folder <code>aimless</code>, or create it</li>
-          <li>Upload both files</li>
+          <li>Upload the new or changed files</li>
         </ol>
         <button id="publish-open-dashboard">Open Neocities dashboard</button>
         <div class="confirm-actions">
@@ -1504,11 +1506,13 @@
       <div class="publish-step" id="publish-step-published" hidden>
         <div class="publish-heading" id="publish-heading-published">Neocities page</div>
         <div class="publish-url" id="publish-url-published"></div>
+        <div class="publish-url publish-url-index" id="publish-index-url" hidden></div>
         <p class="publish-note">Built <span id="publish-built-when"></span>.</p>
         <div class="publish-actions-col">
           <button id="publish-share-link">Share link</button>
           <button id="publish-open">Open</button>
           <button id="publish-rebuild">Rebuild files</button>
+          <button id="publish-copy-manifest">Copy file list</button>
         </div>
         <div class="confirm-actions">
           <button id="btn-publish-published-done" class="btn-primary">Done</button>
@@ -1549,7 +1553,7 @@
     import { renderToCanvas } from './lib/engine/canvas.js';
     import { renderPhotoToCanvas } from './lib/filter-renderer.js';
     import { resolveNavTarget, canStartNewWalk } from './lib/walk-nav.js';
-    import { nextBuildSlug, normalizeSitename, neocitiesTargets, defaultDescription, ogHeadHtml } from './lib/publish.js';
+    import { nextBuildSlug, normalizeSitename, neocitiesTargets, defaultDescription, ogHeadHtml, publishedEntries, indexHtml, manifestText } from './lib/publish.js';
 
     // --- Screen navigation ---
     const screens = {
@@ -1744,6 +1748,7 @@
     let currentFilter = 'original';
     let seenPhotoSelectHint = false;
     let neocitiesSitename = '';
+    let neocitiesIndex = '';   // last emitted aimless/index.html - "(unchanged)" tag compares against it
 
     function applySkin() {
       skinStyle.textContent = scopeCSS(getSkin(currentSkin).css, '#detail-content');
@@ -2195,24 +2200,39 @@
         currentDetailWalk = walk;
         if (db) await put(db, 'walks', walk);
 
+        // The index lists every published walk on this device, not just
+        // this one - it must chase the latest -N filenames, so it is
+        // regenerated on every build. Tag it "(unchanged)" when the
+        // output is identical to the last emission so the user knows the
+        // upload is skippable.
+        const indexStr = indexHtml(publishedEntries(db ? await all(db, 'walks') : [walk]), {
+          subtitle: `walks on ${neocitiesSitename}.neocities.org`,
+        });
+        const indexUnchanged = indexStr === neocitiesIndex;
+        neocitiesIndex = indexStr;
+        savePrefs();
+
         publishBuilt = {
           htmlName: targets.htmlName,
           imageName: targets.imageName,
+          indexName: 'index.html',
           htmlBlob: new Blob([html], { type: 'text/html' }),
           jpgBlob,
+          indexBlob: new Blob([indexStr], { type: 'text/html' }),
         };
         const files = document.getElementById('publish-files');
         files.replaceChildren(...[
-          [targets.htmlName, publishBuilt.htmlBlob.size],
-          [targets.imageName, jpgBlob.size],
-        ].map(([name, size]) => {
+          [targets.htmlName, publishBuilt.htmlBlob.size, ''],
+          [targets.imageName, jpgBlob.size, ''],
+          [publishBuilt.indexName, publishBuilt.indexBlob.size, indexUnchanged ? 'unchanged' : ''],
+        ].map(([name, size, note]) => {
           const li = document.createElement('li');
           const nameEl = document.createElement('span');
           nameEl.className = 'file-name';
           nameEl.textContent = name;
           const sizeEl = document.createElement('span');
           sizeEl.className = 'file-size';
-          sizeEl.textContent = formatFileSize(size);
+          sizeEl.textContent = note || formatFileSize(size);
           li.append(nameEl, sizeEl);
           return li;
         }));
@@ -2223,12 +2243,13 @@
       }
     });
 
-    // Hand-off step: download both (staggered - two immediate clicks get the
-    // second swallowed by some browsers), then upload via the dashboard.
+    // Hand-off step: download all three (staggered - immediate multi-clicks
+    // get swallowed by some browsers), then upload via the dashboard.
     document.getElementById('publish-download').addEventListener('click', () => {
       if (!publishBuilt) return;
       downloadFile(publishBuilt.htmlName, publishBuilt.htmlBlob, 'text/html');
       setTimeout(() => downloadFile(publishBuilt.imageName, publishBuilt.jpgBlob, 'image/jpeg'), 300);
+      setTimeout(() => downloadFile(publishBuilt.indexName, publishBuilt.indexBlob, 'text/html'), 600);
     });
     document.getElementById('publish-open-dashboard').addEventListener('click', () => {
       window.open('https://neocities.org/dashboard', '_blank', 'noopener');
@@ -2240,8 +2261,24 @@
       const pub = currentDetailWalk?.neocities;
       if (!pub) return;
       document.getElementById('publish-url-published').textContent = pub.pageUrl;
+      const indexEl = document.getElementById('publish-index-url');
+      indexEl.hidden = !pub.sitename;
+      if (pub.sitename) indexEl.textContent = `index: https://${pub.sitename}.neocities.org/aimless/`;
       document.getElementById('publish-built-when').textContent = pub.builtAt ? formatWalkDate(pub.builtAt) : 'earlier';
     }
+    // "Copy file list": a plain-text manifest of every published walk's
+    // relative paths + titles, for pasting into an LLM to hand-build a
+    // custom index page.
+    document.getElementById('publish-copy-manifest').addEventListener('click', async () => {
+      const db = await dbPromise;
+      const walks = db ? await all(db, 'walks') : [currentDetailWalk].filter(Boolean);
+      try {
+        await navigator.clipboard.writeText(manifestText(walks));
+        showToast('File list copied');
+      } catch {
+        showToast('Copy failed - select the list manually');
+      }
+    });
     document.getElementById('publish-share-link').addEventListener('click', async () => {
       const url = currentDetailWalk?.neocities?.pageUrl;
       if (!url) return;
@@ -2302,7 +2339,7 @@
     const elStops = document.getElementById('setting-stops');
     const elBudget = document.getElementById('setting-budget');
     const elVoice = document.getElementById('setting-voice');
-    const DEFAULT_PREFS = { stops: 5, budgetMin: 45, voice: 'crow', skin: 'default', filter: 'original', hiddenFilters: [], kmlLink: false, seenPhotoSelectHint: false, neocitiesSitename: '' };
+    const DEFAULT_PREFS = { stops: 5, budgetMin: 45, voice: 'crow', skin: 'default', filter: 'original', hiddenFilters: [], kmlLink: false, seenPhotoSelectHint: false, neocitiesSitename: '', neocitiesIndex: '' };
 
     // Scroll-snap wheel: keeps `input` (a hidden input carrying the setting's
     // value) in sync with the centred item, and saves prefs on user scrolls.
@@ -2366,6 +2403,7 @@
       document.getElementById('opt-kml-link').checked = prefs.kmlLink ?? DEFAULT_PREFS.kmlLink;
       seenPhotoSelectHint = prefs.seenPhotoSelectHint ?? DEFAULT_PREFS.seenPhotoSelectHint;
       neocitiesSitename = prefs.neocitiesSitename ?? DEFAULT_PREFS.neocitiesSitename;
+      neocitiesIndex = prefs.neocitiesIndex ?? DEFAULT_PREFS.neocitiesIndex;
       setHiddenFilters(prefs.hiddenFilters);
       if (isFilterHidden(currentFilter)) currentFilter = visibleFilters()[0]?.id || 'original';
       renderManageList();
@@ -2387,6 +2425,7 @@
         kmlLink: document.getElementById('opt-kml-link').checked,
         seenPhotoSelectHint,
         neocitiesSitename,
+        neocitiesIndex,
       });
     }
 
