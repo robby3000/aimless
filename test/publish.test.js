@@ -2,10 +2,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   NEOCITIES_FOLDER,
+  OG_TAGLINE,
   walkSlug,
+  nextBuildSlug,
   normalizeSitename,
   neocitiesTargets,
   walkDescription,
+  defaultDescription,
   ogHeadHtml,
 } from '../public/lib/publish.js';
 
@@ -64,6 +67,21 @@ test('walkSlug falls back to the seed when the id has no digits', () => {
   const slug = walkSlug({ ...WALK, id: 'walk-x', seed: 'Moss-Fern-Quartz!' });
   assert.equal(slug, 'walk-20261004-mossfe');
   assert.match(slug, /^walk-\d{8}-[a-z0-9]{1,6}$/);
+});
+
+test('nextBuildSlug is the plain slug for a walk with no builds', () => {
+  for (const neocities of [undefined, null, {}]) {
+    assert.equal(nextBuildSlug({ ...WALK, neocities }), walkSlug(WALK), JSON.stringify(neocities));
+  }
+});
+
+test('nextBuildSlug appends the next build number after completed builds', () => {
+  const walk = {
+    ...WALK,
+    neocities: { builds: 1, slug: walkSlug(WALK), pageUrl: 'https://rob.neocities.org/aimless/x.html' },
+  };
+  assert.equal(nextBuildSlug(walk), `${walkSlug(WALK)}-2`);
+  assert.equal(nextBuildSlug({ ...walk, neocities: { ...walk.neocities, builds: 2 } }), `${walkSlug(WALK)}-3`);
 });
 
 test('normalizeSitename trims, lowercases and accepts hyphens', () => {
@@ -133,6 +151,11 @@ test('walkDescription omits the voice sentence for none, myvoice and absent', ()
   }
 });
 
+test('defaultDescription is walkDescription plus the tagline', () => {
+  assert.equal(OG_TAGLINE, 'Created with Aimless.earth. Go Nowhere, Somewhere.');
+  assert.equal(defaultDescription(WALK), `${walkDescription(WALK)} ${OG_TAGLINE}`);
+});
+
 const OG = {
   title: 'A walk on October 4, 2026',
   description: 'A walk on October 4, 2026, 3.2 km, 5 of 5 stops reached.',
@@ -182,4 +205,33 @@ test('ogHeadHtml escapes quotes and angle brackets in values', () => {
   assert.ok(html.includes('He said &quot;hi&quot; &lt;now&gt;'));
   assert.ok(!html.includes('"hi"'));
   assert.ok(!html.includes('<now>'));
+});
+
+test('ogHeadHtml without url/imageUrl keeps the always tags and drops the rest', () => {
+  const html = ogHeadHtml({ title: OG.title, description: OG.description });
+  for (const tag of [
+    '<meta name="description"',
+    'property="og:type"',
+    'property="og:title"',
+    'property="og:description"',
+    'name="twitter:card"',
+    'name="twitter:title"',
+    'name="twitter:description"',
+  ]) {
+    assert.equal(html.split(tag).length - 1, 1, tag);
+  }
+  for (const tag of [
+    'property="og:url"',
+    'property="og:image"',
+    'name="twitter:image"',
+  ]) {
+    assert.ok(!html.includes(tag), tag);
+  }
+});
+
+test('ogHeadHtml emits og:url alone when only url is supplied', () => {
+  const html = ogHeadHtml({ title: OG.title, description: OG.description, url: OG.url });
+  assert.equal(html.split('property="og:url"').length - 1, 1);
+  assert.ok(!html.includes('property="og:image"'));
+  assert.ok(!html.includes('name="twitter:image"'));
 });

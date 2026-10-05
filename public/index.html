@@ -868,8 +868,6 @@
     .publish-files li { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 4px; }
     .publish-files .file-name { word-break: break-all; }
     .publish-files .file-size { color: var(--fg-dim); white-space: nowrap; }
-    .publish-share-row { display: flex; gap: 10px; margin-bottom: 14px; }
-    .publish-share-row button { flex: 1; }
     .publish-steps { margin: 0 0 14px 18px; padding: 0; font-size: 0.85rem; color: var(--fg-dim); }
     .publish-steps li { margin-bottom: 4px; }
     .publish-steps code { color: var(--fg); }
@@ -1267,6 +1265,8 @@
       <p>Follow the arrow. Within about 30 metres of a waypoint the card is revealed and you're asked for a photo. The circle is generous on purpose: phone GPS drifts, so an exact spot could never be reached. If a waypoint is unreachable, tap "Close as I can get" and the walk accepts where you stood.</p>
       <h2>After</h2>
       <p>You get a self-contained HTML artifact of your walk that you can download or share: your route, your photos + the waypoint 'thoughts' that your coordinates generated. The My Voice option contains no extra text and an option to add your own writing. Open a walk from the Archive and add styling: choose a skin and apply filters to the images: long-press to select an image, again to deselect.</p>
+      <h2>Sharing</h2>
+      <p>A walk can leave your phone three ways: the Card, a square image of the route over your featured photo; the HTML file, one self-contained document with no scripts, so it opens cleanly on iOS and inside WhatsApp, Signal, Telegram, Discord or email; and a live page on your Neocities site, usually the best option for Facebook and anywhere that renders a link preview.</p>
       <h2>Offline and privacy</h2>
       <p>Everything runs on your device and works offline once loaded. Nothing is uploaded. A walk leaves the phone only as a file you choose to export, so export the ones you want to keep. Installing to the home screen gives the storage the best protection and gives a full-screen experience.</p>
       <h2>FAQ</h2>
@@ -1335,6 +1335,7 @@
         <summary>Can I put a walk on my Neocities site?</summary>
         <p>Yes. Open a walk from the Archive, tap export, then Neocities page. Aimless asks for your site name once, then builds two files: the page and a preview image. Upload both to a folder called <code>aimless</code> on your site, and the page is live with a proper preview when you share the link.</p>
         <p>Anyone with the link can see the page, so publish the walks you want seen. Your Neocities password and API key are never asked for.</p>
+        <p>The preview only knows where your page lives because of the folder: keep both files together in <code>aimless</code>, or the link preview loses its image.</p>
       </details>
       <details>
         <summary>Why is there no map?</summary>
@@ -1490,10 +1491,6 @@
         <div class="publish-heading" id="publish-heading-handoff">Files ready</div>
         <ul class="publish-files" id="publish-files"></ul>
         <button class="btn-primary" id="publish-download">Download both</button>
-        <div class="publish-share-row" id="publish-share-row" hidden>
-          <button id="publish-share-html">Share HTML</button>
-          <button id="publish-share-image">Share image</button>
-        </div>
         <ol class="publish-steps">
           <li>Open neocities.org/dashboard</li>
           <li>Open the folder <code>aimless</code>, or create it</li>
@@ -1552,7 +1549,7 @@
     import { renderToCanvas } from './lib/engine/canvas.js';
     import { renderPhotoToCanvas } from './lib/filter-renderer.js';
     import { resolveNavTarget, canStartNewWalk } from './lib/walk-nav.js';
-    import { walkSlug, normalizeSitename, neocitiesTargets, walkDescription, ogHeadHtml } from './lib/publish.js';
+    import { nextBuildSlug, normalizeSitename, neocitiesTargets, defaultDescription, ogHeadHtml } from './lib/publish.js';
 
     // --- Screen navigation ---
     const screens = {
@@ -2117,7 +2114,7 @@
     function renderPublishConsent() {
       const walk = currentDetailWalk;
       if (!walk) return;
-      const targets = neocitiesTargets(neocitiesSitename, walkSlug(walk));
+      const targets = neocitiesTargets(neocitiesSitename, nextBuildSlug(walk));
       document.getElementById('publish-url').textContent = targets.pageUrl;
       const contents = document.getElementById('publish-contents');
       contents.replaceChildren(...['Your photos', 'The route drawing', 'The words'].map((t) => {
@@ -2131,7 +2128,7 @@
         li.textContent = 'Includes the GPS link to the real route';
         contents.appendChild(li);
       }
-      publishDesc.value = walk.neocities?.description ?? walkDescription(walk);
+      publishDesc.value = walk.neocities?.description ?? defaultDescription(walk);
       publishCount.textContent = `${publishDesc.value.length}/200`;
     }
     publishDesc.addEventListener('input', () => {
@@ -2153,10 +2150,11 @@
     document.getElementById('btn-publish-build').addEventListener('click', async () => {
       const walk = currentDetailWalk;
       if (!walk) return;
-      const slug = walkSlug(walk);
+      const builds = (walk.neocities?.builds ?? 0) + 1;
+      const slug = nextBuildSlug(walk);
       const targets = neocitiesTargets(neocitiesSitename, slug);
       let description = publishDesc.value.replace(/\s+/g, ' ').trim().slice(0, 200);
-      if (!description) description = walkDescription(walk);
+      if (!description) description = defaultDescription(walk);
       const kmlIncluded = document.getElementById('opt-kml-link').checked;
 
       // Same "rendering…" toast as the HTML export - the engine render of
@@ -2186,6 +2184,7 @@
 
         walk.neocities = {
           sitename: neocitiesSitename,
+          builds,
           slug,
           pageUrl: targets.pageUrl,
           imageUrl: targets.imageUrl,
@@ -2217,9 +2216,6 @@
           li.append(nameEl, sizeEl);
           return li;
         }));
-        const canShareFile = navigator.canShare
-          && navigator.canShare({ files: [new File([jpgBlob], targets.imageName, { type: 'image/jpeg' })] });
-        document.getElementById('publish-share-row').hidden = !canShareFile;
         document.getElementById('neocities-sub').textContent = targets.pageUrl.replace(/^https:\/\//, '');
         showPublishStep('handoff');
       } finally {
@@ -2228,25 +2224,11 @@
     });
 
     // Hand-off step: download both (staggered - two immediate clicks get the
-    // second swallowed by some browsers), or single-file shares.
+    // second swallowed by some browsers), then upload via the dashboard.
     document.getElementById('publish-download').addEventListener('click', () => {
       if (!publishBuilt) return;
       downloadFile(publishBuilt.htmlName, publishBuilt.htmlBlob, 'text/html');
       setTimeout(() => downloadFile(publishBuilt.imageName, publishBuilt.jpgBlob, 'image/jpeg'), 300);
-    });
-    async function sharePublishFile(name, blob, type) {
-      const file = new File([blob], name, { type });
-      try {
-        await navigator.share({ files: [file] });
-      } catch (err) {
-        if (err.name !== 'AbortError') console.warn('Share failed:', err);
-      }
-    }
-    document.getElementById('publish-share-html').addEventListener('click', () => {
-      if (publishBuilt) sharePublishFile(publishBuilt.htmlName, publishBuilt.htmlBlob, 'text/html');
-    });
-    document.getElementById('publish-share-image').addEventListener('click', () => {
-      if (publishBuilt) sharePublishFile(publishBuilt.imageName, publishBuilt.jpgBlob, 'image/jpeg');
     });
     document.getElementById('publish-open-dashboard').addEventListener('click', () => {
       window.open('https://neocities.org/dashboard', '_blank', 'noopener');
@@ -4065,8 +4047,25 @@
         const url = await renderDetailPhoto(p);
         if (url && url.startsWith('data:')) rendered.push({ stopSeq: p.stopSeq, dataUrl: url });
       }
+      // Every exported artifact carries OG meta. Title and description
+      // always; the page/image URLs only once the walk has been published
+      // (the `aimless/` folder convention tells us where the file will
+      // live). A publish build passes its own headHtml and wins via
+      // extraOpts.
+      const headHtml = extraOpts.headHtml ?? ogHeadHtml({
+        title: currentDetailWalk.seed,
+        description: currentDetailWalk.neocities?.description || defaultDescription(currentDetailWalk),
+        ...(currentDetailWalk.neocities?.pageUrl ? {
+          url: currentDetailWalk.neocities.pageUrl,
+          imageUrl: currentDetailWalk.neocities.imageUrl,
+          width: 1200,
+          height: 630,
+          alt: `The route of an Aimless walk on ${formatWalkDate(currentDetailWalk.started)}`,
+        } : {}),
+      });
       return buildHTMLExport(currentDetailWalk, rendered, svg, skin.css, skin.icon, {
         includeKml: document.getElementById('opt-kml-link').checked,
+        headHtml,
         ...extraOpts,
       });
     }

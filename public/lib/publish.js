@@ -9,6 +9,9 @@ import { unreachableRate } from './proximity.js';
 /** Folder every published walk page lives under on the Neocities site. */
 export const NEOCITIES_FOLDER = 'aimless';
 
+/** Tagline appended to every generated description and OG description. */
+export const OG_TAGLINE = 'Created with Aimless.earth. Go Nowhere, Somewhere.';
+
 const SITENAME_RE = /^[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])?$/;
 
 /**
@@ -26,6 +29,17 @@ export function walkSlug(walk) {
     ? Number(digits).toString(36).slice(-6)
     : String(walk.seed).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 6);
   return `walk-${y}${m}${day}-${tail}`;
+}
+
+/**
+ * Slug for the NEXT build: the plain walk slug for the first build,
+ * then `<slug>-2`, `-3`, ... so each build's files never collide with
+ * an earlier upload still sitting in the site's `aimless/` folder.
+ * `walk.neocities.builds` is the count of completed builds.
+ */
+export function nextBuildSlug(walk) {
+  const builds = walk.neocities?.builds ?? 0;
+  return walkSlug(walk) + (builds > 0 ? `-${builds + 1}` : '');
 }
 
 /**
@@ -71,25 +85,41 @@ export function walkDescription(walk) {
   return text;
 }
 
+/** walkDescription plus the Aimless tagline - the default everywhere a description is pre-filled. */
+export function defaultDescription(walk) {
+  return `${walkDescription(walk)} ${OG_TAGLINE}`;
+}
+
 /**
- * The OG <head> block for a published walk page. One tag per line, every
- * attribute value escaped. width/height are the JPG's real pixel size.
+ * The OG <head> block for a walk page. One tag per line, every attribute
+ * value escaped. width/height are the JPG's real pixel size.
+ * url and imageUrl are optional: without `url` there is no og:url, and
+ * without `imageUrl` the whole og:image:* cluster and twitter:image are
+ * omitted - standard exports get the reduced block until the walk is
+ * published and real URLs exist to point at.
  */
 export function ogHeadHtml({ title, description, url, imageUrl, width, height, alt }) {
-  return [
+  const lines = [
     `<meta name="description" content="${esc(description)}">`,
     `<meta property="og:type" content="website">`,
     `<meta property="og:title" content="${esc(title)}">`,
     `<meta property="og:description" content="${esc(description)}">`,
-    `<meta property="og:url" content="${esc(url)}">`,
-    `<meta property="og:image" content="${esc(imageUrl)}">`,
-    `<meta property="og:image:type" content="image/jpeg">`,
-    `<meta property="og:image:width" content="${esc(width)}">`,
-    `<meta property="og:image:height" content="${esc(height)}">`,
-    `<meta property="og:image:alt" content="${esc(alt)}">`,
+  ];
+  if (url) lines.push(`<meta property="og:url" content="${esc(url)}">`);
+  if (imageUrl) {
+    lines.push(
+      `<meta property="og:image" content="${esc(imageUrl)}">`,
+      `<meta property="og:image:type" content="image/jpeg">`,
+      `<meta property="og:image:width" content="${esc(width)}">`,
+      `<meta property="og:image:height" content="${esc(height)}">`,
+      `<meta property="og:image:alt" content="${esc(alt)}">`,
+    );
+  }
+  lines.push(
     `<meta name="twitter:card" content="summary_large_image">`,
     `<meta name="twitter:title" content="${esc(title)}">`,
     `<meta name="twitter:description" content="${esc(description)}">`,
-    `<meta name="twitter:image" content="${esc(imageUrl)}">`,
-  ].join('\n');
+  );
+  if (imageUrl) lines.push(`<meta name="twitter:image" content="${esc(imageUrl)}">`);
+  return lines.join('\n');
 }
