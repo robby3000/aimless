@@ -138,6 +138,16 @@ test('without title/headHtml the head is the plain keepsake head', async () => {
   assert.ok(html.includes('initial-scale=1.0">\n<title>'));
 });
 
+test('export head carries the app icon link tags', async () => {
+  const html = await buildHTMLExport(WALK, [], '<svg></svg>');
+  assert.ok(html.includes('<link rel="icon" href="data:image/png;base64,'));
+  assert.ok(html.includes('sizes="16x16"'));
+  assert.ok(html.includes('sizes="32x32"'));
+  assert.ok(html.includes('<link rel="apple-touch-icon" href="data:image/png;base64,'));
+  assert.ok(html.indexOf('rel="icon"') > html.indexOf('<title>'), 'icons not after <title>');
+  assert.ok(html.indexOf('rel="icon"') < html.indexOf('<style'), 'icons not before <style>');
+});
+
 test('opts.title and opts.headHtml reach the head', async () => {
   const headHtml = '<meta property="og:title" content="x">';
   const html = await buildHTMLExport(WALK, [], '<svg></svg>', '', 'sky', {
@@ -232,9 +242,10 @@ test('buildHTMLExport places My Voice blocks under photos in order', async () =>
   ];
   const html = await buildHTMLExport(walk, photos, '<svg></svg>');
   // Block 0 belongs to the first photo (stopSeq 0), wherever it lands in the doc.
-  assert.ok(html.indexOf('first block') > html.indexOf('P0'), 'first block not under photo 1');
-  assert.ok(html.indexOf('first block') < html.indexOf('P1'), 'first block after second photo');
-  assert.ok(html.indexOf('second block') > html.indexOf('P1'), 'second block not under photo 2');
+  // Full data URLs as markers: bare 'P0'/'P1' can also match inside icon base64.
+  assert.ok(html.indexOf('first block') > html.indexOf('base64,P0'), 'first block not under photo 1');
+  assert.ok(html.indexOf('first block') < html.indexOf('base64,P1'), 'first block after second photo');
+  assert.ok(html.indexOf('second block') > html.indexOf('base64,P1'), 'second block not under photo 2');
   assert.ok(html.includes('<span class="haiku-line">still first</span>'), 'internal line break not preserved');
 });
 

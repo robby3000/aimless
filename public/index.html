@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-cfcae4b1">
+  <meta name="aimless-build" content="aimless-v0.2.0-9fe25999">
   <meta name="description" content="Go nowhere. Somewhere.">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/favicon-16.png" type="image/png" sizes="16x16">
@@ -1340,10 +1340,11 @@
       </details>
       <details>
         <summary>Can I put a walk on my Neocities site?</summary>
-        <p>Yes. Open a walk from the Archive, tap export, then Neocities page. Aimless asks for your site name once, then builds two files: the page and a preview image. Upload both to a folder called <code>aimless</code> on your site, and the page is live with a proper preview when you share the link.</p>
+        <p>Yes. Open a walk from the Archive, tap export, then Neocities page. Aimless asks for your site name once, then builds the files for you: the page, a preview image, and an index page that lists your published walks. Upload them to a folder called <code>aimless</code> on your site, and the page is live with a proper preview when you share the link.</p>
         <p>Anyone with the link can see the page, so publish the walks you want seen. Your Neocities password and API key are never asked for.</p>
-        <p>The preview only knows where your page lives because of the folder: keep both files together in <code>aimless</code>, or the link preview loses its image.</p>
-        <p>The third file, <code>index.html</code>, is a ready-made list of your published walks. Neocities serves it at <code>/aimless/</code>: link to it from your homepage, or upload it as your homepage if the site is walks only. It lists walks published from this device.</p>
+        <p>The preview only knows where your page lives because of the folder: keep the page and its image together in <code>aimless</code>, or the link preview loses its image.</p>
+        <p>Neocities serves <code>index.html</code> at <code>/aimless/</code>: a ready-made front page for your walks. Link to it from your homepage, or upload it as your homepage if the site is walks only. A walk joins the list when you tick the index checkbox at build time, or later on the published step; Update index makes a fresh <code>index.html</code> to upload after you change your mind.</p>
+        <p>Want a page of your own design instead? Copy file list puts your published walks on the clipboard as plain text: paths, titles, dates, descriptions. Feed it to an LLM with a creative prompt, or build the page by hand. Aimless only knows about walks published from this device.</p>
       </details>
       <details>
         <summary>Why is there no map?</summary>

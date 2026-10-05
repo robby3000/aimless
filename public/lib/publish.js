@@ -3,7 +3,7 @@
 // the site index page and the file-list manifest.
 // Pure: takes data, returns strings. No DOM, no storage.
 
-import { esc, formatWalkDate, voiceName, logoDataUri } from './export.js';
+import { esc, formatWalkDate, voiceName, logoDataUri, iconsHeadHtml } from './export.js';
 import { BASE_CSS } from './skins.js';
 import { formatKm } from './geo.js';
 import { unreachableRate } from './proximity.js';
@@ -173,6 +173,7 @@ export function indexHtml(entries, opts = {}) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${esc(opts.title || 'Aimless walks')}</title>
+${iconsHeadHtml()}
 <style>
 ${BASE_CSS}
 .idx-list { display: flex; flex-direction: column; gap: 18px; margin-top: 20px; }

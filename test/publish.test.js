@@ -276,6 +276,12 @@ test('indexHtml escapes titles and descriptions', () => {
   assert.ok(html.includes('a&lt;b&gt;'));
 });
 
+test('indexHtml head carries the app icon link tags', () => {
+  const html = indexHtml([]);
+  assert.ok(html.includes('<link rel="icon" href="data:image/png;base64,'));
+  assert.ok(html.includes('<link rel="apple-touch-icon" href="data:image/png;base64,'));
+});
+
 test('indexHtml renders an empty state with no entries', () => {
   const html = indexHtml([]);
   assert.ok(html.includes('No walks yet.'));
