@@ -142,6 +142,7 @@ export function publishedEntries(walks) {
       started: w.started,
       builtAt: w.neocities.builtAt ?? w.started ?? 0,
       description: w.neocities.description || defaultDescription(w),
+      voice: w.voice && w.voice !== 'none' ? voiceName(w.voice) : null,
     }))
     .sort((a, b) => b.builtAt - a.builtAt);
 }
@@ -201,7 +202,7 @@ ${BASE_CSS}
 export function manifestText(walks) {
   const lines = ['All paths relative to site root.'];
   for (const e of publishedEntries(walks)) {
-    lines.push(`${NEOCITIES_FOLDER}/${e.slug}.html | ${e.title} | ${formatWalkDate(e.started)} | ${e.description.replace(/\s+/g, ' ')}`);
+    lines.push(`${NEOCITIES_FOLDER}/${e.slug}.html | ${e.title} | ${formatWalkDate(e.started)} | ${e.description.replace(/\s+/g, ' ')}${e.voice ? ` | voice: ${e.voice}` : ''}`);
     lines.push(`${NEOCITIES_FOLDER}/${e.slug}.jpg (preview image)`);
   }
   return lines.join('\n');
