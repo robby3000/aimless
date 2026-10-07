@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-4dd0fcff">
+  <meta name="aimless-build" content="aimless-v0.2.0-28bca6ae">
   <meta name="description" content="Go nowhere. Somewhere.">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/favicon-16.png" type="image/png" sizes="16x16">
@@ -2160,7 +2160,7 @@
     const filenameSave = document.getElementById('btn-filename-save');
     let filenameResolve = null;
     let filenameOpts = {};
-    function askText({ label = 'File name', defaultValue = '', extension = '.html' } = {}) {
+    function askText({ label = 'File name', defaultValue = '', extension = '' } = {}) {
       return new Promise((resolve) => {
         filenameResolve = resolve;
         filenameOpts = { extension };
@@ -4631,7 +4631,7 @@
           downloadFile(filename, html, 'text/html');
         }
       } else if (action === 'download-html') {
-        const filename = await askText({ defaultValue: `aimless-${currentDetailWalk.seed}` });
+        const filename = await askText({ defaultValue: `aimless-${currentDetailWalk.seed}`, extension: '.html' });
         if (!filename) return;
         const html = await buildDetailHTMLWithFeedback();
         downloadFile(filename, html, 'text/html');
