@@ -884,6 +884,7 @@
     .publish-actions-col button { width: 100%; }
     .confirm-actions { display: flex; gap: 10px; justify-content: flex-end; }
     .confirm-actions button { min-width: 76px; }
+    .confirm-actions button[disabled] { opacity: 0.45; }
     #photo-hint-box .hint-never {
       display: flex;
       align-items: center;
@@ -2056,15 +2057,23 @@
       if (e.key === 'Escape' && !confirmOverlay.hidden) settleConfirm(false);
     });
 
-    // Filename dialog for the HTML artifact export — same overlay pattern as
-    // askConfirm, resolves to a sanitized name (extension appended) or null.
+    // Text-entry dialog — same overlay pattern as askConfirm. Used for the
+    // HTML artifact filename (extension '.html') and for filter names (no
+    // extension). Resolves the entered text, or null on cancel; Save stays
+    // disabled while the field is empty.
     const filenameOverlay = document.getElementById('filename-overlay');
+    const filenameLabel = document.getElementById('filename-label');
     const filenameInput = document.getElementById('filename-input');
+    const filenameSave = document.getElementById('btn-filename-save');
     let filenameResolve = null;
-    function askFilename(defaultName) {
+    let filenameOpts = {};
+    function askText({ label = 'File name', defaultValue = '', extension = '.html' } = {}) {
       return new Promise((resolve) => {
         filenameResolve = resolve;
-        filenameInput.value = defaultName;
+        filenameOpts = { extension };
+        filenameLabel.textContent = label;
+        filenameInput.value = defaultValue;
+        filenameSave.disabled = !defaultValue.trim();
         filenameOverlay.hidden = false;
         filenameInput.focus();
         filenameInput.select();
@@ -2075,10 +2084,16 @@
       if (filenameResolve) { filenameResolve(name); filenameResolve = null; }
     };
     const confirmFilename = () => {
-      const clean = filenameInput.value.trim().replace(/[\\/:*?"<>|]/g, '').replace(/\.html?$/i, '');
-      settleFilename(clean ? `${clean}.html` : null);
+      const value = filenameInput.value.trim();
+      if (!value) return;
+      if (!filenameOpts.extension) return settleFilename(value);
+      const clean = value.replace(/[\\/:*?"<>|]/g, '').replace(/\.[^.]+$/, '');
+      settleFilename(clean ? `${clean}${filenameOpts.extension}` : null);
     };
-    document.getElementById('btn-filename-save').addEventListener('click', confirmFilename);
+    filenameInput.addEventListener('input', () => {
+      filenameSave.disabled = !filenameInput.value.trim();
+    });
+    filenameSave.addEventListener('click', confirmFilename);
     document.getElementById('btn-filename-cancel').addEventListener('click', () => settleFilename(null));
     filenameOverlay.addEventListener('click', (e) => {
       if (e.target === filenameOverlay) settleFilename(null);  // backdrop cancels
@@ -4450,7 +4465,7 @@
           downloadFile(filename, html, 'text/html');
         }
       } else if (action === 'download-html') {
-        const filename = await askFilename(`aimless-${currentDetailWalk.seed}`);
+        const filename = await askText({ defaultValue: `aimless-${currentDetailWalk.seed}` });
         if (!filename) return;
         const html = await buildDetailHTMLWithFeedback();
         downloadFile(filename, html, 'text/html');
