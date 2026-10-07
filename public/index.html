@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-aa25bed0">
+  <meta name="aimless-build" content="aimless-v0.2.0-4dd0fcff">
   <meta name="description" content="Go nowhere. Somewhere.">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/favicon-16.png" type="image/png" sizes="16x16">
@@ -4163,6 +4163,8 @@
       p.specEpoch = (p.specEpoch || 0) + 1;
       const db = await dbPromise;
       if (db) await put(db, 'photos', p);
+      // The roll just made the selection savable — surface the Save token.
+      syncFilterRailToSelection();
       await refreshSelectedPhotoFrames();
     }
 
