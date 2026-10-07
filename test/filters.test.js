@@ -4,6 +4,7 @@ import { validateSpec } from '../public/lib/engine/spec.js';
 import {
   FILTERS,
   allFilters,
+  filterSpecJson,
   getFilter,
   importFilterSpec,
   setImportedFilters,
@@ -204,6 +205,18 @@ test('importFilterSpec rejects invalid input loudly', () => {
     () => importFilterSpec('{"format":"wobbletone-filter","version":1,"effects":[{"type":"nope","params":{}}]}'),
     /unknown effect type.*nope/
   );
+});
+
+test('filterSpecJson exports a bare spec that round-trips through importFilterSpec', () => {
+  const filter = getFilter('noire');
+  const json = filterSpecJson(filter, 'My Noire');
+  const parsed = JSON.parse(json);
+  assert.equal(parsed.format, 'wobbletone-filter');
+  assert.equal(parsed.name, 'My Noire');
+  const record = importFilterSpec(json, []);
+  assert.equal(record.id, 'my-noire');
+  assert.equal(record.name, 'My Noire');
+  assert.deepEqual(record.spec.effects, filter.spec.effects);
 });
 
 test('imported filters resolve through getFilter and allFilters', () => {

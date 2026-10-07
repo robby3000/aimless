@@ -219,3 +219,10 @@ export function importFilterSpec(input, takenIds = []) {
   for (let n = 2; taken.has(id); n += 1) id = `${id.replace(/-\d+$/, '')}-${n}`;
   return translateWobbletonePreset(parsed, { id, name });
 }
+
+// Serialize a filter for file export — a bare Filter Spec, the same shape
+// the Wobbletone Code tab emits, so the file round-trips through
+// importFilterSpec here and through preset import there.
+export function filterSpecJson(filter, name) {
+  return JSON.stringify({ ...filter.spec, name: name ?? filter.name }, null, 2) + '\n';
+}

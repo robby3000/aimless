@@ -605,14 +605,49 @@
       font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.12em;
       color: var(--fg-dim); padding: 10px 20px 2px;
     }
-    .filter-row {
-      display: flex; align-items: center; gap: 12px;
-      width: 100%; padding: 10px 20px; border: 0; background: none;
-      color: var(--fg); font: inherit; text-align: left;
+    .filter-card {
+      margin: 0 16px 8px;
+      padding: 10px;
+      background: var(--surface-2);
+      border: 1px solid rgba(230, 247, 249, 0.10);
+      border-radius: 6px;
     }
-    .filter-row .filter-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .filter-row .filter-action { flex: 0 0 auto; color: var(--fg-dim); font-size: 0.8rem; }
-    .filter-row.is-hidden .filter-name { opacity: 0.45; }
+    .filter-card-head { display: flex; align-items: flex-start; gap: 10px; }
+    .filter-thumb {
+      width: 56px; height: 56px; flex-shrink: 0;
+      border-radius: 4px; background: var(--bg);
+    }
+    .filter-card-info { flex: 1; min-width: 0; }
+    .filter-card-info .filter-name {
+      font-weight: 500;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .filter-effects {
+      font-size: 0.72rem; color: var(--fg-dim); margin-top: 3px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .filter-card-delete {
+      flex-shrink: 0; padding: 0 2px;
+      background: none; border: 0; color: var(--fg-dim);
+      font: inherit; font-size: 1rem; cursor: pointer;
+    }
+    .filter-card-delete:active { color: var(--danger); }
+    .filter-card-actions { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+    .filter-card-export {
+      padding: 4px 10px;
+      background: none; color: var(--fg);
+      border: 1px solid rgba(230, 247, 249, 0.18); border-radius: 2px;
+      font: inherit; font-size: 0.78rem; cursor: pointer;
+    }
+    .filter-card-export:active { background: rgba(230, 247, 249, 0.08); }
+    .filter-hide {
+      margin-left: auto; display: flex; align-items: center; gap: 6px;
+      font-size: 0.78rem; color: var(--fg-dim); cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .filter-hide input { width: 16px; height: 16px; accent-color: var(--accent); margin: 0; }
+    .filter-card.is-hidden .filter-card-info,
+    .filter-card.is-hidden .filter-thumb { opacity: 0.45; }
 
     /* Bottom export sheet. Overlays the nav bar so it reads as a modal
        action sheet, not another row in the controls column. */
@@ -1560,7 +1595,7 @@
     import { buildHexIndex, innerCard } from './lib/inner.js';
     import { oracleCard } from './lib/oracle.js';
     import { FILTERS, getFilter, allFilters, visibleFilters, setImportedFilters, importFilterSpec,
-             setHiddenFilters, hiddenFilters, hideFilter, unhideFilter, isFilterHidden,
+             filterSpecJson, setHiddenFilters, hiddenFilters, hideFilter, unhideFilter, isFilterHidden,
              effectiveFilterId, effectiveSpec } from './lib/filters.js';
     import { renderToCanvas } from './lib/engine/canvas.js';
     import { renderPhotoToCanvas } from './lib/filter-renderer.js';
@@ -1992,18 +2027,63 @@
       if (railMode === 'filter') renderDetailRail();
     }
 
+    // Wobbletone-style cards: a live thumbnail of the spec against the
+    // current photo, name + effect chain, and per-filter controls. Customs
+    // get delete (top right) and export; every filter gets a hide switch
+    // (checkbox controls rail visibility).
+    function filterCard(f, custom) {
+      const hidden = isFilterHidden(f.id);
+      const effects = f.spec.effects.map((e) => e.type).join(' → ');
+      return `<article class="filter-card${hidden ? ' is-hidden' : ''}">` +
+        `<div class="filter-card-head">` +
+        `<canvas class="filter-thumb" width="96" height="96" data-thumb="${f.id}"></canvas>` +
+        `<div class="filter-card-info">` +
+        `<div class="filter-name">${esc(f.name)}</div>` +
+        `<div class="filter-effects">${esc(effects || 'no effects')}</div>` +
+        `</div>` +
+        (custom ? `<button class="filter-card-delete" data-delete="${f.id}" aria-label="Delete filter" title="Delete filter">✕</button>` : '') +
+        `</div>` +
+        `<div class="filter-card-actions">` +
+        (custom ? `<button class="filter-card-export" data-export="${f.id}">export</button>` : '') +
+        `<label class="filter-hide"><input type="checkbox" data-hide="${f.id}"${hidden ? ' checked' : ''}> hide</label>` +
+        `</div></article>`;
+    }
+
     function renderManageList() {
-      const customs = importedSorted().map((f) =>
-        `<div class="filter-row"><span class="filter-name">${f.name}</span>` +
-        `<button class="filter-action" data-delete="${f.id}">delete</button></div>`).join('');
-      const builtins = FILTERS.map((f) => {
-        const hidden = isFilterHidden(f.id);
-        return `<div class="filter-row${hidden ? ' is-hidden' : ''}"><span class="filter-name">${f.name}</span>` +
-          `<button class="filter-action" data-${hidden ? 'unhide' : 'hide'}="${f.id}">${hidden ? 'show' : 'hide'}</button></div>`;
-      }).join('');
+      const customs = importedSorted().map((f) => filterCard(f, true)).join('');
+      const builtins = FILTERS.map((f) => filterCard(f, false)).join('');
       elManageList.innerHTML =
         (customs ? `<div class="filter-sub">Custom</div>${customs}` : '') +
         `<div class="filter-sub">Built-in</div>${builtins}`;
+      pumpFilterThumbs();
+    }
+
+    // Card thumbnails preview each spec against the first selected photo —
+    // or the walk's first when nothing is selected. One card per animation
+    // frame so opening the sheet never blocks; detached canvases (a rebuilt
+    // list) are skipped.
+    async function pumpFilterThumbs() {
+      const photo = currentDetailPhotos.find((p) => selectedPhotoSeqs.has(p.stopSeq)) || currentDetailPhotos[0];
+      const jobs = [...elManageList.querySelectorAll('canvas.filter-thumb')]
+        .map((canvas) => ({ canvas, spec: getFilter(canvas.dataset.thumb)?.spec }))
+        .filter((job) => job.spec);
+      if (!jobs.length) return;
+      const { img } = photo ? await photoSource(photo) : { img: null };
+      if (!img) { jobs.forEach((job) => { job.canvas.hidden = true; }); return; }
+      const step = () => {
+        const job = jobs.shift();
+        if (!job) return;
+        if (job.canvas.isConnected) {
+          try {
+            const rendered = renderDetailCanvas(img, photo, job.spec, 96);
+            const s = Math.min(rendered.width, rendered.height);
+            job.canvas.getContext('2d')
+              .drawImage(rendered, (rendered.width - s) / 2, (rendered.height - s) / 2, s, s, 0, 0, 96, 96);
+          } catch { job.canvas.hidden = true; }
+        }
+        requestAnimationFrame(step);
+      };
+      step();
     }
 
     async function refreshImportedFilters() {
@@ -2396,8 +2476,35 @@
     });
     document.getElementById('btn-publish-published-done').addEventListener('click', closePublish);
 
+    // Export a custom filter as a bare Filter Spec file — the same shape
+    // the Wobbletone export produces, so the file round-trips through both
+    // apps' importers. Share sheet first, plain download as fallback.
+    async function exportFilter(id) {
+      const filter = getFilter(id);
+      if (!filter) return;
+      const name = await askText({ label: 'Filter name', defaultValue: filter.name });
+      if (!name) return;
+      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'aimless-filter';
+      const filename = `${slug}.json`;
+      const text = filterSpecJson(filter, name);
+      if (typeof File !== 'undefined' && navigator.share) {
+        const file = new File([text], filename, { type: 'application/json' });
+        try {
+          if (navigator.canShare?.({ files: [file] })) {
+            await navigator.share({ title: 'Aimless filter', files: [file] });
+          } else {
+            await navigator.share({ title: 'Aimless filter', text });
+          }
+          return;
+        } catch (err) {
+          if (err.name === 'AbortError') return;
+        }
+      }
+      downloadFile(filename, text, 'application/json');
+    }
+
     elManageList.addEventListener('click', async (e) => {
-      const t = e.target.closest('.filter-action');
+      const t = e.target.closest('[data-delete], [data-export]');
       if (!t) return;
       if (t.dataset.delete) {
         const id = t.dataset.delete;
@@ -2408,20 +2515,28 @@
         if (currentFilter === id) currentFilter = 'original';
         savePrefs();
         await refreshImportedFilters();
-      } else if (t.dataset.hide) {
+      } else if (t.dataset.export) {
+        exportFilter(t.dataset.export);
+        return;
+      }
+      if (currentDetailWalk) showWalkDetail(currentDetailWalk.id);
+    });
+
+    // The hide switch is a checkbox per card — change, not click.
+    elManageList.addEventListener('change', (e) => {
+      const t = e.target.closest('input[data-hide]');
+      if (!t) return;
+      if (t.checked) {
         hideFilter(t.dataset.hide);
         if (currentFilter === t.dataset.hide) {
           currentFilter = visibleFilters()[0]?.id || 'original';
         }
-        savePrefs();
-        renderFilterRail();
-        renderManageList();
-      } else if (t.dataset.unhide) {
-        unhideFilter(t.dataset.unhide);
-        savePrefs();
-        renderFilterRail();
-        renderManageList();
+      } else {
+        unhideFilter(t.dataset.hide);
       }
+      savePrefs();
+      renderFilterRail();
+      t.closest('.filter-card')?.classList.toggle('is-hidden', t.checked);
       if (currentDetailWalk) showWalkDetail(currentDetailWalk.id);
     });
 
