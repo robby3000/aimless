@@ -163,6 +163,10 @@ let importedFilters = [];
 
 export function setImportedFilters(filters) {
   importedFilters = (filters || []).map((filter) => validateFilter(filter));
+  // Rail order is oldest to newest so the latest save/import lands next to
+  // the action tokens. Records from before createdAt existed keep their
+  // store order ahead of dated ones (sort is stable, missing = 0).
+  importedFilters.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
   return importedFilters;
 }
 

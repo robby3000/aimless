@@ -219,6 +219,18 @@ test('filterSpecJson exports a bare spec that round-trips through importFilterSp
   assert.deepEqual(record.spec.effects, filter.spec.effects);
 });
 
+test('imported filters ride the rail oldest to newest (createdAt order)', () => {
+  const older = importFilterSpec({ format: 'wobbletone-filter', version: 1, name: 'Zed Older', effects: [] }, []);
+  const newer = importFilterSpec({ format: 'wobbletone-filter', version: 1, name: 'Aaa Newer', effects: [] }, []);
+  setImportedFilters([{ ...newer, createdAt: 200 }, { ...older, createdAt: 100 }]);
+  try {
+    // Dated records sort ascending regardless of id or store order.
+    assert.deepEqual(allFilters().slice(FILTERS.length).map((f) => f.id), ['zed-older', 'aaa-newer']);
+  } finally {
+    setImportedFilters([]);
+  }
+});
+
 test('imported filters resolve through getFilter and allFilters', () => {
   const record = importFilterSpec({ format: 'wobbletone-filter', version: 1, name: 'ZZ Custom', effects: [] }, []);
   setImportedFilters([record]);
