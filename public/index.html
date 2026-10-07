@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-28bca6ae">
+  <meta name="aimless-build" content="aimless-v0.2.0-382259e1">
   <meta name="description" content="Go nowhere. Somewhere.">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/favicon-16.png" type="image/png" sizes="16x16">
@@ -1495,7 +1495,7 @@
   <div id="filename-overlay" hidden>
     <div id="filename-box" role="dialog" aria-labelledby="filename-label" aria-modal="true">
       <div id="filename-label">File name</div>
-      <input id="filename-input" type="text" autocomplete="off" spellcheck="false" />
+      <input id="filename-input" name="aimless-text" type="text" autocomplete="off" autocorrect="off" spellcheck="false" data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true" />
       <div class="confirm-actions">
         <button id="btn-filename-cancel">Cancel</button>
         <button id="btn-filename-save" class="btn-primary">Save</button>
