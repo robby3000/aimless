@@ -530,7 +530,7 @@
     }
     .rail-item.selected { color: var(--fg); opacity: 1; }
     /* Surprise's only flourish: a coral period, same as the logo. */
-    .rail-item.rail-surprise span { color: var(--accent); }
+    .rail-item.rail-surprise span, .rail-item.rail-save span { color: var(--accent); }
     /* Rail-end affordance: a boxed coral plus opens the filters sheet —
        shaped differently from the bare-word items so it reads as a verb. */
     .rail-item.rail-plus { opacity: 0.75; }
@@ -1763,10 +1763,18 @@
     // set once, filters are auditioned repeatedly.
     let railMode = 'filter';
     // Surprise always rides the last content slot — it's an action (roll a
-    // random stack onto the one selected photo), not a stored filter. The
-    // boxed plus after it opens the filters sheet.
+    // random stack onto the one selected photo), not a stored filter. Save
+    // appears between it and the boxed plus only while a selected photo
+    // carries a rolled spec. The plus opens the filters sheet.
     const SURPRISE_TOKEN = '<div class="rail-item rail-surprise" data-action data-value="surprise">Surprise<span>.</span></div>';
+    const SAVE_TOKEN = '<div class="rail-item rail-save" data-action data-value="save">Save<span>.</span></div>';
     const ADD_TOKEN = '<div class="rail-item rail-plus" data-action data-value="add"><span class="plus-box">+</span></div>';
+    let railHasSave = false;
+    // A selected photo's stored Surprise roll is what Save writes to the
+    // filters store.
+    function hasSavableSpec() {
+      return currentDetailPhotos.some((p) => selectedPhotoSeqs.has(p.stopSeq) && p.filterSpec);
+    }
     // The shared base result styles and the active skin are injected scoped
     // to the detail view so they cannot leak into the rest of the app; the
     // export embeds the same fragments unscoped. Base first, skin after it,
@@ -1890,6 +1898,10 @@
         surpriseSelectedPhoto();
         return;
       }
+      if (value === 'save') {
+        saveSurpriseSpec();
+        return;
+      }
       // With photos selected the rail is scoped to them: it writes filterId
       // onto those photo records. With none selected there is no walk-wide
       // render — the tap only arms the value as last-used (the item lights
@@ -1916,9 +1928,10 @@
     // Rebuild the rail's contents for the active mode and reflect the mode
     // on the gutter buttons (coral on lighter teal = pressed).
     function renderDetailRail() {
+      if (railMode === 'filter') railHasSave = hasSavableSpec();
       railDetail.innerHTML = railMode === 'skin'
         ? SKINS.map((s) => `<div class="rail-item" data-value="${s.id}">${s.name}</div>`).join('')
-        : visibleFilters().map((f) => `<div class="rail-item" data-value="${f.id}">${f.name}</div>`).join('') + SURPRISE_TOKEN + ADD_TOKEN;
+        : visibleFilters().map((f) => `<div class="rail-item" data-value="${f.id}">${f.name}</div>`).join('') + SURPRISE_TOKEN + (railHasSave ? SAVE_TOKEN : '') + ADD_TOKEN;
       detailRail.refresh();
       if (railMode === 'skin') detailRail.setValue(currentSkin);
       else syncFilterRailToSelection();
@@ -3857,6 +3870,15 @@
       // The rail only carries filters in filter mode; in skin mode the
       // selection's state is re-marked when the user switches back.
       if (railMode !== 'filter') return;
+      // The Save token exists only while a selected photo carries a rolled
+      // spec — when that flips, rebuild the rail without moving its scroll.
+      // renderDetailRail re-enters this function with the flag already set.
+      if (hasSavableSpec() !== railHasSave) {
+        const scroll = railDetail.scrollLeft;
+        renderDetailRail();
+        railDetail.scrollLeft = scroll;
+        return;
+      }
       // Nothing selected, or a mixed selection: nothing is lit — a lit
       // filter only ever means "this is what the selection has".
       if (!selectedPhotoSeqs.size) { detailRail.clearSelection(); return; }
@@ -4027,6 +4049,33 @@
       const db = await dbPromise;
       if (db) await put(db, 'photos', p);
       await refreshSelectedPhotoFrames();
+    }
+
+    // Rail tail action (exists only while a selected photo carries a roll):
+    // save the rolled spec as a named custom filter in the filters store.
+    // The photo keeps its own spec copy — the snapshot survives the saved
+    // filter being renamed or deleted later.
+    async function saveSurpriseSpec() {
+      const p = currentDetailPhotos.find((x) => selectedPhotoSeqs.has(x.stopSeq) && x.filterSpec);
+      if (!p) return;
+      const name = await askText({ label: 'Filter name' });
+      if (!name) return;
+      try {
+        // importFilterSpec gives validation and slug-id dedup for free. Deep
+        // copy: validateSpec normalises params in place and must not mutate
+        // the photo's stored roll.
+        const specCopy = JSON.parse(JSON.stringify(p.filterSpec));
+        specCopy.name = name;
+        const record = importFilterSpec(specCopy, allFilters().map((f) => f.id));
+        record.createdAt = Date.now();
+        const db = await dbPromise;
+        if (db) await put(db, 'filters', record);
+        else setImportedFilters([...allFilters().slice(FILTERS.length), record]);
+        await refreshImportedFilters();
+        showToast(`Saved filter "${record.name}"`);
+      } catch (err) {
+        showToast(err.message || 'Could not save filter');
+      }
     }
 
     // Instruction modal — long-press isn't discoverable otherwise. Shows on
