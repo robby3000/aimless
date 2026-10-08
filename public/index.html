@@ -402,6 +402,15 @@
 
     /* --- Archive screen --- */
     #screen-archive { gap: 12px; }
+    .archive-toolbar {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+    .archive-toolbar button {
+      padding: 8px 14px;
+      font-size: 0.85rem;
+    }
     .archive-empty {
       flex: 1;
       display: flex;
@@ -1293,6 +1302,10 @@
 
   <!-- Archive screen -->
   <section id="screen-archive" class="screen">
+    <div class="archive-toolbar">
+      <button id="btn-backup" type="button">Back up</button>
+      <button id="btn-restore" type="button">Restore</button>
+    </div>
     <div id="archive-list"></div>
     <div id="archive-empty" class="archive-empty">No walks yet.<br>Press go.</div>
   </section>
@@ -1333,7 +1346,7 @@
       </details>
       <details>
         <summary>Will my walks survive?</summary>
-        <p>Only if you export them. Walks live in browser storage, which browsers can clear under pressure or via privacy settings. Open a walk from the Archive and tap export: the HTML file is self-contained, opens anywhere, and needs no app. Installing Aimless to the home screen gives storage the best protection. The same goes for your saved filters: export the ones you want to keep.</p>
+        <p>Only if you export them. Walks live in browser storage, which browsers can clear under pressure or via privacy settings. Open a walk from the Archive and tap export: the HTML file is self-contained, opens anywhere, and needs no app. Installing Aimless to the home screen gives storage the best protection. For the whole collection at once, Back up on the Archive screen writes walks, photos and saved filters to one JSON file; Restore brings them back, which is also how everything moves to a new phone.</p>
       </details>
       <details>
         <summary>What are the voices?</summary>
@@ -1472,6 +1485,7 @@
     </div>
   </div>
   <input type="file" id="myvoice-file" accept=".txt,text/plain" hidden>
+  <input type="file" id="backup-file" accept=".json,application/json" hidden>
 
   <nav>
     <button id="nav-go" class="active">Go</button>
@@ -1601,6 +1615,7 @@
     import { FILTERS, getFilter, allFilters, visibleFilters, setImportedFilters, importFilterSpec,
              filterSpecJson, setHiddenFilters, hiddenFilters, hideFilter, unhideFilter, isFilterHidden,
              effectiveFilterId, effectiveSpec } from './lib/filters.js';
+    import { buildBackup, parseBackup } from './lib/backup.js';
     import { renderToCanvas } from './lib/engine/canvas.js';
     import { renderPhotoToCanvas } from './lib/filter-renderer.js';
     import { resolveNavTarget, canStartNewWalk } from './lib/walk-nav.js';
@@ -2489,31 +2504,40 @@
     });
     document.getElementById('btn-publish-published-done').addEventListener('click', closePublish);
 
+    // Share a payload as a file via the platform sheet, falling back to a
+    // plain download. allowText: small payloads may share as raw text when
+    // file-share is refused (Android Chrome rejects .json files); a full
+    // backup is far too big to paste anywhere, so it passes allowText:false.
+    async function shareOrDownloadFile(filename, text, title, { type = 'application/json', allowText = true } = {}) {
+      if (typeof File !== 'undefined' && navigator.share) {
+        const file = new File([text], filename, { type });
+        try {
+          if (navigator.canShare?.({ files: [file] })) {
+            await navigator.share({ title, files: [file] });
+            return 'shared';
+          }
+          if (allowText) {
+            await navigator.share({ title, text });
+            return 'shared';
+          }
+        } catch (err) {
+          if (err.name === 'AbortError') return 'aborted';
+        }
+      }
+      downloadFile(filename, text, type);
+      return 'downloaded';
+    }
+
     // Export a custom filter as a bare Filter Spec file — the same shape
     // the Wobbletone export produces, so the file round-trips through both
-    // apps' importers. Share sheet first, plain download as fallback.
+    // apps' importers.
     async function exportFilter(id) {
       const filter = getFilter(id);
       if (!filter) return;
       const name = await askText({ label: 'Filter name', defaultValue: filter.name });
       if (!name) return;
       const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'aimless-filter';
-      const filename = `${slug}.json`;
-      const text = filterSpecJson(filter, name);
-      if (typeof File !== 'undefined' && navigator.share) {
-        const file = new File([text], filename, { type: 'application/json' });
-        try {
-          if (navigator.canShare?.({ files: [file] })) {
-            await navigator.share({ title: 'Aimless filter', files: [file] });
-          } else {
-            await navigator.share({ title: 'Aimless filter', text });
-          }
-          return;
-        } catch (err) {
-          if (err.name === 'AbortError') return;
-        }
-      }
-      downloadFile(filename, text, 'application/json');
+      await shareOrDownloadFile(`${slug}.json`, filterSpecJson(filter, name), 'Aimless filter');
     }
 
     elManageList.addEventListener('click', async (e) => {
@@ -3817,6 +3841,100 @@
         list.appendChild(item);
       }
     }
+
+    // --- Backup / restore ---
+    // One JSON file carries every durable store: walks, photos, custom
+    // filters, prefs (the ephemeral activeWalk row stays out). Restore
+    // merges by id and never overwrites - a backup can only add data.
+    async function backupData() {
+      const db = await dbPromise;
+      if (!db) return showToast('Storage unavailable');
+      const [walks, photos, filters] = await Promise.all([
+        all(db, 'walks'), all(db, 'photos'), all(db, 'filters'),
+      ]);
+      if (!walks.length && !filters.length) return showToast('Nothing to back up');
+      const prefs = await getPrefs(db, DEFAULT_PREFS);
+      const name = await askText({
+        label: 'File name',
+        defaultValue: `aimless-backup-${new Date().toISOString().slice(0, 10)}`,
+      });
+      if (!name) return;
+      const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'aimless-backup';
+      const text = JSON.stringify(buildBackup({ walks, photos, filters, prefs }), null, 2) + '\n';
+      const result = await shareOrDownloadFile(`${slug}.json`, text, 'Aimless backup', { allowText: false });
+      if (result === 'downloaded') showToast('Sharing unavailable; downloaded backup');
+    }
+
+    async function restoreBackup(file) {
+      if (!file) return;
+      let backup;
+      try {
+        backup = parseBackup(await file.text());
+      } catch (err) {
+        showToast(err.message);
+        return;
+      }
+      const db = await dbPromise;
+      if (!db) return showToast('Storage unavailable');
+      const walkIds = new Set((await all(db, 'walks')).map((w) => w.id));
+      const photoIds = new Set((await all(db, 'photos')).map((p) => p.id));
+      const filterIds = new Set(allFilters().map((f) => f.id));
+      const added = { walks: 0, photos: 0, filters: 0 };
+      let already = 0;
+      for (const w of backup.walks) {
+        if (walkIds.has(w.id)) { already += 1; continue; }
+        await put(db, 'walks', w);
+        walkIds.add(w.id);
+        added.walks += 1;
+      }
+      for (const p of backup.photos) {
+        if (photoIds.has(p.id)) { already += 1; continue; }
+        await put(db, 'photos', p);
+        photoIds.add(p.id);
+        added.photos += 1;
+      }
+      // Filters dedupe by slug rather than skipping: a collision renames
+      // the restored record (rainy -> rainy-2) instead of dropping it.
+      for (const f of backup.filters) {
+        const record = { ...f };
+        if (filterIds.has(record.id)) {
+          const base = record.id.replace(/-\d+$/, '');
+          let n = 2;
+          while (filterIds.has(`${base}-${n}`)) n += 1;
+          record.id = `${base}-${n}`;
+        }
+        await put(db, 'filters', record);
+        filterIds.add(record.id);
+        added.filters += 1;
+      }
+      // Restored prefs are stored but not applied to the live session -
+      // they take effect on the next launch.
+      if (backup.prefs) {
+        const picked = Object.fromEntries(
+          Object.entries(backup.prefs).filter(([key]) => key in DEFAULT_PREFS));
+        await setPrefs(db, picked);
+      }
+      await refreshImportedFilters();
+      renderArchive();
+      const skipped = backup.skipped.walks + backup.skipped.photos + backup.skipped.filters;
+      let msg = `Restored ${added.walks} walk${added.walks === 1 ? '' : 's'}, ` +
+        `${added.photos} photo${added.photos === 1 ? '' : 's'}, ` +
+        `${added.filters} filter${added.filters === 1 ? '' : 's'}`;
+      if (already) msg += ` (${already} already present)`;
+      if (skipped) msg += ` - ${skipped} malformed record${skipped === 1 ? '' : 's'} skipped`;
+      showToast(msg);
+    }
+
+    document.getElementById('btn-backup').addEventListener('click', () => {
+      backupData().catch(() => showToast('Could not write backup'));
+    });
+    const backupFile = document.getElementById('backup-file');
+    document.getElementById('btn-restore').addEventListener('click', () => backupFile.click());
+    backupFile.addEventListener('change', async () => {
+      const file = backupFile.files && backupFile.files[0];
+      backupFile.value = '';
+      if (file) restoreBackup(file).catch(() => showToast('Could not restore backup'));
+    });
 
     // --- Walk detail ---
     let currentDetailWalk = null;

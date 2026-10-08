@@ -57,6 +57,7 @@ public/
     platform.js         # UA detection: isIOS, isInAppBrowser, isStandalone
     inner.js            # The Inner voice: I Ching hexagram from coordinates (docs/iching/)
     filters.js          # Filter Spec presets ({id,name,spec}) + Wobbletone translation
+    backup.js           # app-data archive: buildBackup/parseBackup over walks+photos+filters+prefs
     filter-renderer.js  # thin engine adapter: cover-fit + renderToCanvas (share cards)
     engine/             # wobbletone-engine git submodule — shared CPU renderer (do not edit here)
     kml.js              # KML route export (plan + trace + stop placemarks)
@@ -70,7 +71,7 @@ public/
     inner.json          # 64 hexagrams: number, hex_font, binary, title, haiku
 test/
   geo.test.js  rng.test.js  walk.test.js  deck.test.js  proximity.test.js  skins.test.js
-  platform.test.js  export.test.js  inner.test.js  filters.test.js  filter-renderer.test.js
+  platform.test.js  export.test.js  inner.test.js  filters.test.js  backup.test.js  filter-renderer.test.js
   kml.test.js  walk-nav.test.js  engine.test.js  surprise.test.js  oracle.test.js
   publish.test.js
 scripts/
