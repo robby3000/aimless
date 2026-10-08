@@ -2,7 +2,7 @@
 // A walking app must work with no signal - precache the shell, fall back to
 // cache for everything else. No CDN, no external resources (roadmap A2).
 
-const CACHE = 'aimless-v0.2.0-07f62150';
+const CACHE = 'aimless-v0.2.0-67207670';
 
 // Resolved against the worker's own URL, so the app works at a domain root
 // or under a subpath (GitHub Pages project sites) with no changes.
@@ -34,6 +34,7 @@ const PRECACHE = [
   './lib/platform.js',
   './lib/inner.js',
   './lib/filters.js',
+  './lib/backup.js',
   './lib/filter-renderer.js',
   './lib/walk-nav.js',
   './lib/oracle.js',
