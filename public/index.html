@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-382259e1">
+  <meta name="aimless-build" content="aimless-v0.2.0-d3842d01">
   <meta name="description" content="Go nowhere. Somewhere.">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/favicon-16.png" type="image/png" sizes="16x16">
@@ -1911,15 +1911,24 @@
       };
     }
 
-    const detailRail = makeRail(railDetail, (value) => {
+    const detailRail = makeRail(railDetail, async (value) => {
       if (railMode === 'skin') {
         currentSkin = value;
         applySkin();
         savePrefs();
-        // The trace SVG's colours come from the skin too (they are
-        // attributes, not CSS), so the detail view must re-render on a
-        // skin change.
-        if (currentDetailWalk) showWalkDetail(currentDetailWalk.id);
+        // A purposeful selection persists onto the walk record — the
+        // artifact keeps this skin until another is chosen here. The put
+        // must land before showWalkDetail re-reads the record, or the
+        // rebuild would stamp the stale skin back over the choice.
+        if (currentDetailWalk) {
+          currentDetailWalk.skin = value;
+          const db = await dbPromise;
+          if (db) await put(db, 'walks', currentDetailWalk);
+          // The trace SVG's colours come from the skin too (they are
+          // attributes, not CSS), so the detail view must re-render on a
+          // skin change.
+          showWalkDetail(currentDetailWalk.id);
+        }
         return;
       }
       if (value === 'add') {
@@ -3560,6 +3569,7 @@
           oracle: s.card?.oracle,       // oracle voices: the drawn title
         })),
         trace,
+        skin: currentSkin,   // the skin the artifact was given at creation
         gaveUp,
       };
       lastDoneRecord = record;   // the done screen's "Take me home" reads this
@@ -4229,6 +4239,11 @@
       // same walk (skin change, management actions) keep it.
       if (currentDetailWalk?.id !== walk.id) selectedPhotoSeqs.clear();
       currentDetailWalk = walk;
+      // The walk keeps the skin it was given — viewing restores that skin to
+      // the rail rather than the walk inheriting whatever happens to be
+      // selected. Walks saved before this field existed fall back to the
+      // current skin.
+      currentSkin = walk.skin || currentSkin;
 
       // Load photos.
       const photos = await byIndex(db, 'photos', 'walkId', walkId);
