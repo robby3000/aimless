@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-d3842d01">
+  <meta name="aimless-build" content="aimless-v0.2.0-07f62150">
   <meta name="description" content="Go nowhere. Somewhere.">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/favicon-16.png" type="image/png" sizes="16x16">
@@ -1333,7 +1333,7 @@
       </details>
       <details>
         <summary>Will my walks survive?</summary>
-        <p>Only if you export them. Walks live in browser storage, which browsers can clear under pressure or via privacy settings. Open a walk from the Archive and tap export: the HTML file is self-contained, opens anywhere, and needs no app. Installing Aimless to the home screen gives storage the best protection.</p>
+        <p>Only if you export them. Walks live in browser storage, which browsers can clear under pressure or via privacy settings. Open a walk from the Archive and tap export: the HTML file is self-contained, opens anywhere, and needs no app. Installing Aimless to the home screen gives storage the best protection. The same goes for your saved filters: export the ones you want to keep.</p>
       </details>
       <details>
         <summary>What are the voices?</summary>
@@ -1356,7 +1356,7 @@
       </details>
       <details>
         <summary>What does the Surprise filter do?</summary>
-        <p>It doesn't pick a filter, it rolls one: a random stack of effects stored on that photo. Most rolls are ordinary, occasionally one is golden. Keep tapping until one clicks, then leave it alone: the next tap replaces it. It works on exactly one selected photo at a time.</p>
+        <p>It doesn't pick a filter, it rolls one: a random stack of effects stored on that photo. Most rolls are ordinary, occasionally one is golden. Keep tapping until one clicks, then leave it alone: the next tap replaces it. A roll worth keeping: tap Save. in the rail, name it, and it joins your filters like any other. It works on exactly one selected photo at a time.</p>
       </details>
       <details>
         <summary>punk mode</summary>
@@ -1368,11 +1368,15 @@
       </details>
       <details>
         <summary>What is Wobbletone?</summary>
-        <p><a href="https://wobbletone.com" target="_blank" rel="noopener">Wobbletone</a> is an image effects playground that is easy to use for infinite creative possibilities. You build a stack of effects, each with its own settings; these are the same format as Aimless filters. Create a set of amazing custom filters and import them into Aimless.</p>
+        <p><a href="https://wobbletone.com" target="_blank" rel="noopener">Wobbletone</a> is an image effects playground that is easy to use for infinite creative possibilities. You build a stack of effects, each with its own settings; these are the same format as Aimless filters. Create a set of amazing custom filters and send them to Aimless: each preset's Export button saves exactly the file the Filters sheet imports.</p>
       </details>
       <details>
         <summary>How do I import my own filters?</summary>
-        <p>Tap the + at the end of the Filter rail on a walk's detail page. You can copy and paste the code of a single Wobbletone filter you create, or save a set of presets and import them all at once. Get it at <a href="https://wobbletone.com" target="_blank" rel="noopener">wobbletone.com</a>.</p>
+        <p>Tap the + at the end of the Filter rail on a walk's detail page, then import one filter at a time: paste the code from Wobbletone's Code tab, or tap Export on a Wobbletone preset to save a .json file and bring it in with choose file. Get Wobbletone at <a href="https://wobbletone.com" target="_blank" rel="noopener">wobbletone.com</a>.</p>
+      </details>
+      <details>
+        <summary>How do I tidy the filter rail?</summary>
+        <p>The same + opens the Filters sheet, where every filter shows a live preview on one of the walk's photos. Any filter can be hidden so the rail stays short. Your own filters, saved or imported, can also be exported as .json files to share, or deleted.</p>
       </details>
       <details>
         <summary>Can I put a walk on my Neocities site?</summary>
@@ -1414,7 +1418,7 @@
     <div class="sheet-handle"></div>
     <div class="sheet-heading">Filters</div>
     <div class="filter-manage-import">
-      <textarea id="filter-json" rows="4" spellcheck="false" placeholder='Paste filter spec JSON (from Wobbletone.com code tab) and import, or choose a .json file'></textarea>
+      <textarea id="filter-json" rows="4" spellcheck="false" placeholder='Paste filter spec JSON (from Wobbletone Export or Code tab) and import, or choose a .json file'></textarea>
       <input type="file" id="filter-file" accept=".json,application/json" hidden>
       <div class="filter-import-actions">
         <button id="btn-filter-file">choose file</button>
