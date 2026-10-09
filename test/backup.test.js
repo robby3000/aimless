@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildBackup, parseBackup, BACKUP_SCHEMA, BACKUP_VERSION } from '../public/lib/backup.js';
+import { buildBackup, parseBackup, resolveRestoredFilter, BACKUP_SCHEMA, BACKUP_VERSION } from '../public/lib/backup.js';
 
 const WALK = {
   id: 'walk-1',
@@ -100,4 +100,38 @@ test('filter validation does not mutate the stored record', () => {
   const parsed = parseBackup({ schema: BACKUP_SCHEMA, version: 1, filters: [loose] });
   assert.equal(parsed.filters.length, 1);
   assert.equal(parsed.filters[0].spec.extraKey, 'kept');
+});
+
+test('restore skips a filter that is already installed', () => {
+  const existing = new Map([[FILTER.id, FILTER]]);
+  assert.equal(resolveRestoredFilter({ ...FILTER }, existing), null);
+});
+
+test('restore renames on a bare id collision', () => {
+  const incoming = { ...FILTER, name: 'Stormy' };
+  const record = resolveRestoredFilter(incoming, new Map([[FILTER.id, FILTER]]));
+  assert.equal(record.id, 'rainy-2');
+  assert.equal(record.name, 'Stormy');
+});
+
+test('a renamed restore climbs past existing suffixes', () => {
+  const existing = new Map([
+    [FILTER.id, FILTER],
+    ['rainy-2', { ...FILTER, id: 'rainy-2', name: 'Rainy Two' }],
+  ]);
+  const incoming = { ...FILTER, name: 'Stormy' };
+  assert.equal(resolveRestoredFilter(incoming, existing).id, 'rainy-3');
+});
+
+test('restore keeps a genuinely new filter unchanged', () => {
+  const record = resolveRestoredFilter({ ...FILTER, id: 'sunny', name: 'Sunny' }, new Map());
+  assert.equal(record.id, 'sunny');
+  assert.equal(record.name, 'Sunny');
+});
+
+test('re-importing the same archive twice adds nothing the second time', () => {
+  const installed = new Map();
+  const first = resolveRestoredFilter({ ...FILTER }, installed);
+  installed.set(first.id, first);
+  assert.equal(resolveRestoredFilter({ ...FILTER }, installed), null);
 });

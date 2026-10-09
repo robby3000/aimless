@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-2d84464f">
+  <meta name="aimless-build" content="aimless-v0.2.0-7bb66e77">
   <meta name="description" content="Go nowhere. Somewhere.">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/favicon-16.png" type="image/png" sizes="16x16">
@@ -1615,7 +1615,7 @@
     import { FILTERS, getFilter, allFilters, visibleFilters, setImportedFilters, importFilterSpec,
              filterSpecJson, setHiddenFilters, hiddenFilters, hideFilter, unhideFilter, isFilterHidden,
              effectiveFilterId, effectiveSpec } from './lib/filters.js';
-    import { buildBackup, parseBackup } from './lib/backup.js';
+    import { buildBackup, parseBackup, resolveRestoredFilter } from './lib/backup.js';
     import { renderToCanvas } from './lib/engine/canvas.js';
     import { renderPhotoToCanvas } from './lib/filter-renderer.js';
     import { resolveNavTarget, canStartNewWalk } from './lib/walk-nav.js';
@@ -3880,7 +3880,7 @@
       if (!db) return showToast('Storage unavailable');
       const walkIds = new Set((await all(db, 'walks')).map((w) => w.id));
       const photoIds = new Set((await all(db, 'photos')).map((p) => p.id));
-      const filterIds = new Set(allFilters().map((f) => f.id));
+      const filterById = new Map(allFilters().map((f) => [f.id, f]));
       const added = { walks: 0, photos: 0, filters: 0 };
       let already = 0;
       for (const w of backup.walks) {
@@ -3895,18 +3895,15 @@
         photoIds.add(p.id);
         added.photos += 1;
       }
-      // Filters dedupe by slug rather than skipping: a collision renames
-      // the restored record (rainy -> rainy-2) instead of dropping it.
+      // Filters dedupe by content: an archive copy of a filter already
+      // installed is skipped like walks and photos. Only a bare id
+      // collision (same slug, different content) renames the restored
+      // record (rainy -> rainy-2).
       for (const f of backup.filters) {
-        const record = { ...f };
-        if (filterIds.has(record.id)) {
-          const base = record.id.replace(/-\d+$/, '');
-          let n = 2;
-          while (filterIds.has(`${base}-${n}`)) n += 1;
-          record.id = `${base}-${n}`;
-        }
+        const record = resolveRestoredFilter(f, filterById);
+        if (!record) { already += 1; continue; }
         await put(db, 'filters', record);
-        filterIds.add(record.id);
+        filterById.set(record.id, record);
         added.filters += 1;
       }
       // Restored prefs are stored but not applied to the live session -

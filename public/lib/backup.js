@@ -84,3 +84,41 @@ export function parseBackup(input) {
     skipped,
   };
 }
+
+// Restore dedup is by content, not id alone. An archive carrying a copy of
+// a filter the device already has must be skipped like a duplicate walk or
+// photo - re-importing your own backup should add nothing. Only a bare id
+// collision (same slug, different name or spec) renames the restored record.
+/**
+ * @param {object} filter        validated record from the backup file.
+ * @param {Map}    existingById  id -> installed filter (built-ins included).
+ * @returns {object|null} the record to store (id possibly renamed), or null
+ *   when the same filter is already installed.
+ */
+export function resolveRestoredFilter(filter, existingById) {
+  const existing = existingById.get(filter.id);
+  const record = { ...filter };
+  if (!existing) return record;
+  if (existing.name === filter.name && sameSpec(existing.spec, filter.spec)) return null;
+  const base = record.id.replace(/-\d+$/, '');
+  let n = 2;
+  while (existingById.has(`${base}-${n}`)) n += 1;
+  record.id = `${base}-${n}`;
+  return record;
+}
+
+/** Spec equality after validation, so a raw spec and a stored (already
+    normalised) spec compare clean. Unparseable specs never match. */
+function sameSpec(a, b) {
+  const norm = (spec) => {
+    try {
+      const copy = { id: 'spec-check', name: 'x', spec: JSON.parse(JSON.stringify(spec)) };
+      validateFilter(copy);
+      return JSON.stringify(copy.spec);
+    } catch {
+      return null;
+    }
+  };
+  const na = norm(a);
+  return na !== null && na === norm(b);
+}
