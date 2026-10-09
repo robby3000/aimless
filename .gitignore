@@ -18,8 +18,8 @@ walk-*.json
 *.gpx
 *.geojson
 
-# Photographs and stray screenshots. The PWA's own icons are the only
-# images that belong in git, so they are re-included below.
+# Photographs and stray screenshots. The PWA's own images are the only
+# ones that belong in git, so they are re-included below.
 *.jpg
 *.jpeg
 *.heic
@@ -27,6 +27,7 @@ walk-*.json
 *.webp
 *.png
 !public/icons/**
+!public/fur-bg.webp
 
 # Secrets. Phase 2 adds an AI key - it lives in the environment, never here.
 .env

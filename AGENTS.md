@@ -52,6 +52,8 @@ public/
   manifest.json       # no "id" (defaults to start_url) and no "version" (not a manifest member)
   sw.js               # precaches the shell for offline use; cache name is generated, see below
   icons/              # generated PNGs (192, 512, 512-maskable)
+  fur-bg.webp         # body::before fur texture: fixed 1200x1080 centered, coral
+                      # ring visible only on viewports bigger than the image
   lib/
     geo.js  rng.js  walk.js  deck.js  store.js  dexie.mjs  proximity.js  export.js  skins.js
     platform.js         # UA detection: isIOS, isInAppBrowser, isStandalone
