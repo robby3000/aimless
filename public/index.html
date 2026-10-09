@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-3a0f3aae">
+  <meta name="aimless-build" content="aimless-v0.2.0-53693c84">
   <meta name="description" content="Go nowhere. Somewhere.">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/favicon-16.png" type="image/png" sizes="16x16">
@@ -135,13 +135,16 @@
       gap: 18px;
     }
     /* Fur texture at native size, centred behind the Go screen only - never
-       scaled, never stretched. Only when the viewport fits inside the image
-       do we show it, so a larger screen can never expose a bare edge: it
-       gets the flat colour instead. Attached to the screen element, so it
-       does not scroll with the content. Remove this block and the file to
-       drop the texture. */
-    @media (max-width: 1200px) and (max-height: 1080px) {
+       scaled, never stretched. The element paints it but the media query
+       measures the viewport, so the height gate leaves ~110px headroom for
+       the header + nav chrome, and inside the query the screen's 600px
+       column cap is lifted so the fur runs edge to edge (children still
+       centre via align-items). Past the gate the screen shows the flat
+       colour: no bare edges, no upscaling. Remove this block and the file
+       to drop the texture. */
+    @media (max-width: 1200px) and (max-height: 1140px) {
       #screen-go {
+        max-width: none;
         background: var(--bg) url('./fur-bg.webp') center no-repeat;
       }
     }
