@@ -52,8 +52,8 @@ public/
   manifest.json       # no "id" (defaults to start_url) and no "version" (not a manifest member)
   sw.js               # precaches the shell for offline use; cache name is generated, see below
   icons/              # generated PNGs (192, 512, 512-maskable)
-  fur-bg.webp         # #screen-go fur texture at native size; media query hides
-                      # it past the image bounds + chrome headroom (no bare edges)
+  fur-bg.webp         # #screen-go fur texture, 3x portrait export (1152x2082);
+                      # media query hides it past the image bounds (no bare edges)
   lib/
     geo.js  rng.js  walk.js  deck.js  store.js  dexie.mjs  proximity.js  export.js  skins.js
     platform.js         # UA detection: isIOS, isInAppBrowser, isStandalone
