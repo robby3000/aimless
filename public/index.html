@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-67207670">
+  <meta name="aimless-build" content="aimless-v0.2.0-f2ab1d83">
   <meta name="description" content="Go nowhere. Somewhere.">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/favicon-16.png" type="image/png" sizes="16x16">
@@ -3259,9 +3259,11 @@
           cards = plan.stops.map(() => null);
         } else if (voice.titles) {
           // Oracle voices: each waypoint's own coordinates draw title + three
-          // lines from the voice's pools. No seeded deck, no dedup buffer —
-          // the same coordinates always read the same way in this voice.
-          cards = plan.stops.map((s) => oracleCard(s, voice));
+          // lines from the voice's pools. No seeded deck; the shared used-set
+          // re-draws any line or title an earlier stop already took, so the
+          // artifact never shows the same string in two verses.
+          const used = new Set();
+          cards = plan.stops.map((s) => oracleCard(s, voice, used));
         } else {
           // Load recent pairs for cross-walk dedup.
           if (db) {

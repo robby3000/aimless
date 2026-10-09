@@ -66,6 +66,47 @@ test('card text is exactly three newline-separated lines', () => {
   }
 });
 
+test('a shared used-set keeps lines and titles unique within a walk', () => {
+  // 3-entry pools force collisions by the fourth draw: three stops consume
+  // every string, and none may repeat.
+  const tiny = {
+    slug: 'tiny',
+    titles: ['t0', 't1', 't2'],
+    l1: ['a0', 'a1', 'a2'],
+    l2: ['b0', 'b1', 'b2'],
+    l3: ['c0', 'c1', 'c2'],
+  };
+  const used = new Set();
+  const seen = new Set();
+  for (let i = 0; i < 3; i++) {
+    const card = oracleCard({ lat: 51.5 + i * 0.001, lng: -0.1 }, tiny, used);
+    for (const s of [card.oracle.title, ...card.text.split('\n')]) {
+      assert.ok(!seen.has(s), `repeated within the walk: ${s}`);
+      seen.add(s);
+    }
+  }
+  assert.equal(used.size, 12, 'every pool string should be spent');
+});
+
+test('a drawn string equal to one already used re-rolls', () => {
+  // 't' sits in every pool, so the title takes it and each line must dodge.
+  const voice = {
+    slug: 'dup',
+    titles: ['t'],
+    l1: ['t', 'a', 'b'],
+    l2: ['t', 'c'],
+    l3: ['t', 'd', 'e'],
+  };
+  const card = oracleCard({ lat: 51.5, lng: -0.1 }, voice, new Set());
+  assert.equal(card.oracle.title, 't');
+  for (const l of card.text.split('\n')) assert.notEqual(l, 't');
+});
+
+test('a fresh used-set does not alter the draw', () => {
+  const stray = VOICES.stray;
+  assert.deepEqual(oracleCard(STOP, stray, new Set()), oracleCard(STOP, stray));
+});
+
 test('index draws are spread across the pools, not clumped', () => {
   // 2000 distinct coordinates through one voice: every slot should see a
   // broad spread of indices (loose chi-squared-flavoured sanity check).

@@ -246,12 +246,13 @@
       // The Inner has no deck: each stop's card comes from its coordinates.
       // Oracle voices (titles pool) likewise draw from coordinates via
       // oracleCard; legacy deck voices draw from the seeded deck.
+      const used = new Set();
       const cards = silent
         ? plan.stops.map(() => null)
         : voiceSlug === 'inner'
           ? plan.stops.map((s) => innerCard(s, buildHexIndex(voiceData)))
           : voiceData.titles
-            ? plan.stops.map((s) => oracleCard(s, voiceData))
+            ? plan.stops.map((s) => oracleCard(s, voiceData, used))
             : drawWalk({ seed, voice: voiceData, stops }).cards;
       const voice = voiceSlug === 'inner' ? { slug: 'inner', name: 'The Inner' } : voiceData;
       plan.stops = plan.stops.map((s, i) => ({ ...s, card: cards[i] }));
