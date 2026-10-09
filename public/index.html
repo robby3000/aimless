@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-9ee85de6">
+  <meta name="aimless-build" content="aimless-v0.2.0-0e3d8b5f">
   <meta name="description" content="Go nowhere. Somewhere.">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/favicon-16.png" type="image/png" sizes="16x16">
@@ -60,29 +60,6 @@
          so the header and the bottom nav stay pinned at all times. */
       overflow: hidden;
     }
-
-    /* Fur texture: a fixed 1200x1080 layer centered under everything.
-       Viewports smaller than the image crop it at native sharpness and the
-       coral ring sits offscreen; bigger ones see the framed panel instead of
-       stretched fur. The flat --bg paints first, so a slow texture load
-       never flashes a bare screen. Remove this block and the file to drop
-       the texture entirely. */
-    body::before {
-      content: '';
-      position: fixed;
-      left: 50%;
-      top: 50%;
-      width: 1200px;
-      height: 1080px;
-      transform: translate(-50%, -50%);
-      background: url('./fur-bg.webp') center no-repeat;
-      border-radius: var(--radius);
-      box-shadow: 0 0 0 2px var(--accent);
-      pointer-events: none;
-      z-index: -1;
-    }
-    /* The focused walk state blanks everything but the compass - no fur. */
-    body.walk-focused::before { display: none; }
 
     /* --- Screens --- */
     .screen {
@@ -156,6 +133,12 @@
       align-items: center;
       text-align: center;
       gap: 18px;
+      /* Fur texture behind the Go screen only. cover scales without
+         distortion; --bg underneath paints first, so a slow load or a
+         browser without WebP just shows the flat colour. The background is
+         attached to the screen element, so it does not scroll with the
+         content. Remove this declaration and the file to drop the texture. */
+      background: var(--bg) url('./fur-bg.webp') center / cover no-repeat;
     }
     /* Centre the content vertically via auto margins rather than
        justify-content: with justify-content an overflowing screen clips its
