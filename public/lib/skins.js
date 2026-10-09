@@ -628,6 +628,8 @@ export function getSkin(id) {
  * scopes to `#scope::before`, which keeps viewport-fixed overlays working
  * in-app). @media/@supports blocks keep their prelude and have their inner
  * rules scoped; other @-rules (e.g. @keyframes) pass through untouched.
+ * Selectors using the img type also emit a canvas twin, because the preview
+ * renders photos into <canvas> elements while the export uses <img>.
  * The parser is a brace matcher - keep braces out of comments.
  */
 export function scopeCSS(css, scope) {
@@ -665,13 +667,23 @@ function scopeBlock(css, scope) {
   return out;
 }
 
+const IMG_TYPE = /(^|[\s>+~])img(?![\w-])/g;
+
 function scopeSelectors(selectors, scope) {
-  return selectors.split(',').map((raw) => {
+  return selectors.split(',').flatMap((raw) => {
     const s = raw.trim();
     if (!s) return s;
-    if (s === 'body' || s === ':root') return scope;
-    if (s.startsWith('body ')) return `${scope} ${s.slice(5)}`;
-    if (s.startsWith('body:')) return `${scope}${s.slice(4)}`;
-    return `${scope} ${s}`;
+    // The detail preview renders photos as <canvas>, not <img> (baked pixels,
+    // no JPEG encode), so skin rules written for the bare img selector would
+    // lose their borders there. Twin every selector that types img with a
+    // canvas variant; in the export the twin simply matches nothing.
+    const twin = s.replace(IMG_TYPE, '$1canvas');
+    const variants = twin === s ? [s] : [s, twin];
+    return variants.map((v) => {
+      if (v === 'body' || v === ':root') return scope;
+      if (v.startsWith('body ')) return `${scope} ${v.slice(5)}`;
+      if (v.startsWith('body:')) return `${scope}${v.slice(4)}`;
+      return `${scope} ${v}`;
+    });
   }).join(', ');
 }

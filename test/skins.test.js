@@ -92,6 +92,30 @@ test('scopeCSS ignores comments when matching body selectors', () => {
   assert.ok(!out.includes('body'));
 });
 
+test('scopeCSS twins img selectors with canvas for the preview DOM', () => {
+  // Detail photos render into <canvas> elements (baked pixels), but skins
+  // style photos via the bare img selector written for the export's <img>.
+  const out = scopeCSS('img { border: 2px solid red; }', '#d');
+  assert.ok(out.includes('#d img, #d canvas {'), `missing canvas twin in: ${out}`);
+});
+
+test('scopeCSS twins descendant img selectors but not img-like names', () => {
+  const out = scopeCSS('.photo-frame img, .img-logo, img-x { border: 1px; }', '#d');
+  assert.ok(out.includes('#d .photo-frame img, #d .photo-frame canvas'));
+  assert.ok(!out.includes('canvas-logo'), '.img-logo must not twin');
+  assert.ok(!out.includes('canvas-x'), 'img-x element must not twin');
+});
+
+test('every skin img rule reaches preview canvases', () => {
+  // Regression: neon and eighties photo borders vanished in the detail
+  // preview because skin img rules never matched the <canvas> renders.
+  for (const s of SKINS) {
+    if (!/(^|[^-\w])img[^{]*{/.test(s.css)) continue;
+    const out = scopeCSS(s.css, '#detail-content');
+    assert.ok(out.includes('canvas'), `${s.id} img rules have no canvas twin`);
+  }
+});
+
 test('aquarium keeps its residents on fixed, click-through viewport layers', () => {
   // The point of the skin: the tank stays in the viewport while the walk
   // result scrolls, and never intercepts taps on the content beneath.
