@@ -7,6 +7,7 @@ const LEGACY_ALIASES = new Set(['glow', 'halation']);
 const EFFECT_DEFAULTS = {
   brightness: { v: 110 }, contrast: { v: 110 }, saturate: { v: 120 }, hue: { v: 0 }, sepia: { v: 60 }, invert: { v: 100 }, blur: { v: 1 }, opacity: { v: 80 },
   grayscale: { filter: 'None', intensity: 50, exposure: 0, contrast: 0, shadows: 0, highlights: 0 },
+  mixer: { mode: 'Gain', r: 100, g: 100, b: 100, offset: 0 },
   duotone: { shadow: '#1a0d3d', highlight: '#ff5c8a', contrast: 20 },
   tritone: { shadow: '#0b1d3a', mid: '#c44d4d', highlight: '#ffe8a3' }, posterize: { steps: 5 }, heatmap: { intensity: 100 },
   drama: { style: 'Cinematic', strength: 70, shadows: 0, highlights: 0, saturation: 100 },
