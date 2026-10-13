@@ -225,6 +225,58 @@ export function importFilterSpec(input, takenIds = []) {
   return translateWobbletonePreset(parsed, { id, name });
 }
 
+// Parse pasted/file JSON into store records. A bare Filter Spec or single
+// preset record imports as one filter via importFilterSpec (unchanged slug
+// dedup). A Wobbletone Export All archive imports every preset at once;
+// a preset whose id or name matches an existing imported filter overwrites
+// it, so tweak-in-Wobbletone/re-import cycles don't stack up -2 copies.
+// Presets that fail validation are skipped and reported, not fatal.
+export function importFilterPayload(input, takenIds = [], imported = []) {
+  let parsed;
+  try {
+    parsed = typeof input === 'string' ? JSON.parse(input) : input;
+  } catch {
+    throw new Error('Not valid JSON');
+  }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed) || parsed.schema !== 'wobbletone-presets') {
+    return { records: [importFilterSpec(parsed, takenIds)], errors: [] };
+  }
+  if (![1, 2].includes(parsed.version) || !Array.isArray(parsed.presets)) {
+    throw new Error('Unsupported Wobbletone preset archive');
+  }
+  const taken = new Set([...FILTERS.map((filter) => filter.id), ...takenIds]);
+  const byId = new Map();
+  const byName = new Map();
+  for (const filter of imported || []) {
+    if (filter && filter.id && !byId.has(filter.id)) byId.set(filter.id, filter);
+    const key = String((filter && filter.name) || '').toLowerCase();
+    if (key && !byName.has(key)) byName.set(key, filter);
+  }
+  const records = [];
+  const errors = [];
+  for (const preset of parsed.presets) {
+    try {
+      const spec = wobbletoneSpecFrom(preset);
+      const name = String((preset && preset.name) || spec.name || 'Imported').trim() || 'Imported';
+      const existing = (preset && preset.id && byId.get(preset.id)) || byName.get(name.toLowerCase());
+      let id;
+      if (existing) {
+        id = existing.id;
+      } else {
+        id = /^[a-z0-9-]+$/.test((preset && preset.id) || '') ? preset.id
+          : (name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'imported');
+        for (let n = 2; taken.has(id); n += 1) id = `${id.replace(/-\d+$/, '')}-${n}`;
+      }
+      taken.add(id);
+      records.push({ ...validateFilter({ id, name, spec }), createdAt: existing ? existing.createdAt : undefined });
+    } catch (err) {
+      errors.push(err.message);
+    }
+  }
+  if (!records.length && errors.length) throw new Error(errors[0]);
+  return { records, errors };
+}
+
 // Serialize a filter for file export — a bare Filter Spec, the same shape
 // the Wobbletone Code tab emits, so the file round-trips through
 // importFilterSpec here and through preset import there.

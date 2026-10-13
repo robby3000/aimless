@@ -7,6 +7,7 @@ import {
   filterSpecJson,
   getFilter,
   importFilterSpec,
+  importFilterPayload,
   setImportedFilters,
   translateWobbletoneArchive,
   translateWobbletonePreset,
@@ -217,6 +218,67 @@ test('filterSpecJson exports a bare spec that round-trips through importFilterSp
   assert.equal(record.id, 'my-noire');
   assert.equal(record.name, 'My Noire');
   assert.deepEqual(record.spec.effects, filter.spec.effects);
+});
+
+const SPEC = (effects, name) => ({ format: 'wobbletone-filter', version: 1, name, effects });
+const ARCHIVE = (presets) => ({ schema: 'wobbletone-presets', version: 2, presets });
+
+test('importFilterPayload imports a whole Wobbletone archive at once', () => {
+  const archive = ARCHIVE([
+    { id: 'x-one', name: 'One', spec: SPEC([{ type: 'contrast', params: { v: 130 } }]) },
+    { id: 'x-two', name: 'Two', spec: SPEC([]) },
+  ]);
+  const { records, errors } = importFilterPayload(archive, [], []);
+  assert.deepEqual(records.map((f) => f.id), ['x-one', 'x-two']);
+  assert.deepEqual(errors, []);
+  assert.equal(records[0].spec.effects[0].params.v, 130);
+});
+
+test('importFilterPayload slug-dedups archive ids against built-ins and the batch', () => {
+  const archive = ARCHIVE([
+    { id: 'pop', name: 'Pop', spec: SPEC([]) },
+    { id: 'pop', name: 'Pop Two', spec: SPEC([]) },
+  ]);
+  const { records } = importFilterPayload(archive, [], []);
+  assert.deepEqual(records.map((f) => f.id), ['pop-2', 'pop-3']);
+});
+
+test('importFilterPayload refreshes imported filters matched by id or name', () => {
+  // First import: 'pop' collides with the built-in and lands as pop-2.
+  const first = importFilterPayload(ARCHIVE([{ id: 'pop', name: 'Pop', spec: SPEC([{ type: 'invert', params: { v: 50 } }]) }]), [], []);
+  assert.equal(first.records[0].id, 'pop-2');
+  const imported = [{ ...first.records[0], createdAt: 42 }];
+  // Re-import after tweaking in Wobbletone: same preset name updates pop-2
+  // in place rather than stacking up pop-3.
+  const second = importFilterPayload(
+    ARCHIVE([{ id: 'pop', name: 'Pop', spec: SPEC([{ type: 'invert', params: { v: 100 } }]) }]),
+    ['pop-2'], imported);
+  assert.equal(second.records[0].id, 'pop-2');
+  assert.equal(second.records[0].createdAt, 42);
+  assert.equal(second.records[0].spec.effects[0].params.v, 100);
+});
+
+test('importFilterPayload skips bad presets inside an archive but keeps the rest', () => {
+  const archive = ARCHIVE([
+    { id: 'bad-one', name: 'Bad', spec: SPEC([{ type: 'nope', params: {} }]) },
+    { id: 'good-one', name: 'Good', spec: SPEC([]) },
+  ]);
+  const { records, errors } = importFilterPayload(archive, [], []);
+  assert.deepEqual(records.map((f) => f.id), ['good-one']);
+  assert.equal(errors.length, 1);
+  assert.match(errors[0], /nope/);
+});
+
+test('importFilterPayload throws when every archive preset fails', () => {
+  const archive = ARCHIVE([{ id: 'bad', name: 'Bad', spec: SPEC([{ type: 'nope', params: {} }]) }]);
+  assert.throws(() => importFilterPayload(archive, [], []), /nope/);
+});
+
+test('importFilterPayload still imports single specs through the dedup path', () => {
+  const { records, errors } = importFilterPayload(
+    JSON.stringify(SPEC([{ type: 'contrast', params: { v: 150 } }], 'My Look')), []);
+  assert.deepEqual(records.map((f) => f.id), ['my-look']);
+  assert.deepEqual(errors, []);
 });
 
 test('imported filters ride the rail oldest to newest (createdAt order)', () => {

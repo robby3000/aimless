@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-576ec7c9">
+  <meta name="aimless-build" content="aimless-v0.2.0-53ce8da5">
   <meta name="description" content="Go nowhere. Somewhere.">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/favicon-16.png" type="image/png" sizes="16x16">
@@ -1400,7 +1400,7 @@
       </details>
       <details>
         <summary>How do I import my own filters?</summary>
-        <p>Tap the + at the end of the Filter rail on a walk's detail page, then import one filter at a time: paste the code from Wobbletone's Code tab, or tap Export on a Wobbletone preset to save a .json file and bring it in with choose file. Get Wobbletone at <a href="https://wobbletone.com" target="_blank" rel="noopener">wobbletone.com</a>.</p>
+        <p>Tap the + at the end of the Filter rail on a walk's detail page, then paste the code from Wobbletone's Code tab or bring in a .json file: a preset's Export button saves one filter, Export All saves the whole set and imports them all at once. Importing again updates filters with the same name instead of adding copies. Get Wobbletone at <a href="https://wobbletone.com" target="_blank" rel="noopener">wobbletone.com</a>.</p>
       </details>
       <details>
         <summary>How do I tidy the filter rail?</summary>
@@ -1627,7 +1627,7 @@
     import { isIOS, isInAppBrowser, isStandalone } from './lib/platform.js';
     import { buildHexIndex, innerCard } from './lib/inner.js';
     import { oracleCard } from './lib/oracle.js';
-    import { FILTERS, getFilter, allFilters, visibleFilters, setImportedFilters, importFilterSpec,
+    import { FILTERS, getFilter, allFilters, visibleFilters, setImportedFilters, importFilterSpec, importFilterPayload,
              filterSpecJson, setHiddenFilters, hiddenFilters, hideFilter, unhideFilter, isFilterHidden,
              effectiveFilterId, effectiveSpec } from './lib/filters.js';
     import { buildBackup, parseBackup, resolveRestoredFilter } from './lib/backup.js';
@@ -2139,16 +2139,28 @@
     async function applyFilterImport(json) {
       const db = await dbPromise;
       try {
-        const record = importFilterSpec(json, allFilters().map((f) => f.id));
-        record.createdAt = Date.now();
-        if (db) await put(db, 'filters', record);
-        else setImportedFilters([...allFilters().slice(FILTERS.length), record]);
+        const imported = allFilters().slice(FILTERS.length);
+        const { records, errors } = importFilterPayload(json, allFilters().map((f) => f.id), imported);
+        const now = Date.now();
+        const next = imported.slice();
+        for (const record of records) {
+          record.createdAt = record.createdAt || now;
+          if (db) await put(db, 'filters', record);
+          else {
+            const at = next.findIndex((f) => f.id === record.id);
+            if (at >= 0) next[at] = record; else next.push(record);
+          }
+        }
+        if (!db) setImportedFilters(next);
         await refreshImportedFilters();
-        currentFilter = record.id;
+        const last = records[records.length - 1];
+        currentFilter = last.id;
         savePrefs();
-        detailRail.setValue(record.id);
+        detailRail.setValue(last.id);
         if (currentDetailWalk) showWalkDetail(currentDetailWalk.id);
-        elFilterImportStatus.textContent = `Imported "${record.name}".`;
+        elFilterImportStatus.textContent = records.length === 1 && !errors.length
+          ? `Imported "${last.name}".`
+          : `Imported ${records.length} filters.` + (errors.length ? ` Skipped ${errors.length}: ${errors[0]}` : '');
         elFilterJson.value = '';
       } catch (err) {
         elFilterImportStatus.textContent = err.message;
