@@ -71,80 +71,192 @@ export function translateWobbletonePreset(preset, overrides = {}) {
 const spec = (effects) => ({ format: SPEC_FORMAT, version: SPEC_VERSION, effects });
 
 export const FILTERS = [
+  { id: 'original', name: 'Original', spec: spec([
+
+  ]) },
   { id: 'pop', name: 'Pop', spec: spec([
-    { type: 'contrast', params: { v: 118 } },
-    { type: 'saturate', params: { v: 135 } },
-    { type: 'brightness', params: { v: 102 } },
+    { type: 'saturate', params: {v:128} },
+    { type: 'contrast', params: {v:112} },
+    { type: 'brightness', params: {v:103} },
   ]) },
   { id: 'old-film', name: 'Old film', spec: spec([
-    { type: 'sepia', params: { v: 35 } },
-    { type: 'contrast', params: { v: 90 } },
-    { type: 'brightness', params: { v: 105 } },
-    { type: 'saturate', params: { v: 85 } },
-    { type: 'overlay', params: { kind: 'radial', stops: [[0.6, 'transparent'], [1, 'rgba(40,20,0,0.4)']], blend: 'multiply', opacity: 100 } },
+    { type: 'sepia', params: {v:14} },
+    { type: 'contrast', params: {v:94} },
+    { type: 'saturate', params: {v:85} },
+    { type: 'brightness', params: {v:103} },
+    { type: 'colorwash', params: {color:"#9aa05a", blend:"soft-light", opacity:8} },
+    { type: 'grain', params: {size:0.9, opacity:25, blend:"overlay", seed:1} },
   ]) },
-  { id: 'black-and-white', name: 'Black and white', spec: spec([
-    { type: 'grayscale', params: { v: 100 } },
-    { type: 'contrast', params: { v: 110 } },
-    { type: 'brightness', params: { v: 98 } },
-  ]) },
-  { id: 'original', name: 'Original', spec: spec([]) },
-  { id: 'noire', name: 'Noire', spec: spec([
-    { type: 'grayscale', params: { v: 100 } },
-    { type: 'contrast', params: { v: 175 } },
-    { type: 'brightness', params: { v: 85 } },
-    { type: 'overlay', params: { kind: 'radial', stops: [[0.4, 'transparent'], [1, 'rgba(0,0,0,0.85)']], blend: 'normal', opacity: 100 } },
-  ]) },
-  { id: 'sepia', name: 'Sepia', spec: spec([
-    { type: 'sepia', params: { v: 90 } },
-    { type: 'contrast', params: { v: 95 } },
-    { type: 'brightness', params: { v: 90 } },
-    { type: 'saturate', params: { v: 110 } },
-  ]) },
-  { id: 'muted', name: 'Muted', spec: spec([
-    { type: 'saturate', params: { v: 55 } },
-    { type: 'contrast', params: { v: 85 } },
-    { type: 'brightness', params: { v: 105 } },
+  { id: 'soft', name: 'Soft', spec: spec([
+    { type: 'shadowshighlights', params: {shadows:-11, highlights:-20} },
+    { type: 'contrast', params: {v:90} },
+    { type: 'saturate', params: {v:96} },
+    { type: 'bloom', params: {blur:10, threshold:220, contrast:130, saturate:100, opacity:12, color:"#ffffff", tint:0, blend:"screen"} },
+    { type: 'blur', params: {v:0.3} },
   ]) },
   { id: 'cold', name: 'Cold', spec: spec([
-    { type: 'hue', params: { v: 180 } },
-    { type: 'sepia', params: { v: 45 } },
-    { type: 'hue', params: { v: 200 } }, // -160deg ≡ +200deg; registry clamps 0–360
-    { type: 'saturate', params: { v: 80 } },
-    { type: 'contrast', params: { v: 105 } },
-    { type: 'brightness', params: { v: 98 } },
+    { type: 'saturate', params: {v:85} },
+    { type: 'mixer', params: {mode:"Gain", r:80, g:95, b:110, offset:4} },
   ]) },
-  { id: 'trippy-1', name: 'Trippy 1', spec: spec([
-    { type: 'invert', params: { v: 100 } },
-    { type: 'hue', params: { v: 180 } },
-    { type: 'saturate', params: { v: 200 } },
-    { type: 'contrast', params: { v: 130 } },
+  { id: 'warm', name: 'Warm', spec: spec([
+    { type: 'mixer', params: {mode:"Gain", r:100, g:90, b:80, offset:4} },
   ]) },
-  { id: 'trippy-2', name: 'Trippy 2', spec: spec([
-    { type: 'hue', params: { v: 290 } },
-    { type: 'saturate', params: { v: 350 } },
-    { type: 'contrast', params: { v: 140 } },
-    { type: 'brightness', params: { v: 110 } },
+  { id: 'muted', name: 'Muted', spec: spec([
+    { type: 'saturate', params: {v:30} },
+    { type: 'contrast', params: {v:96} },
   ]) },
-  { id: 'trippy-3', name: 'Trippy 3', spec: spec([
-    { type: 'invert', params: { v: 30 } },
-    { type: 'hue', params: { v: 90 } },
-    { type: 'saturate', params: { v: 250 } },
-    { type: 'contrast', params: { v: 200 } },
-    { type: 'overlay', params: { kind: 'linear', angle: 45, stops: [[0, 'rgba(255,0,128,0.5)'], [1, 'rgba(0,255,200,0.5)']], blend: 'color-dodge', opacity: 100 } },
+  { id: 'darker-sky', name: 'Darker sky', spec: spec([
+    { type: 'shadowshighlights', params: {shadows:56, highlights:-60} },
+    { type: 'contrast', params: {v:176} },
+    { type: 'gradient', params: {"c1":"#2a1d3a","c2":"#feffd1", angle:180, blend:"multiply", opacity:80} },
+    { type: 'saturate', params: {v:75} },
   ]) },
-  translateWobbletonePreset({
-    id: '01511ff0-3806-4525-8fa3-25e4112d8ece',
-    name: 'psych-post-2',
-    effects: [
-      { defId: 'saturate', enabled: true, params: { v: 120 } },
-      { defId: 'vignette', enabled: true, params: { color: '#000000', size: 60, opacity: 56 } },
-      { defId: 'blur', enabled: true, params: { v: 8.7 } },
-      { defId: 'posterize', enabled: true, params: { steps: 10 } },
-      { defId: 'grain', enabled: true, params: { size: 1.4, opacity: 44, blend: 'overlay' } },
-      { defId: 'psychedelic', enabled: true, params: { saturate: 280, contrast: 130, bands: 8, solarize: 60 } },
-    ],
-  }, { id: 'psych-post-2', name: 'Psych post 2' }),
+  { id: 'black-and-white', name: 'B&W', spec: spec([
+    { type: 'grayscale', params: {exposure:0, contrast:8, shadows:0, highlights:0, filter:"Yellow", intensity:30} },
+  ]) },
+  { id: 'grainy-bw', name: 'Grainy B&W', spec: spec([
+    { type: 'grayscale', params: {exposure:0, contrast:8, shadows:0, highlights:0, filter:"Yellow", intensity:26} },
+    { type: 'grain', params: {size:0.9, opacity:25, blend:"overlay", seed:1} },
+  ]) },
+  { id: 'hitch', name: 'Hitch', spec: spec([
+    { type: 'tritone', params: {shadow:"#000c1f", mid:"#858386", highlight:"#fff9f0"} },
+    { type: 'grain', params: {size:0.9, opacity:25, blend:"overlay", seed:1} },
+  ]) },
+  { id: 'sepia', name: 'Sepia', spec: spec([
+    { type: 'duotone', params: {shadow:"#231106", highlight:"#fff2e5", contrast:65} },
+    { type: 'contrast', params: {v:117} },
+    { type: 'grain', params: {size:0.9, opacity:25, blend:"overlay", seed:1} },
+    { type: 'vignette', params: {color:"#000000", size:20, opacity:3} },
+  ]) },
+  { id: 'noire', name: 'Noire', spec: spec([
+    { type: 'grayscale', params: {exposure:5, contrast:35, shadows:15, highlights:21, filter:"Red", intensity:84} },
+    { type: 'vignette', params: {color:"#000000", size:20, opacity:10} },
+    { type: 'grain', params: {size:0.8, opacity:25, blend:"overlay", seed:1} },
+  ]) },
+  { id: 'bw-infrared', name: 'B&W infrared', spec: spec([
+    { type: 'infrared', params: {intensity:76} },
+    { type: 'hue', params: {v:88} },
+    { type: 'invert', params: {v:100} },
+    { type: 'contrast', params: {v:136} },
+    { type: 'brightness', params: {v:92} },
+    { type: 'gradient', params: {"c1":"#030303","c2":"#ffffff", angle:180, blend:"multiply", opacity:18} },
+    { type: 'grayscale', params: {exposure:8, contrast:0, shadows:0, highlights:0, filter:"Blue", intensity:79} },
+    { type: 'grain', params: {size:0.7, opacity:20, blend:"overlay", seed:1} },
+  ]) },
+  { id: 'ortho', name: 'Ortho', spec: spec([
+    { type: 'grayscale', params: {exposure:12, contrast:15, shadows:0, highlights:0, filter:"Blue", intensity:65} },
+    { type: 'grain', params: {size:0.9, opacity:25, blend:"overlay", seed:1} },
+  ]) },
+  { id: 'daido', name: 'Daidō', spec: spec([
+    { type: 'grayscale', params: {exposure:0, contrast:17, shadows:-30, highlights:0, filter:"Orange", intensity:60} },
+    { type: 'blur', params: {v:0.5} },
+    { type: 'grain', params: {size:1.3, opacity:70, blend:"soft-light", seed:1} },
+  ]) },
+  { id: 'mappage', name: 'Mappage', spec: spec([
+    { type: 'blur', params: {v:2.3} },
+    { type: 'posterize', params: {steps:5} },
+    { type: 'saturate', params: {v:151} },
+    { type: 'hue', params: {v:298} },
+  ]) },
+  { id: 'electronica', name: 'Electronica', spec: spec([
+    { type: 'glitch', params: {style:"CCD Failure", amount:68, bandSize:62, split:27, corrupt:64, blocks:73, seed:9847} },
+    { type: 'chromatic', params: {offset:5, strength:29} },
+    { type: 'grayscale', params: {exposure:28, contrast:15, shadows:-83, highlights:-84, filter:"Green", intensity:69} },
+  ]) },
+  { id: 'cadsabest', name: 'Cadsabest', spec: spec([
+    { type: 'chromatic', params: {offset:14.815691480433532, strength:17} },
+    { type: 'scanlines', params: {size:4.885392349499605, color:"#f8dabf", opacity:79, blend:"multiply"} },
+    { type: 'colorwash', params: {color:"#a4a98a", blend:"multiply", opacity:74} },
+    { type: 'heatmap', params: {intensity:70} },
+    { type: 'glitch', params: {style:"CCD Failure", amount:81, bandSize:65, split:12.735080652804012, corrupt:35, blocks:83, seed:775} },
+  ]) },
+  { id: 'jellyfish', name: 'Jellyfish', spec: spec([
+    { type: 'tritone', params: {shadow:"#34728b", mid:"#449e1e", highlight:"#ac43aa"} },
+    { type: 'outline', params: {threshold:67, width:4.989490829568712, color:"#6855de", detail:6.235755150030766, softness:3.7753036360923877, surface:"original", opacity:17} },
+    { type: 'chromatic', params: {offset:17.81162757698844, strength:11} },
+    { type: 'glitch', params: {style:"CCD Failure", amount:52, bandSize:31, split:11.342138842282731, corrupt:49, blocks:25, seed:151} },
+  ]) },
+  { id: 'philly-cheese', name: 'Philly cheese', spec: spec([
+    { type: 'posterize', params: {steps:11} },
+    { type: 'psychedelic', params: {saturate:315, contrast:90, bands:11, solarize:7} },
+    { type: 'dropshadow', params: {x:-29, y:-19, blur:6, color:"#fd08ba"} },
+    { type: 'glitch', params: {style:"VHS Tear", amount:92, bandSize:85, split:26, corrupt:35, blocks:18, seed:5688} },
+  ]) },
+  { id: 'aubrey', name: 'Aubrey', spec: spec([
+    { type: 'grain', params: {size:1.1590650389208066, opacity:7, blend:"screen", seed:1} },
+    { type: 'tritone', params: {shadow:"#e60679", mid:"#d7b286", highlight:"#603f9c"} },
+    { type: 'psychedelic', params: {saturate:125, contrast:198, bands:10, solarize:75} },
+    { type: 'invert', params: {v:6} },
+    { type: 'chromatic', params: {offset:14.647635615805326, strength:93} },
+  ]) },
+  { id: 'hiro', name: 'Hiro', spec: spec([
+    { type: 'outline', params: {threshold:37, width:0, color:"#baf4f7", detail:10, softness:2, surface:"original", opacity:86} },
+    { type: 'vignette', params: {color:"#5ed774", size:37, opacity:23} },
+    { type: 'echo', params: {count:4, distance:28, direction:296, decay:59, blur:14, blend:"lighten", opacity:68} },
+    { type: 'gradient', params: {"c1":"#63f606","c2":"#e652f6", angle:231, blend:"multiply", opacity:98} },
+    { type: 'psychedelic', params: {saturate:308, contrast:194, bands:3, solarize:76} },
+    { type: 'posterize', params: {steps:15} },
+  ]) },
+  { id: 'gizme', name: 'Gizme', spec: spec([
+    { type: 'blur', params: {v:7.733735687148187} },
+    { type: 'posterize', params: {steps:9} },
+    { type: 'vintage', params: {sepia:84, contrast:72, saturate:88, brightness:134} },
+    { type: 'glitch', params: {style:"VHS Tear", amount:86, bandSize:86, split:19.133280448650687, corrupt:43, blocks:77, seed:5120} },
+  ]) },
+  { id: 'earlswood', name: 'Earlswood', spec: spec([
+    { type: 'colorwash', params: {color:"#5c89fd", blend:"multiply", opacity:91} },
+    { type: 'vignette', params: {color:"#269ceb", size:61, opacity:64} },
+    { type: 'drama', params: {style:"Storm", strength:82, shadows:-16, highlights:1, saturation:42} },
+    { type: 'chromatic', params: {offset:16.811813013112648, strength:73} },
+    { type: 'contrast', params: {v:95} },
+    { type: 'hue', params: {v:221} },
+  ]) },
+  { id: 'gdansk-65', name: 'Gdańsk 65', spec: spec([
+    { type: 'contrast', params: {v:133} },
+    { type: 'vignette', params: {color:"#000000", size:35, opacity:36} },
+    { type: 'blur', params: {v:4.6} },
+    { type: 'glitch', params: {style:"CCD Failure", amount:66, bandSize:56, split:15.5, corrupt:40, blocks:0, seed:3149} },
+    { type: 'hue', params: {v:61} },
+    { type: 'gradient', params: {"c1":"#70182b","c2":"#0e6666", angle:200, blend:"overlay", opacity:100} },
+    { type: 'chromatic', params: {offset:12.5, strength:70} },
+    { type: 'scanlines', params: {size:7, color:"#b3eeff", opacity:75, blend:"screen"} },
+  ]) },
+  { id: 'daguerre', name: 'Daguerre', spec: spec([
+    { type: 'specular', params: {surfaceScale:4, strength:11, shininess:69, color:"#121b1f", azimuth:276, elevation:83, bumpBlur:0, source:"alpha", blend:"lighten", opacity:90} },
+    { type: 'psychedelic', params: {saturate:387, contrast:91, bands:7, solarize:91} },
+    { type: 'shadowshighlights', params: {shadows:-72, highlights:93} },
+    { type: 'gradient', params: {"c1":"#08fbae","c2":"#4d94b1", angle:278, blend:"color-dodge", opacity:32} },
+    { type: 'vintage', params: {sepia:97, contrast:110, saturate:76, brightness:118} },
+    { type: 'grain', params: {size:0.9, opacity:25, blend:"overlay", seed:1} },
+  ]) },
+  { id: 'schrader', name: 'Šchrader', spec: spec([
+    { type: 'psychedelic', params: {saturate:236, contrast:193, bands:11, solarize:1} },
+    { type: 'brightness', params: {v:70} },
+    { type: 'bloom', params: {blur:42.39668401728494, threshold:202, contrast:204, saturate:99, opacity:57, color:"#eab440", tint:99, blend:"screen"} },
+    { type: 'contrast', params: {v:129} },
+    { type: 'shadowshighlights', params: {shadows:-21, highlights:100} },
+    { type: 'liquid', params: {intensity:73, waveX:51, waveY:72, flow:"organic", noise:"turbulence", octaves:3, seed:2236, softness:12.847004728451399, highlight:87, mix:66} },
+  ]) },
+  { id: 'radar-station', name: 'Radar station', spec: spec([
+    { type: 'shadowshighlights', params: {shadows:34, highlights:23} },
+    { type: 'hue', params: {v:44} },
+    { type: 'saturate', params: {v:163} },
+    { type: 'posterize', params: {steps:5} },
+    { type: 'bloom', params: {blur:23.4204781087444, threshold:308, contrast:121, saturate:9, opacity:25, color:"#2ba171", tint:46, blend:"screen"} },
+  ]) },
+  { id: 'bender', name: 'Bender', spec: spec([
+    { type: 'glitch', params: {style:"Signal Loss", amount:100, bandSize:100, split:30, corrupt:100, blocks:75, seed:1195} },
+    { type: 'brightness', params: {v:94} },
+    { type: 'shadowshighlights', params: {shadows:31, highlights:91} },
+    { type: 'chromatic', params: {offset:7.2227948584769734, strength:58} },
+  ]) },
+  { id: 'impaired', name: 'Impaired', spec: spec([
+    { type: 'morphology', params: {op:"dilate", radiusX:2, radiusY:9} },
+    { type: 'colorwash', params: {color:"#4f79a9", blend:"multiply", opacity:99} },
+    { type: 'liquid', params: {intensity:5, waveX:29, waveY:94, flow:"vertical", noise:"turbulence", octaves:2, seed:8933, softness:11.574712639462748, highlight:29, mix:32} },
+    { type: 'brightness', params: {v:170} },
+    { type: 'glitch', params: {style:"VHS Tear", amount:54, bandSize:14, split:3.972251833200695, corrupt:74, blocks:74, seed:3620} },
+  ]) },
 ];
 
 // A filter preset is { id, name, spec } — the spec is the renderable form.
@@ -283,3 +395,4 @@ export function importFilterPayload(input, takenIds = [], imported = []) {
 export function filterSpecJson(filter, name) {
   return JSON.stringify({ ...filter.spec, name: name ?? filter.name }, null, 2) + '\n';
 }
+

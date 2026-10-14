@@ -48,9 +48,9 @@ const EFFECTS = [
   { defId: 'dropshadow', params: { x: 0, y: 8, blur: 16, color: '#7c5cff' } },
 ];
 
-test('FILTERS lists the 12 rail presets with unique ids and valid specs', () => {
-  assert.equal(FILTERS.length, 12);
-  assert.equal(new Set(FILTERS.map((filter) => filter.id)).size, 12);
+test('FILTERS lists the 31 rail presets with unique ids and valid specs', () => {
+  assert.equal(FILTERS.length, 31);
+  assert.equal(new Set(FILTERS.map((filter) => filter.id)).size, 31);
   FILTERS.forEach((filter) => {
     assert.match(filter.id, /^[a-z0-9-]+$/);
     assert.ok(filter.name.length > 0);
@@ -69,57 +69,66 @@ test('Original is the only preset with an empty effect list', () => {
 
 test('built-in presets carry their spec effects in order', () => {
   const types = (id) => getFilter(id).spec.effects.map((effect) => effect.type);
-  assert.deepEqual(types('pop'), ['contrast', 'saturate', 'brightness']);
-  assert.deepEqual(types('old-film'), ['sepia', 'contrast', 'brightness', 'saturate', 'overlay']);
-  assert.deepEqual(types('black-and-white'), ['grayscale', 'contrast', 'brightness']);
-  assert.deepEqual(types('noire'), ['grayscale', 'contrast', 'brightness', 'overlay']);
-  assert.deepEqual(types('sepia'), ['sepia', 'contrast', 'brightness', 'saturate']);
-  assert.deepEqual(types('muted'), ['saturate', 'contrast', 'brightness']);
-  assert.deepEqual(types('cold'), ['hue', 'sepia', 'hue', 'saturate', 'contrast', 'brightness']);
-  assert.deepEqual(types('trippy-1'), ['invert', 'hue', 'saturate', 'contrast']);
-  assert.deepEqual(types('trippy-2'), ['hue', 'saturate', 'contrast', 'brightness']);
-  assert.deepEqual(types('trippy-3'), ['invert', 'hue', 'saturate', 'contrast', 'overlay']);
-  assert.deepEqual(types('psych-post-2'), ['saturate', 'vignette', 'blur', 'posterize', 'grain', 'psychedelic']);
+  assert.deepEqual(types('original'), []);
+  assert.deepEqual(types('pop'), ['saturate', 'contrast', 'brightness']);
+  assert.deepEqual(types('old-film'), ['sepia', 'contrast', 'saturate', 'brightness', 'colorwash', 'grain']);
+  assert.deepEqual(types('soft'), ['shadowshighlights', 'contrast', 'saturate', 'bloom', 'blur']);
+  assert.deepEqual(types('cold'), ['saturate', 'mixer']);
+  assert.deepEqual(types('warm'), ['mixer']);
+  assert.deepEqual(types('muted'), ['saturate', 'contrast']);
+  assert.deepEqual(types('darker-sky'), ['shadowshighlights', 'contrast', 'gradient', 'saturate']);
+  assert.deepEqual(types('black-and-white'), ['grayscale']);
+  assert.deepEqual(types('grainy-bw'), ['grayscale', 'grain']);
+  assert.deepEqual(types('hitch'), ['tritone', 'grain']);
+  assert.deepEqual(types('sepia'), ['duotone', 'contrast', 'grain', 'vignette']);
+  assert.deepEqual(types('noire'), ['grayscale', 'vignette', 'grain']);
+  assert.deepEqual(types('bw-infrared'), ['infrared', 'hue', 'invert', 'contrast', 'brightness', 'gradient', 'grayscale', 'grain']);
+  assert.deepEqual(types('ortho'), ['grayscale', 'grain']);
+  assert.deepEqual(types('daido'), ['grayscale', 'blur', 'grain']);
+  assert.deepEqual(types('mappage'), ['blur', 'posterize', 'saturate', 'hue']);
+  assert.deepEqual(types('electronica'), ['glitch', 'chromatic', 'grayscale']);
+  assert.deepEqual(types('cadsabest'), ['chromatic', 'scanlines', 'colorwash', 'heatmap', 'glitch']);
+  assert.deepEqual(types('jellyfish'), ['tritone', 'outline', 'chromatic', 'glitch']);
+  assert.deepEqual(types('philly-cheese'), ['posterize', 'psychedelic', 'dropshadow', 'glitch']);
+  assert.deepEqual(types('aubrey'), ['grain', 'tritone', 'psychedelic', 'invert', 'chromatic']);
+  assert.deepEqual(types('hiro'), ['outline', 'vignette', 'echo', 'gradient', 'psychedelic', 'posterize']);
+  assert.deepEqual(types('gizme'), ['blur', 'posterize', 'vintage', 'glitch']);
+  assert.deepEqual(types('earlswood'), ['colorwash', 'vignette', 'drama', 'chromatic', 'contrast', 'hue']);
+  assert.deepEqual(types('gdansk-65'), ['contrast', 'vignette', 'blur', 'glitch', 'hue', 'gradient', 'chromatic', 'scanlines']);
+  assert.deepEqual(types('daguerre'), ['specular', 'psychedelic', 'shadowshighlights', 'gradient', 'vintage', 'grain']);
+  assert.deepEqual(types('schrader'), ['psychedelic', 'brightness', 'bloom', 'contrast', 'shadowshighlights', 'liquid']);
+  assert.deepEqual(types('radar-station'), ['shadowshighlights', 'hue', 'saturate', 'posterize', 'bloom']);
+  assert.deepEqual(types('bender'), ['glitch', 'brightness', 'shadowshighlights', 'chromatic']);
+  assert.deepEqual(types('impaired'), ['morphology', 'colorwash', 'liquid', 'brightness', 'glitch']);
 });
 
-test('Cold writes its negative hue as the equivalent 0-360 rotation', () => {
-  const cold = getFilter('cold').spec.effects;
-  assert.equal(cold[0].params.v, 180);
-  assert.equal(cold[2].params.v, 200); // hue-rotate(-160deg) ≡ +200deg
+test('FILTERS rail order is the shipped set', () => {
+  assert.deepEqual(FILTERS.map((filter) => filter.id), [
+    'original', 'pop', 'old-film', 'soft', 'cold', 'warm', 'muted', 'darker-sky',
+    'black-and-white', 'grainy-bw', 'hitch', 'sepia', 'noire', 'bw-infrared',
+    'ortho', 'daido', 'mappage', 'electronica', 'cadsabest', 'jellyfish',
+    'philly-cheese', 'aubrey', 'hiro', 'gizme', 'earlswood', 'gdansk-65',
+    'daguerre', 'schrader', 'radar-station', 'bender', 'impaired',
+  ]);
 });
 
-test('overlay presets retain their gradient settings', () => {
-  const oldFilm = getFilter('old-film').spec.effects[4].params;
-  const noire = getFilter('noire').spec.effects[3].params;
-  const trippy = getFilter('trippy-3').spec.effects[4].params;
-  assert.equal(oldFilm.kind, 'radial');
-  assert.deepEqual(oldFilm.stops, [[0.6, 'transparent'], [1, 'rgba(40,20,0,0.4)']]);
-  assert.equal(oldFilm.blend, 'multiply');
-  assert.deepEqual(noire.stops, [[0.4, 'transparent'], [1, 'rgba(0,0,0,0.85)']]);
-  assert.equal(noire.blend, 'normal');
-  assert.equal(trippy.kind, 'linear');
-  assert.equal(trippy.angle, 45);
-  assert.deepEqual(trippy.stops, [[0, 'rgba(255,0,128,0.5)'], [1, 'rgba(0,255,200,0.5)']]);
-  assert.equal(trippy.blend, 'color-dodge');
+test('Warm and Cold run through the channel mixer in Gain mode', () => {
+  const warm = getFilter('warm').spec.effects[0];
+  const cold = getFilter('cold').spec.effects[1];
+  assert.equal(warm.type, 'mixer');
+  assert.equal(cold.type, 'mixer');
+  assert.equal(warm.params.mode, 'Gain');
+  assert.ok(warm.params.b < 100 && warm.params.b < warm.params.r);
+  assert.ok(cold.params.b > 100 && cold.params.r < 100);
 });
 
-test('Psych post 2 preserves its source order, values, and display name', () => {
-  const filter = getFilter('psych-post-2');
-  assert.equal(filter.name, 'Psych post 2');
-  const effects = filter.spec.effects;
-  assert.equal(effects[0].type, 'saturate');
-  assert.equal(effects[0].params.v, 120);
-  assert.deepEqual(effects[1].params, { color: '#000000', size: 60, opacity: 56 });
-  assert.equal(effects[2].type, 'blur');
-  assert.equal(effects[2].params.v, 8.7);
-  assert.equal(effects[3].type, 'posterize');
-  assert.equal(effects[3].params.steps, 10);
-  assert.equal(effects[4].type, 'grain');
-  assert.equal(effects[4].params.seed, 1);
-  assert.equal(effects[5].type, 'psychedelic');
-  assert.equal(effects[5].params.saturate, 280);
-  assert.equal(effects[5].params.bands, 8);
-  assert.equal(effects[5].params.solarize, 60);
+test('Darker sky keeps its multiply gradient settings', () => {
+  const gradient = getFilter('darker-sky').spec.effects[2].params;
+  assert.equal(gradient.c1, '#2a1d3a');
+  assert.equal(gradient.c2, '#feffd1');
+  assert.equal(gradient.angle, 180);
+  assert.equal(gradient.blend, 'multiply');
+  assert.equal(gradient.opacity, 80);
 });
 
 test('getFilter falls back to original for unknown ids', () => {
