@@ -158,11 +158,13 @@ export async function buildHTMLExport(walk, photos, svgTrace, skinCss = '', icon
   const stopCards = walk.stops.map((s, i) => {
     const photoUrl = photoDataUrls.get(s.seq);
     const photoHtml = photoUrl ? `<div class="photo-frame"><img src="${esc(photoUrl)}" alt="photo"></div>` : '';
-    const status = s.approached
-      ? '<span class="status approached">close as I can get</span>'
+    // Quiet status marks — every stop reports its outcome, but subtly:
+    // small dim text, not a pill. The summary line carries the count.
+    const meta = s.approached
+      ? '<div class="stop-meta"><span class="status approached">close as I can get</span></div>'
       : s.reachedAt
-        ? '<span class="status reached">reached</span>'
-        : '<span class="status missed">not reached</span>';
+        ? '<div class="stop-meta"><span class="status reached">reached</span></div>'
+        : '<div class="stop-meta"><span class="status missed">not reached</span></div>';
     // Inner stops carry the hexagram resolved from their coordinates: the
     // glyph beside its title, then the haiku with one element per line so
     // the breaks are structural rather than white-space dependent. Oracle
@@ -182,9 +184,10 @@ export async function buildHTMLExport(walk, photos, svgTrace, skinCss = '', icon
     const myIdx = photoSeqs.indexOf(s.seq);
     const myVoiceHtml = myIdx >= 0 && myVoice[myIdx] ? myVoiceBlockHtml(myVoice[myIdx]) : '';
     return `<div class="stop">
+      <input type="checkbox" class="stop-open" aria-label="waypoint ${i + 1} details">
       <div class="stop-num">${i + 1}</div>
       <div class="stop-body">
-        <div class="stop-meta">${status}</div>
+        ${meta}
         ${hexHtml}
         ${cardHtml}
         ${photoHtml}
@@ -204,7 +207,11 @@ export async function buildHTMLExport(walk, photos, svgTrace, skinCss = '', icon
 
   // Filtered pixels are baked into the photo data URLs — the artifact
   // carries no filter markup, no SVG defs, no CSS filter declarations.
-  const embeddedCss = stripFilterDeclarations(`${BASE_CSS}\n${PHOTO_CSS}\n@media print {\n${PRINT_CSS}\n}`);
+  // The skin sits between PHOTO_CSS and the print reset: after base so its
+  // rules win on screen, before PRINT_CSS so the paper-safe colours always
+  // win in print (browsers drop backgrounds when printing, and a dark
+  // skin's pale text would otherwise come out invisible on white).
+  const embeddedCss = stripFilterDeclarations(`${BASE_CSS}\n${PHOTO_CSS}\n${skinCss}\n@media print {\n${PRINT_CSS}\n}`);
 
   // Embed the KML route as a data URI so the keepsake offers a route export
   // with no scripts — just an anchor with a download attribute. The KML is
@@ -225,9 +232,9 @@ ${iconsHeadHtml()}
 ${opts.headHtml ? `${opts.headHtml}\n` : ''}<style>
 ${embeddedCss}
 </style>
-${skinCss ? `<style id="skin">\n${stripFilterDeclarations(skinCss)}\n</style>` : ''}
 </head>
 <body>
+  <header>
   <h1><a class="app-link" href="https://aimless.earth"><img class="app-icon" src="${logoDataUri(icon)}" alt="">Aimless</a></h1>
   <div class="seed">${walk.seed}</div>
   ${voice ? `<div class="walk-voice">Voice of ${voice}</div>` : ''}
@@ -235,6 +242,7 @@ ${skinCss ? `<style id="skin">\n${stripFilterDeclarations(skinCss)}\n</style>` :
   <div class="summary">
     <b>${reached}</b> of ${walk.stops.length} stops reached.
   </div>
+  </header>
   <div class="trace">${svgTrace}</div>
   ${stopCards}
   ${myVoiceTail}

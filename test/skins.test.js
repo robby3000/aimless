@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { SKINS, getSkin, scopeCSS } from '../public/lib/skins.js';
+import { SKINS, getSkin, scopeCSS, BASE_CSS } from '../public/lib/skins.js';
 
 test('skins have unique ids and non-empty names', () => {
   const ids = SKINS.map((s) => s.id);
@@ -11,9 +11,12 @@ test('skins have unique ids and non-empty names', () => {
   }
 });
 
-test('the six named skins are present', () => {
+test('the named skins are present', () => {
   const names = SKINS.map((s) => s.name);
-  for (const name of ['Verdant', 'Neon', 'Old Skool', '1980s', 'Kitsch', 'Aquarium', 'Minimalist 1']) {
+  for (const name of [
+    'Verdant', 'Neon', 'Old Skool', '1980s', 'Kitsch', 'Aquarium',
+    'Minimalist 1', 'Chapters', 'Carousel', 'Contact Sheet',
+  ]) {
     assert.ok(names.includes(name), `missing skin ${name}`);
   }
 });
@@ -92,27 +95,32 @@ test('scopeCSS ignores comments when matching body selectors', () => {
   assert.ok(!out.includes('body'));
 });
 
-test('scopeCSS twins img selectors with canvas for the preview DOM', () => {
-  // Detail photos render into <canvas> elements (baked pixels), but skins
-  // style photos via the bare img selector written for the export's <img>.
-  const out = scopeCSS('img { border: 2px solid red; }', '#d');
-  assert.ok(out.includes('#d img, #d canvas {'), `missing canvas twin in: ${out}`);
+test('base hides waypoint numbers; skins opt in', () => {
+  // .stop-num is always emitted in the markup so any skin can reveal it;
+  // the default keeps numbers off.
+  assert.ok(BASE_CSS.includes('.stop-num { display: none; }'));
 });
 
-test('scopeCSS twins descendant img selectors but not img-like names', () => {
-  const out = scopeCSS('.photo-frame img, .img-logo, img-x { border: 1px; }', '#d');
-  assert.ok(out.includes('#d .photo-frame img, #d .photo-frame canvas'));
-  assert.ok(!out.includes('canvas-logo'), '.img-logo must not twin');
-  assert.ok(!out.includes('canvas-x'), 'img-x element must not twin');
+test('base hides the .stop-open expansion hook; skins opt in', () => {
+  // One hidden checkbox per stop backs CSS-only expand/collapse (Contact
+  // Sheet's lightbox). Skins that don't use it must never see it.
+  assert.ok(BASE_CSS.includes('.stop-open { display: none; }'));
 });
 
-test('every skin img rule reaches preview canvases', () => {
-  // Regression: neon and eighties photo borders vanished in the detail
-  // preview because skin img rules never matched the <canvas> renders.
+test('contact sheet reveals .stop-open as its tap surface', () => {
+  // The export is script-free, so the checkbox IS the interaction; in-app
+  // index.html overrides it back to display:none and JS drives .checked.
+  const cs = getSkin('contactsheet');
+  assert.ok(/\.stop-open\s*{[^}]*display:\s*block/.test(cs.css), 'contact sheet must un-hide .stop-open');
+  assert.ok(cs.css.includes(':has(.stop-open:checked)'), 'contact sheet must wire :checked to expansion');
+});
+
+test('skins decorate .photo-frame, never the leaf photo element', () => {
+  // The leaf is <img> in exports but <canvas> in-app; only the .photo-frame
+  // wrapper exists in both markups, so skin rules must target the frame —
+  // a bare img selector would silently lose its styling in-app.
   for (const s of SKINS) {
-    if (!/(^|[^-\w])img[^{]*{/.test(s.css)) continue;
-    const out = scopeCSS(s.css, '#detail-content');
-    assert.ok(out.includes('canvas'), `${s.id} img rules have no canvas twin`);
+    assert.ok(!/(^|[\s,{>+~])img(?![\w-])/.test(s.css), `${s.id} styles the img element directly`);
   }
 });
 

@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-6b529f43">
+  <meta name="aimless-build" content="aimless-v0.2.0-2199d5b0">
   <meta name="description" content="Go nowhere. Somewhere.">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/favicon-16.png" type="image/png" sizes="16x16">
@@ -76,7 +76,9 @@
     .screen.active { display: flex; }
 
     /* --- Header --- */
-    header {
+    /* Scoped to body > : the walk-result markup now emits its own <header>
+       inside #detail-content; bare element selectors would restyle it. */
+    body > header {
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -95,7 +97,7 @@
     .logo span { color: var(--accent); }
     /* Detail screen drops the header: the artifact frame keeps a uniform
        teal border on all four sides, gaining a row of viewport. */
-    body.detail-active header { display: none; }
+    body.detail-active > header { display: none; }
 
     /* --- Buttons --- */
     button {
@@ -767,11 +769,11 @@
 
     /* --- Focused walk state: everything but the compass fades out and
        becomes unresponsive, so pocket taps cannot end the walk --- */
-    header, nav, .walk-header, #stop-counter, #card-display,
+    body > header, body > nav, .walk-header, #stop-counter, #card-display,
     #screen-walk .walk-actions, #walk-status {
       transition: opacity 0.4s;
     }
-    body.walk-focused header, body.walk-focused nav,
+    body.walk-focused > header, body.walk-focused > nav,
     body.walk-focused .walk-header, body.walk-focused #stop-counter,
     body.walk-focused #card-display,
     body.walk-focused #screen-walk .walk-actions, body.walk-focused #walk-status {
@@ -795,7 +797,7 @@
     .info-content details ul { color: var(--fg-dim); font-size: 0.95rem; padding-left: 20px; margin: 6px 0; }
 
     /* --- Bottom nav --- */
-    nav {
+    body > nav {
       display: flex;
       border-top: 1px solid var(--surface);
       /* safe-area inset inside the bar: the nav reaches the screen edge while
@@ -803,7 +805,7 @@
       padding-bottom: var(--safe-bottom);
       flex-shrink: 0;
     }
-    nav button {
+    body > nav button {
       flex: 1;
       background: transparent;
       border: none;
@@ -813,7 +815,7 @@
       color: var(--fg-dim);
       border-top: 2px solid transparent;
     }
-    nav button.active {
+    body > nav button.active {
       color: var(--accent);
       border-top-color: var(--accent-large);
     }
@@ -1119,7 +1121,20 @@
       -webkit-tap-highlight-color: transparent;
       pointer-events: none;   /* gestures belong to the frame, not the child */
     }
-    .photo-frame.selected { box-shadow: 0 0 0 4px var(--accent); }
+    /* Selection ring: box-shadow draws outside the frame without touching
+       the image or layout. #detail-content prefix keeps it ahead of scoped
+       skin rules on the same element. Fixed app blue, not --accent: the
+       selection affordance must read as a system-standard colour regardless
+       of which skin is showing. */
+    #detail-content .photo-frame.selected { box-shadow: 0 0 0 4px #7ab8ff; }
+    /* Skins can use the emitted .stop-open checkbox as a CSS-only expansion
+       hook — in the script-free export it is the tap surface itself. In-app
+       it must stay out of the way: the long-press photo selection lives on
+       .photo-frame, and an invisible overlay would swallow its pointerdown.
+       So in-app the input stays hidden and JS flips .checked instead; the
+       skin's :has(:checked) rules work identically. The extra .stop keeps
+       this ahead of the scoped skin's #detail-content .stop-open rule. */
+    #detail-content .stop .stop-open { display: none; }
     .photo-loading {
       height: 120px;
       border-radius: 8px;
@@ -1167,7 +1182,7 @@
     @media print {
       html, body { height: auto; overflow: visible; }
       body { background: white; color: black; }
-      header, nav, .walk-actions, .detail-controls,
+      body > header, body > nav, .walk-actions, .detail-controls,
       .sheet-overlay, .sheet,
       #portrait-nudge, #welcome-overlay,
       #screen-go, #screen-walk, #screen-archive, #screen-info { display: none !important; }
@@ -4214,7 +4229,14 @@
     detailContent.addEventListener('click', (e) => {
       if (suppressClick) { suppressClick = false; return; }
       const frame = e.target.closest('.photo-frame');
-      if (!selectedPhotoSeqs.size) return;   // taps are free outside selection mode
+      if (!selectedPhotoSeqs.size) {
+        // Outside selection mode a short tap toggles a skin's expansion
+        // hook if it provides one (.stop-open, Contact Sheet's lightbox).
+        // Long-press never reaches here — suppressClick consumed it.
+        const open = e.target.closest('.stop')?.querySelector('.stop-open');
+        if (open) open.checked = !open.checked;
+        return;
+      }
       // A tap off the photos clears the selection; a tap on one toggles it.
       if (frame) togglePhotoSelected(Number(frame.dataset.stopseq));
       else clearPhotoSelection();
@@ -4432,11 +4454,13 @@
         const photoHtml = sp
           ? `<div class="photo-frame" data-stopseq="${s.seq}"><div class="photo-loading"${arStyle}></div></div>`
           : '';
-        const status = s.approached
-          ? '<span class="status approached">close as I can get</span>'
+        // Quiet status marks — every stop reports its outcome, but subtly:
+        // small dim text, not a pill. The summary line carries the count.
+        const meta = s.approached
+          ? '<div class="stop-meta"><span class="status approached">close as I can get</span></div>'
           : s.reachedAt
-            ? '<span class="status reached">reached</span>'
-            : '<span class="status missed">not reached</span>';
+            ? '<div class="stop-meta"><span class="status reached">reached</span></div>'
+            : '<div class="stop-meta"><span class="status missed">not reached</span></div>';
         // Inner stops carry the hexagram resolved from their coordinates:
         // the glyph beside its title, then the haiku with one element per
         // line so the breaks are structural rather than white-space dependent.
@@ -4458,9 +4482,10 @@
           ? `<div class="card-text card-haiku myvoice-text">${myVoiceBlocks[myIdx].split('\n').map((l) => `<span class="haiku-line">${esc(l)}</span>`).join('')}</div>`
           : '';
         return `<div class="stop" data-seq="${s.seq}">
+          <input type="checkbox" class="stop-open" aria-label="waypoint ${i + 1} details">
           <div class="stop-num">${i + 1}</div>
           <div class="stop-body">
-            <div class="stop-meta">${status}</div>
+            ${meta}
             ${hexHtml}
             ${cardHtml}
             ${photoHtml}
@@ -4489,6 +4514,7 @@
         : 0;
 
       document.getElementById('detail-content').innerHTML = `
+        <header>
         <h1>Aimless</h1>
         <div class="seed">${walk.seed}</div>
         ${voice ? `<div class="walk-voice">Voice of ${voice}</div>` : ''}
@@ -4496,6 +4522,7 @@
         <div class="summary">
           <b>${reached}</b> of ${walk.stops.length} stops reached.
         </div>
+        </header>
         <div class="trace">${svg}</div>
         ${stopHtml}
         ${myVoiceTail}

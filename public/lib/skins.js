@@ -1,11 +1,20 @@
 // Walk Result skins. Each skin is a CSS fragment written against the shared
 // walk-result markup vocabulary (body, h1/h2, .seed, .walk-voice, .date,
-// .summary, .trace, .stop, .stop-num, .status, .card-text, img, footer; The
+// .summary, .trace, .stop, .stop-num, .status, .card-text, footer; The
 // Inner voice adds an optional .card-hex > .glyph + .hex-title block before
 // .card-text, which gains .card-haiku containing one .haiku-line per line).
+// .stop-num is emitted for every stop but hidden by default in BASE_CSS -
+// a skin reveals it (and styles it) when numerals suit its design.
+// .stop-open is a hidden checkbox per stop: a CSS-only expansion hook
+// (Contact Sheet's tap-to-open lightbox). The export uses it as the tap
+// surface; in-app it stays display:none while JS flips .checked.
 // The same fragment skins the in-app detail view (scoped to #detail-content
 // via scopeCSS) and the self-contained HTML export (embedded as-is). CSS
 // only - exports must never contain scripts.
+//
+// Photos are styled via their .photo-frame wrapper, never the leaf element:
+// the leaf is <img> in exports but <canvas> in-app, while the frame exists
+// in both markups unchanged.
 //
 // Skins style decoration only: colours, typography, borders, backgrounds.
 // Never layout, so the same fragment works against both markups. A skin may
@@ -28,16 +37,29 @@
  * just in exports.
  */
 export const BASE_CSS = `
-:root { --bg: #0a0a0a; --surface: #161616; --fg: #e8e8e8; --fg-dim: #888; --accent: #7ab8ff; }
+/* The skinnable surface: a palette/typography skin should only need to set
+   these. Defaults reproduce the original dark look. */
+:root {
+  --bg: #23221f; --surface: #161616; --fg: #e8e8e8; --fg-dim: #888; --accent: #7ab8ff;
+  --body-font: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  /* --heading-font intentionally undeclared: an unset var() makes
+     font-family fall back to inherit, so headings follow body font unless
+     a skin sets it explicitly. */
+  --mono-font: monospace;
+  --rule: #222;
+  --badge-reached-bg: #2a4a2a;    --badge-reached-fg: #8c8;
+  --badge-approached-bg: #4a3a2a; --badge-approached-fg: #fc8;
+  --badge-missed-bg: #4a2a2a;     --badge-missed-fg: #e0a3a3;
+}
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
   background: var(--bg); color: var(--fg);
-  font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  font-family: var(--body-font);
   line-height: 1.6; padding: 24px; max-width: 640px; margin: 0 auto;
 }
-h1 { font-size: 1.4rem; margin-bottom: 4px; }
+h1 { font-family: var(--heading-font); font-size: 1.4rem; margin-bottom: 4px; }
 h1 a { color: inherit; text-decoration: none; }
-.seed { font-family: monospace; color: var(--accent); font-size: 0.9rem; }
+.seed { font-family: var(--mono-font); color: var(--accent); font-size: 0.9rem; }
 .walk-voice { font-size: 0.9rem; color: inherit; opacity: 0.85; margin-top: 2px; }
 .date { color: var(--fg-dim); font-size: 0.9rem; margin-bottom: 16px; }
 .summary { color: var(--fg-dim); font-size: 0.9rem; margin-bottom: 24px; }
@@ -45,31 +67,35 @@ h1 a { color: inherit; text-decoration: none; }
 .trace { background: var(--surface); border-radius: 12px; padding: 16px; margin-bottom: 24px; text-align: center; }
 .trace svg { max-width: 100%; height: auto; }
 .stop {
-  display: flex; gap: 12px; margin-bottom: 20px;
-  border-bottom: 1px solid #222; padding-bottom: 16px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid var(--rule); padding-bottom: 16px;
 }
-.stop-num {
-  width: 32px; height: 32px; border-radius: 50%;
-  background: var(--accent); color: #0a0a0a;
-  display: flex; align-items: center; justify-content: center;
-  font-weight: 700; font-size: 0.9rem; flex-shrink: 0;
-}
-.stop-body { flex: 1; }
 .stop-meta { margin-bottom: 8px; }
-.status { font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
-.status.reached { background: #2a4a2a; color: #8c8; }
-.status.approached { background: #4a3a2a; color: #fc8; }
-.status.missed { background: #4a2a2a; color: #e0a3a3; }
+/* Waypoint numbers are a per-skin dial: always emitted, hidden here. A skin
+   that wants them opts in and styles them itself (.stop-num { display: ... }). */
+.stop-num { display: none; }
+/* Expansion state hook: one hidden checkbox per stop, for skins that offer
+   CSS-only open/closed states. A skin that uses it re-shows and positions
+   it (Contact Sheet makes it a transparent full-cell tap surface). */
+.stop-open { display: none; }
+/* Quiet status marks: every stop reports its outcome, but as small dim
+   text, not a pill — it reports, it doesn't badge. */
+.status { font-size: 0.8rem; font-style: italic; color: var(--fg-dim); }
+.status.approached { color: var(--badge-approached-fg); }
+.status.missed { color: var(--badge-missed-fg); }
 .card-text { font-size: 1.1rem; line-height: 1.6; }
 /* The Inner voice: a large hexagram glyph beside its title, then the haiku
    below a faint rule. No colour is set so every skin's palette flows through. */
-.card-hex { display: flex; align-items: center; gap: 14px; }
-.card-hex .glyph { font-size: 3rem; line-height: 1; flex-shrink: 0; }
-.card-hex .hex-title { font-size: 1.15rem; font-weight: 700; line-height: 1.3; }
-.card-haiku {
-  margin-top: 12px; padding-top: 12px;
-  border-top: 1px solid color-mix(in srgb, currentColor 22%, transparent);
-}
+.card-hex { display: flex; align-items: flex-end; gap: 14px; }
+/* The hexagram glyphs are full-width cells: the bars are drawn narrower,
+   so the font bakes in side bearing on both sides. A small negative margin
+   optically left-aligns the bars with the text column. */
+.card-hex .glyph { font-size: 3rem; line-height: 1; flex-shrink: 0; margin-left: -0.1em; }
+.card-hex .hex-title { font-family: var(--heading-font); font-size: 1.15rem; font-weight: 700; line-height: 1.3; }
+/* Title binds to its verse: no rule between them — separation lives at the
+   .stop boundary. A rule here made the title read as a caption for the
+   previous stop's photo. */
+.card-haiku { margin-top: 8px; }
 .haiku-line { display: block; overflow-wrap: break-word; }
 /* My Voice overflow: blocks beyond the photo count trail the content as
    plain paragraphs — no card frame, rule, or stop number. */
@@ -88,10 +114,8 @@ export const PRINT_CSS = `
 body { background: white; color: black; max-width: none; }
 .trace { background: white; border: 1px solid #ccc; }
 .stop { border-bottom: 1px solid #ddd; }
-.stop-num { background: #333; color: white; }
-.status.reached { background: #d4e8d4; color: #264; }
-.status.approached { background: #f0e4d4; color: #642; }
-.status.missed { background: #f0d4d4; color: #622; }
+.status.approached { color: #642; }
+.status.missed { color: #622; }
 .seed { color: #448; }
 `;
 
@@ -110,7 +134,16 @@ export const SKINS = [
   {
     id: 'default',
     name: 'Default',
-    css: '',
+    // Status labels read as numbered margin notes: "3. reached". The numeral
+    // is a CSS counter, not the hidden .stop-num element. Colour is re-asserted
+    // on the tinted compound selectors, which outrank .status on specificity.
+    css: `
+body { counter-reset: stopnum; }
+.stop { counter-increment: stopnum; }
+.status { font-weight: 400; font-size: 0.75rem; color: #777; }
+.status.approached, .status.missed { color: #777; }
+.status::before { content: counter(stopnum) ". "; }
+`,
     icon: 'sky',
     trace: { planStroke: '#555555', traceStroke: '#7ab8ff', originFill: '#7ab8ff', stopFill: '#e8e8e8' },
     card: {
@@ -140,12 +173,12 @@ h1, h2 { color: #3c531f; }
   border-radius: 4px;
 }
 .stop { border-bottom: 1px solid #b9c99a; }
-.stop-num { background: #5a7a2e; color: #f4f1e4; border-radius: 50% 0 50% 50%; }
+
 .status.reached { background: #dfeccb; color: #3c531f; }
 .status.approached { background: #efe6c3; color: #7a5a1e; }
 .status.missed { background: #ecd9cb; color: #7a3a1e; }
 .card-text { color: #38451f; }
-img { outline: 4px solid #eef2df; outline-offset: 2px; }
+.photo-frame { outline: 4px solid #eef2df; outline-offset: 2px; }
 footer { color: #8a906e; }
 `,
     icon: 'dark',
@@ -183,17 +216,12 @@ h1, h2 {
   border-radius: 0;
 }
 .stop { border-bottom: 1px dashed #3d2b6b; }
-.stop-num {
-  background: transparent; color: #00f5ff;
-  border: 2px solid #00f5ff; border-radius: 0;
-  text-shadow: 0 0 6px #00f5ff;
-  box-shadow: 0 0 10px #00f5ff66;
-}
+
 .status.reached { background: transparent; color: #39ff6a; border: 1px solid #39ff6a; }
 .status.approached { background: transparent; color: #ffe74c; border: 1px solid #ffe74c; }
 .status.missed { background: transparent; color: #ff3864; border: 1px solid #ff3864; }
 .card-text { color: #e0d7ff; text-shadow: 0 0 4px #7a5cff55; }
-img { border: 2px solid #ff2bd6; box-shadow: 0 0 16px #ff2bd677; border-radius: 0; }
+.photo-frame { border: 2px solid #ff2bd6; box-shadow: 0 0 16px #ff2bd677; border-radius: 0; }
 footer { color: #554a80; }
 `,
     icon: 'sky',
@@ -234,11 +262,6 @@ h1, h2 {
   border-radius: 0;
 }
 .stop { border-bottom: 1px dotted #a08b64; }
-.stop-num {
-  background: transparent; color: #6b5233;
-  border: 1.5px solid #6b5233; border-radius: 50%;
-  font-family: Georgia, serif;
-}
 .status { font-style: italic; text-transform: none; letter-spacing: 0; background: transparent; padding: 0; }
 /* The base skin's .status.* backgrounds win on specificity, so each variant
    must re-declare transparent here. */
@@ -247,7 +270,7 @@ h1, h2 {
 .status.missed { background: transparent; color: #8a2e1e; }
 .card-text { font-size: 1.05rem; color: #46392a; }
 .card-text::first-letter { font-size: 1.6em; font-weight: 700; color: #6b5233; }
-img { border: 1px solid #8a7355; padding: 6px; background: #f7f0dd; }
+.photo-frame { border: 1px solid #8a7355; padding: 6px; background: #f7f0dd; }
 footer { font-style: italic; color: #93826a; }
 footer::before { content: "~ "; }
 footer::after { content: " ~"; }
@@ -285,16 +308,13 @@ h1::before, h2::before { content: "C:\\> "; color: #2aa02a; }
   box-shadow: inset 0 0 40px #003300;
 }
 .stop { border-bottom: 1px solid #0f3d0f; }
-.stop-num {
-  background: #33ff33; color: #000; border-radius: 0;
-  font-family: 'Courier New', monospace;
-}
+
 .status { border-radius: 0; font-family: 'Courier New', monospace; }
 .status.reached { background: #0f3d0f; color: #33ff33; }
 .status.approached { background: #3d3d0f; color: #ffff33; }
 .status.missed { background: #3d0f0f; color: #ff5555; }
 .card-text { color: #33ff33; }
-img { border: 2px solid #33ff33; border-radius: 0; filter: contrast(1.1); }
+.photo-frame { border: 2px solid #33ff33; border-radius: 0; filter: contrast(1.1); }
 footer { color: #1e7a1e; }
 footer::before { content: "*** "; }
 footer::after { content: " ***"; }
@@ -335,16 +355,12 @@ h1, h2 {
   box-shadow: 6px 6px 0 #66ccff;
 }
 .stop { border-bottom: 3px dotted #ff66cc; }
-.stop-num {
-  background: #ffcc00; color: #cc0066;
-  border: 3px solid #ff66cc; border-radius: 50%;
-  transform: rotate(-8deg);
-}
+
 .status.reached { background: #ccff66; color: #336600; border-radius: 12px; }
 .status.approached { background: #ffcc66; color: #7a3300; border-radius: 12px; }
 .status.missed { background: #ff99aa; color: #7a0028; border-radius: 12px; }
 .card-text { color: #771177; }
-img {
+.photo-frame {
   border: 5px solid #ffcc00;
   outline: 3px dotted #ff66cc;
   border-radius: 20px;
@@ -381,16 +397,16 @@ body {
   background-image: linear-gradient(180deg, #0E3242 0%, #113E4E 55%, #0C2E3B 100%);
   background-attachment: fixed;
   color: #C9DEDA;
-  font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+  font-family: system-ui, -apple-system, sans-serif;
 }
 h1, h2 {
-  font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
+  font-family: Georgia, 'Times New Roman', serif;
   color: #EEF6F2;
 }
 h1 { font-style: italic; text-shadow: 0 2px 24px rgba(130, 214, 195, 0.25); }
 a { color: #F2946B; }
 .seed {
-  font-family: 'IBM Plex Mono', ui-monospace, 'Courier New', monospace;
+  font-family: ui-monospace, 'SF Mono', 'Courier New', monospace;
   color: #F2946B;
   letter-spacing: 0.08em;
 }
@@ -404,20 +420,14 @@ a { color: #F2946B; }
   box-shadow: inset 0 0 48px rgba(130, 214, 195, 0.08);
 }
 .stop { border-bottom: 1px solid rgba(233, 244, 240, 0.14); }
-.stop-num {
-  background: radial-gradient(circle at 32% 28%, #EEF6F2 0%, rgba(238, 246, 242, 0.72) 45%, rgba(238, 246, 242, 0.32) 100%);
-  color: #0B2A38;
-  border: 1px solid rgba(238, 246, 242, 0.45);
-}
-.status.reached { background: rgba(47, 107, 82, 0.45); color: #A8E0C8; }
-.status.approached { background: rgba(201, 168, 118, 0.22); color: #E8C468; }
-.status.missed { background: rgba(232, 114, 76, 0.18); color: #F2946B; }
+
+.stop-meta { display: none; }
 .card-text { color: #C9DEDA; }
 .card-hex .glyph { color: #82D6C3; text-shadow: 0 0 14px rgba(130, 214, 195, 0.45); }
 .card-hex .hex-title { font-family: Georgia, serif; color: #EEF6F2; }
-img { border: 1px solid rgba(233, 244, 240, 0.28); border-radius: 2px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35); }
+.photo-frame { border: 1px solid rgba(233, 244, 240, 0.28); border-radius: 2px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35); }
 footer {
-  font-family: 'IBM Plex Mono', ui-monospace, 'Courier New', monospace;
+  font-family: ui-monospace, 'SF Mono', 'Courier New', monospace;
   color: #7FA3A0;
 }
 
@@ -533,7 +543,7 @@ footer::after { left: 88%; width: 5px; height: 5px; box-shadow: -7vw -40px 0 1px
       bg: '#0B2A38',
       fg: '#EEF6F2',
       accent: '#F2946B',
-      font: "italic 600 52px 'Fraunces', Georgia, 'Times New Roman', serif",
+      font: "italic 600 52px Georgia, 'Times New Roman', serif",
     },
   },
 
@@ -551,7 +561,6 @@ body {
   color: #2c2c2c;
   font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
   line-height: 1.7;
-  counter-reset: stopnum;
 }
 h1, h2 {
   font-family: Georgia, 'Times New Roman', serif;
@@ -589,19 +598,11 @@ h2 { font-size: 1.2rem; }
   padding-bottom: 28px;
   margin-bottom: 28px;
   display: block;
-  counter-increment: stopnum;
 }
-.stop-num, .stop-meta { display: none; }
 .card-text { color: #2c2c2c; font-size: 1.1rem; line-height: 1.7; }
-.card-text::before {
-  content: counter(stopnum) ". ";
-  color: #b56b50;
-  font-weight: 700;
-  font-size: 1.4rem;
-}
 .card-hex .glyph { color: #3a3a3a; font-family: Georgia, serif; }
 .card-hex .hex-title { font-family: Georgia, serif; font-weight: 700; color: #3a3a3a; }
-img { border: none; outline: none; box-shadow: none; border-radius: 8px; }
+.photo-frame { border: none; outline: none; box-shadow: none; border-radius: 8px; }
 footer { color: #9a9a9a; font-size: 0.8rem; }
 `,
     icon: 'dark',
@@ -612,6 +613,382 @@ footer { color: #9a9a9a; font-size: 0.8rem; }
       accent: '#b56b50',
       font: "400 52px Georgia, 'Times New Roman', serif",
     },
+  },
+
+  {
+    id: 'chapters',
+    name: 'Chapters',
+    // Family A1: title screen, trace screen, then one full-viewport screen
+    // per waypoint, then the footer. Mandatory snap, letterboxed photos,
+    // a large faded chapter numeral via the .stop-num hook. Requires the
+    // <header> markup hook, which both emitters provide.
+    css: `
+:root {
+  --bg: #1e231e; --surface: #1e1e1a; --fg: #eceae2; --fg-dim: #8f8c80;
+  --accent: #d9a45b; --rule: rgba(236, 234, 226, 0.14);
+  --body-font: system-ui, -apple-system, sans-serif;
+  --heading-font: Georgia, 'Times New Roman', serif;
+}
+
+/* The body is the scroll port: height 100% + own scroll, so children sized
+   in % fill one viewport each. In-app body maps to #detail-content, which
+   is already the scroller — the same rules just work there. */
+html, body { height: 100%; }
+body {
+  margin: 0; padding: 0; max-width: none;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+}
+
+/* Every top-level block can snap; the real screens take the full port. */
+body > * { scroll-snap-align: start; }
+header, .trace, .stop, .myvoice-tail {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 32px 24px;
+}
+
+/* Title slide: centred, quiet. */
+header { align-items: center; text-align: center; }
+header h1 { font-family: var(--heading-font); font-weight: 400; font-size: 2.2rem; }
+header .summary { margin-bottom: 0; }
+
+/* Trace slide: diagram centred on the field. */
+.trace { align-items: center; background: none; padding-top: 0; padding-bottom: 0; }
+.trace svg { max-height: 72svh; }
+
+/* The trace draws itself — but only as its screen scrolls into view, so the
+   animation isn't spent before the viewer reaches it. view() ties progress
+   to visibility in the scroll port; the dots' inline delays still stagger
+   the pops within the entry range. Progressive enhancement: without support
+   the animation plays on load as it always has. */
+@supports (animation-timeline: view()) {
+  .trace svg .tr-line, .trace svg .tr-dot {
+    animation-timeline: view();
+    animation-range: entry;
+  }
+}
+
+/* A chapter. The stop column stays readable; the numeral looms behind. */
+.stop { border-bottom: none; margin-bottom: 0; }
+.stop-body { width: 100%; max-width: 620px; margin: 0 auto; }
+.stop-num {
+  display: block;
+  font-family: var(--heading-font);
+  font-size: 4.5rem; line-height: 1;
+  color: rgba(217, 164, 91, 0.35);
+  margin-bottom: 0.4rem;
+}
+.card-hex .hex-title { font-size: 1.5rem; font-weight: 400; }
+.card-haiku { font-size: 1.05rem; }
+
+/* Status labels read as small grey margin notes (same as Default). Colour
+   re-asserted on the tinted compound selectors, which outrank .status. */
+.status { font-weight: 400; font-size: 0.75rem; color: #777; }
+.status.approached, .status.missed { color: #777; }
+
+/* Letterbox: the frame is a plate on the dark field; the whole photo shows. */
+.photo-frame {
+  height: 52svh;
+  margin-top: 16px;
+  border-radius: 0;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+}
+.photo-frame > * { display: block; width: 100%; height: 100%; object-fit: contain; }
+
+footer { padding: 40px 24px; scroll-snap-align: end; }
+
+/* Print must not inherit the scroll port: an overflowed body clips the
+   export to a single page. Flatten to the plain sequential page and let
+   the shared print reset do the rest. */
+@media print {
+  html, body { height: auto; }
+  body { overflow: visible; scroll-snap-type: none; }
+  header, .trace, .stop, .myvoice-tail { min-height: 0; display: block; padding: 0; }
+  .stop-num { font-size: 1.4rem; }
+  .photo-frame { height: auto; }
+  .photo-frame > * { height: auto; }
+}
+`,
+    icon: 'light',
+    trace: { planStroke: '#4a463c', traceStroke: '#d9a45b', originFill: '#d9a45b', stopFill: '#eceae2' },
+    card: { bg: '#1e231e', fg: '#eceae2', accent: '#d9a45b', font: "400 52px Georgia, 'Times New Roman', serif" },
+  },
+
+  {
+    id: 'carousel',
+    name: 'Carousel',
+    // Family B1: horizontal swipe — title slide, trace slide, one slide per
+    // waypoint, then the footer. Mandatory x-snap with centred 92% slides
+    // so neighbours peek as the affordance. Letterboxed photos, large faded
+    // waypoint numeral via .stop-num. Requires the <header> hook.
+    // No dot-nav: anchor targets would need emitting per stop — deferred.
+    css: `
+:root {
+  --bg: #e9e6df; --surface: #f4f1ea; --fg: #201d18; --fg-dim: #6f6a5f;
+  --accent: #2f6a4f; --rule: rgba(32, 29, 24, 0.18);
+  --body-font: system-ui, -apple-system, sans-serif;
+  --heading-font: Georgia, 'Times New Roman', serif;
+}
+
+/* The body is the horizontal scroll port (in-app: #detail-content, already
+   the scroller). Children are 92%-wide snap-centred slides. */
+html, body { height: 100%; }
+body {
+  margin: 0; padding: 0; max-width: none;
+  display: flex;
+  overflow-x: auto; overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+}
+body > * {
+  flex: 0 0 92%;
+  height: 100%;
+  scroll-snap-align: center;
+  display: flex; flex-direction: column;
+  /* plain center overflows upward on tall slides — the top becomes
+     unreachable; safe center degrades to start instead of clipping */
+  justify-content: safe center;
+  padding: 24px;
+  overflow-y: auto;   /* a slide taller than the port scrolls inside itself */
+}
+
+/* Title slide: centred, with the swipe hint as the affordance. */
+header { align-items: center; text-align: center; }
+header h1 { font-family: var(--heading-font); font-weight: 400; font-size: 2.2rem; }
+header .summary { margin-bottom: 0; }
+header::after {
+  content: "swipe →";
+  margin-top: 3rem;
+  font-size: 0.75rem; letter-spacing: 0.3em; text-transform: uppercase;
+  color: var(--fg-dim);
+}
+
+/* Trace slide. */
+.trace { align-items: center; background: none; padding-top: 0; padding-bottom: 0; }
+.trace svg { max-height: 70vh; margin: 0 auto; }
+
+/* A slide per waypoint. The text column stays narrow; the numeral looms. */
+.stop { border-bottom: none; margin-bottom: 0; }
+.stop-body { width: 100%; max-width: 520px; margin: 0 auto; }
+.stop-num {
+  display: block;
+  font-family: var(--heading-font);
+  font-size: 4.5rem; line-height: 1;
+  color: rgba(47, 106, 79, 0.28);
+  margin-bottom: 0.4rem;
+}
+.card-hex .hex-title { font-size: 1.5rem; font-weight: 400; }
+.card-haiku { font-size: 1.05rem; }
+
+/* Status labels read as small grey margin notes (same as Default). */
+.status { font-weight: 400; font-size: 0.75rem; color: #777; }
+.status.approached, .status.missed { color: #777; }
+
+/* Letterbox: the frame is a pale plate; the whole photo shows. */
+.photo-frame {
+  height: 46svh;
+  margin-top: 16px;
+  border-radius: 2px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+}
+.photo-frame > * { display: block; width: 100%; height: 100%; object-fit: contain; }
+
+footer { align-items: center; }
+
+/* Flatten to a plain sequential page on paper: a horizontal scroll port
+   would clip everything right of slide one otherwise. */
+@media print {
+  html, body { height: auto; }
+  body { display: block; overflow: visible; scroll-snap-type: none; }
+  body > * { flex: none; height: auto; padding: 0; overflow: visible; }
+  header::after { content: none; }
+  .stop-num { font-size: 1.4rem; }
+  .photo-frame { height: auto; }
+  .photo-frame > * { height: auto; }
+}
+`,
+    icon: 'dark',
+    trace: { planStroke: '#a8a094', traceStroke: '#2f6a4f', originFill: '#2f6a4f', stopFill: '#201d18' },
+    card: { bg: '#e9e6df', fg: '#201d18', accent: '#2f6a4f', font: "400 52px Georgia, 'Times New Roman', serif" },
+  },
+
+  {
+    id: 'contactsheet',
+    name: 'Contact Sheet',
+    // Family D1: a dark proof sheet — numbered frames in a grid, number +
+    // image only at each frame's own aspect. Tap opens a viewport-filling
+    // lightbox (photo large, caption alongside) via the .stop-open checkbox
+    // hook; tap anywhere closes. In-app the input stays display:none and JS
+    // flips .checked on short tap, so the long-press photo-selection
+    // gesture keeps working on grid and lightbox photos alike.
+    css: `
+:root {
+  --bg: #17140f; --surface: #231e16; --fg: #e8e2d4; --fg-dim: #8d8574;
+  --accent: #d9b36a; --rule: rgba(232, 226, 212, 0.16);
+  --body-font: system-ui, -apple-system, sans-serif;
+  --heading-font: Georgia, 'Times New Roman', serif;
+  --mono-font: ui-monospace, 'SF Mono', 'Courier New', monospace;
+}
+
+/* The page is the grid: header strip and trace take the full width,
+   each waypoint is a cell, footer closes the sheet. */
+body {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  max-width: none;
+  padding: 14px;
+}
+@media (min-width: 720px) {
+  body { grid-template-columns: repeat(3, 1fr); gap: 18px; padding: 24px; }
+}
+header, .trace, .myvoice-tail, footer { grid-column: 1 / -1; }
+header { padding-bottom: 10px; border-bottom: 1px solid var(--rule); }
+header .summary { margin-bottom: 0; }
+.trace { background: var(--surface); border: 1px solid var(--rule); }
+.myvoice-tail { margin-top: 0; }
+
+/* A proof frame: plate, frame number above the photo. Photos keep their
+   own aspect — landscape and portrait both sit whole in the sheet. */
+body { align-items: start; }
+.stop {
+  border: 1px solid var(--rule);
+  background: var(--surface);
+  padding: 10px;
+  margin-bottom: 0;
+}
+.stop-num {
+  display: block;
+  font-family: var(--mono-font);
+  font-size: 0.75rem;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+.stop-body { display: flex; flex-direction: column; }
+.photo-frame { order: -1; }
+
+.photo-frame {
+  margin: 0;
+  border-radius: 0;
+  border: 1px solid var(--rule);
+  background: #0d0b08;
+}
+.photo-frame > * { display: block; width: 100%; height: auto; }
+
+/* The caption under the frame. */
+.stop-meta { margin-bottom: 6px; }
+.status { font-weight: 400; font-size: 0.75rem; color: #777; }
+.status.approached, .status.missed { color: #777; }
+.card-hex { align-items: baseline; gap: 10px; }
+.card-hex .glyph { font-size: 1.9rem; }
+.card-hex .hex-title { font-size: 0.95rem; }
+.card-text { font-size: 0.9rem; line-height: 1.5; color: var(--fg-dim); }
+.card-haiku { margin-top: 4px; }
+
+footer { margin-top: 8px; }
+
+/* Tap-to-expand: a hidden checkbox per stop is the tap surface in the
+   export (script-free, so the input IS the interaction); in-app the input
+   stays display:none and JS flips .checked. Unchecked frames show number +
+   photo only; checked frames become a viewport lightbox. */
+.stop { position: relative; }
+.stop-open {
+  appearance: none;
+  display: block;   /* BASE_CSS hides the hook; this skin uses it */
+  position: absolute; inset: 0;
+  margin: 0; padding: 0;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 5;
+}
+.stop-open:focus-visible { opacity: 1; outline: 2px solid var(--accent); }
+
+@media screen {
+  /* Collapsed frames show number + image only. */
+  .stop:not(:has(.stop-open:checked)) .stop-meta,
+  .stop:not(:has(.stop-open:checked)) .card-hex,
+  .stop:not(:has(.stop-open:checked)) .card-text {
+    position: absolute;
+    visibility: hidden;
+  }
+
+  /* Expanded: the card becomes a viewport-filling lightbox — photo large,
+     caption alongside. The tap surface covers it all, so tap anywhere
+     closes. */
+  .stop:has(.stop-open:checked) {
+    position: fixed; inset: 0; z-index: 20;
+    background: rgba(13, 11, 8, 0.97);
+    padding: 20px;
+    overflow-y: auto;
+  }
+  .stop:has(.stop-open:checked)::after {
+    content: "tap to close";
+    position: absolute; top: 16px; right: 20px;
+    font-family: var(--mono-font); font-size: 0.7rem;
+    letter-spacing: 0.15em; color: var(--fg-dim);
+  }
+  .stop:has(.stop-open:checked) .stop-body {
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(200px, 2fr);
+    gap: 10px 20px;
+    align-items: center;
+    max-width: 1000px;
+    margin: 4vh auto;
+  }
+  .stop:has(.stop-open:checked) .photo-frame { grid-column: 1; grid-row: 1 / 6; margin: 0; }
+  .stop:has(.stop-open:checked) .photo-frame > * { max-height: 76vh; object-fit: contain; }
+  .stop:has(.stop-open:checked) .stop-meta,
+  .stop:has(.stop-open:checked) .card-hex,
+  .stop:has(.stop-open:checked) .card-text { grid-column: 2; }
+
+  /* My Voice overflow belongs to the final card: hidden in the sheet,
+     appended inside the last card's lightbox when it opens. The tail is a
+     sibling after the last .stop, so :has(+ .myvoice-tail) identifies the
+     final card. pointer-events: none lets taps fall through to close. */
+  .myvoice-tail { display: none; }
+  .stop:has(+ .myvoice-tail):has(.stop-open:checked) ~ .myvoice-tail {
+    display: block;
+    position: fixed; z-index: 21;
+    right: calc(20px + max(0px, (100vw - 1040px) / 2));
+    bottom: 20px;
+    width: min(38%, 380px);
+    pointer-events: none;
+    font-size: 0.85rem;
+    font-style: italic;
+    color: var(--fg-dim);
+  }
+}
+
+/* Narrow ports stack: photo on top, caption under. */
+@media screen and (max-width: 640px) {
+  .stop:has(.stop-open:checked) .stop-body { grid-template-columns: 1fr; }
+  .stop:has(.stop-open:checked) .photo-frame { grid-column: 1; grid-row: auto; }
+  .stop:has(.stop-open:checked) .stop-meta,
+  .stop:has(.stop-open:checked) .card-hex,
+  .stop:has(.stop-open:checked) .card-text { grid-column: 1; }
+  .stop:has(+ .myvoice-tail):has(.stop-open:checked) ~ .myvoice-tail {
+    left: 20px; right: 20px; width: auto;
+  }
+}
+
+/* Print: flatten the grid into the plain sequential page — everything
+   visible, no tap state. */
+@media print {
+  body { display: block; padding: 0; }
+  header, .stop { border: none; padding: 0; }
+  .stop-open { display: none; }
+  .photo-frame { aspect-ratio: auto; border: none; }
+  .photo-frame > * { height: auto; }
+}
+`,
+    icon: 'light',
+    trace: { planStroke: '#4f4636', traceStroke: '#d9b36a', originFill: '#d9b36a', stopFill: '#e8e2d4' },
+    card: { bg: '#17140f', fg: '#e8e2d4', accent: '#d9b36a', font: "400 52px ui-monospace, 'SF Mono', monospace" },
   },
 ];
 
@@ -628,8 +1005,6 @@ export function getSkin(id) {
  * scopes to `#scope::before`, which keeps viewport-fixed overlays working
  * in-app). @media/@supports blocks keep their prelude and have their inner
  * rules scoped; other @-rules (e.g. @keyframes) pass through untouched.
- * Selectors using the img type also emit a canvas twin, because the preview
- * renders photos into <canvas> elements while the export uses <img>.
  * The parser is a brace matcher - keep braces out of comments.
  */
 export function scopeCSS(css, scope) {
@@ -667,23 +1042,13 @@ function scopeBlock(css, scope) {
   return out;
 }
 
-const IMG_TYPE = /(^|[\s>+~])img(?![\w-])/g;
-
 function scopeSelectors(selectors, scope) {
-  return selectors.split(',').flatMap((raw) => {
+  return selectors.split(',').map((raw) => {
     const s = raw.trim();
     if (!s) return s;
-    // The detail preview renders photos as <canvas>, not <img> (baked pixels,
-    // no JPEG encode), so skin rules written for the bare img selector would
-    // lose their borders there. Twin every selector that types img with a
-    // canvas variant; in the export the twin simply matches nothing.
-    const twin = s.replace(IMG_TYPE, '$1canvas');
-    const variants = twin === s ? [s] : [s, twin];
-    return variants.map((v) => {
-      if (v === 'body' || v === ':root') return scope;
-      if (v.startsWith('body ')) return `${scope} ${v.slice(5)}`;
-      if (v.startsWith('body:')) return `${scope}${v.slice(4)}`;
-      return `${scope} ${v}`;
-    });
+    if (s === 'body' || s === ':root') return scope;
+    if (s.startsWith('body ')) return `${scope} ${s.slice(5)}`;
+    if (s.startsWith('body:')) return `${scope}${s.slice(4)}`;
+    return `${scope} ${s}`;
   }).join(', ');
 }

@@ -125,6 +125,31 @@ test('haiku lines become one block element per line', async () => {
   assert.equal((html.match(/<span class="haiku-line">/g) || []).length, 3);
 });
 
+test('every stop emits a .stop-num element for skins to opt into', async () => {
+  // Waypoint numbers are a per-skin dial: the markup always carries them
+  // and BASE_CSS hides them; a skin reveals and styles its own numerals.
+  const html = await buildHTMLExport(WALK, [], '<svg></svg>');
+  assert.equal((html.match(/class="stop-num"/g) || []).length, WALK.stops.length);
+  assert.ok(html.includes('<div class="stop-num">1</div>'));
+});
+
+test('every stop emits a .stop-open checkbox for skins to opt into', async () => {
+  // The expansion hook is a real input: exports are script-free, so CSS
+  // :has(:checked) needs it physically present. BASE_CSS hides it.
+  const html = await buildHTMLExport(WALK, [], '<svg></svg>');
+  assert.equal((html.match(/class="stop-open"/g) || []).length, WALK.stops.length);
+  assert.ok(html.includes('<input type="checkbox" class="stop-open"'));
+});
+
+test('the title block is wrapped in a header element', async () => {
+  // Layout families (Chapters, Carousel) snap the whole header as one
+  // screen, so the loose title elements need a shared wrapper.
+  const html = await buildHTMLExport(WALK, [], '<svg></svg>');
+  const head = html.slice(html.indexOf('<header>'), html.indexOf('</header>'));
+  assert.ok(head.includes('<h1>') && head.includes('class="seed"') && head.includes('class="summary"'));
+  assert.ok(html.indexOf('</header>') < html.indexOf('<div class="trace">'), 'header must close before the trace');
+});
+
 test('photos embed as plain img in a .photo-frame wrapper', async () => {
   const html = await buildHTMLExport(WALK, [{ stopSeq: 0, dataUrl: 'data:image/jpeg;base64,QUJD' }], '<svg></svg>');
   assert.ok(html.includes('<div class="photo-frame"><img src="data:image/jpeg;base64,QUJD" alt="photo"></div>'));
@@ -197,6 +222,18 @@ test('skin CSS filter declarations are stripped from the embedded styles', async
   const html = await buildHTMLExport(WALK, [], '<svg></svg>', skin);
   assert.ok(html.includes('border: 2px solid #33ff33'));
   assert.ok(!html.includes('filter:'));
+});
+
+test('skin CSS precedes the print reset so paper output wins', async () => {
+  // Browsers drop backgrounds when printing; a dark skin's pale body text
+  // must not outrank PRINT_CSS's "black on white" or exports print
+  // unreadably.
+  const skin = 'body { color: #e0d7ff; }';
+  const html = await buildHTMLExport(WALK, [], '<svg></svg>', skin);
+  const skinAt = html.indexOf('#e0d7ff');
+  const printAt = html.indexOf('@media print');
+  assert.ok(skinAt > -1 && printAt > -1);
+  assert.ok(skinAt < printAt, 'skin rules must come before the print block');
 });
 
 test('each photo source appears exactly once', async () => {
