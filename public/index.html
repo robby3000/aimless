@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-608c7dd4">
+  <meta name="aimless-build" content="aimless-v0.2.0-c9c34ac9">
   <meta name="description" content="Go nowhere. Somewhere.">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/favicon-16.png" type="image/png" sizes="16x16">
@@ -1140,13 +1140,22 @@
     #detail-content .zoom-open, #detail-content .zoom-shut {
       display: none !important;
     }
-    /* In-app the artifact's viewport is the detail frame, not the screen:
-       a transform makes this scroller the containing block for
-       position:fixed descendants, so skin overlays (Contact Sheet's
-       lightbox, a zoomed photo) fill the preview while the Skin/Filter
-       rail below stays reachable — the same rules as the export, one
-       element smaller. */
-    #detail-content { transform: translateZ(0); }
+    /* In-app the artifact's viewport is the detail frame, not the screen.
+       Skin overlays (Contact Sheet's lightbox, a zoomed photo) use
+       position:fixed + inset:0 — viewport in the export. Pinning them to
+       the frame's rect via --dc-* insets (set in JS, refreshed on resize)
+       keeps the same skin rules while the rail stays reachable. [data-seq]
+       /[data-stopseq] outrank the scoped skin rule on the same element. */
+    #detail-content .stop[data-seq]:has(.stop-open:checked),
+    #detail-content .photo-frame[data-stopseq]:has(> .zoom-open:checked) {
+      inset: var(--dc-top, 0px) var(--dc-right, 0px) var(--dc-bottom, 0px) var(--dc-left, 0px);
+    }
+    /* The last card's My Voice tail is fixed too — keep it inside the
+       frame, clear of the rail. */
+    #detail-content .myvoice-tail {
+      right: calc(var(--dc-right, 0px) + 20px) !important;
+      bottom: calc(var(--dc-bottom, 0px) + 20px) !important;
+    }
     .photo-loading {
       height: 120px;
       border-radius: 8px;
@@ -4168,6 +4177,21 @@
     let pressY = 0;
     let suppressClick = false;
 
+    // Publish the detail frame's rect as viewport-relative insets so skin
+    // overlays written position:fixed + inset:0 (the export viewport) pin
+    // to the preview frame instead — the rail below stays reachable.
+    // Refreshed on detail open and on resize/orientation change.
+    function updateDetailFrameVars() {
+      const r = detailContent.getBoundingClientRect();
+      detailContent.style.setProperty('--dc-top', `${r.top}px`);
+      detailContent.style.setProperty('--dc-right', `${window.innerWidth - r.right}px`);
+      detailContent.style.setProperty('--dc-bottom', `${window.innerHeight - r.bottom}px`);
+      detailContent.style.setProperty('--dc-left', `${r.left}px`);
+    }
+    window.addEventListener('resize', () => {
+      if (document.getElementById('screen-detail').classList.contains('active')) updateDetailFrameVars();
+    });
+
     function syncFilterRailToSelection() {
       // The rail only carries filters in filter mode; in skin mode the
       // selection's state is re-marked when the user switches back.
@@ -4585,6 +4609,7 @@
         }
       }
       showScreen('detail');
+      updateDetailFrameVars();
       // Restore the pre-rebuild viewport position now, and keep restoring it
       // as lazy photo renders grow the placeholders (no-op on first open —
       // the screen was hidden so no anchor was found).
