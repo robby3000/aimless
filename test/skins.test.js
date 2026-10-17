@@ -115,6 +115,24 @@ test('contact sheet reveals .stop-open as its tap surface', () => {
   assert.ok(cs.css.includes(':has(.stop-open:checked)'), 'contact sheet must wire :checked to expansion');
 });
 
+test('chapters and carousel frames hug the photo via the emitted --ar', () => {
+  // Fixed-height letterbox plates left dead space around images; frames
+  // must size from the photo's own aspect ratio instead.
+  for (const id of ['chapters', 'carousel']) {
+    const css = getSkin(id).css;
+    assert.ok(css.includes('aspect-ratio: var(--ar'), `${id} frame must use the --ar hook`);
+    assert.ok(!/\.photo-frame\s*{[^}]*height:\s*\d+svh/.test(css), `${id} frame must not fix its height`);
+  }
+});
+
+test('carousel keeps its cross axis scrollable for iOS scroll-snap', () => {
+  // iOS Safari ignores scroll-snap-type when the non-snap axis is
+  // overflow:hidden — the carousel port must stay overflow:auto both ways.
+  const css = getSkin('carousel').css;
+  assert.ok(css.includes('scroll-snap-type: x mandatory'));
+  assert.ok(!/overflow-y:\s*hidden/.test(css), 'overflow-y:hidden breaks iOS scroll snapping');
+});
+
 test('skins decorate .photo-frame, never the leaf photo element', () => {
   // The leaf is <img> in exports but <canvas> in-app; only the .photo-frame
   // wrapper exists in both markups, so skin rules must target the frame —

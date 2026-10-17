@@ -689,10 +689,13 @@ header .summary { margin-bottom: 0; }
 .status { font-weight: 400; font-size: 0.75rem; color: #777; }
 .status.approached, .status.missed { color: #777; }
 
-/* Letterbox: the frame is a plate on the dark field; the whole photo shows. */
+/* The frame hugs the photo: width = min(column, height cap × ar), and the
+   emitted --ar sets the box's ratio, so portrait and landscape plates are
+   exactly image-sized — no letterbox slack. */
 .photo-frame {
-  height: 52svh;
-  margin-top: 16px;
+  aspect-ratio: var(--ar, 4 / 3);
+  width: min(100%, calc(52svh * var(--ar, 1.3333)));
+  margin: 16px auto 0;
   border-radius: 0;
   background: var(--surface);
   border: 1px solid var(--rule);
@@ -735,12 +738,15 @@ footer { padding: 40px 24px; scroll-snap-align: end; }
 }
 
 /* The body is the horizontal scroll port (in-app: #detail-content, already
-   the scroller). Children are 92%-wide snap-centred slides. */
+   the scroller). Children are 92%-wide snap-centred slides. overflow-y must
+   stay scrollable (auto), not hidden: iOS Safari ignores scroll-snap-type
+   when the cross axis is hidden. Slides are exactly port-height, so the
+   port itself never actually scrolls vertically. */
 html, body { height: 100%; }
 body {
   margin: 0; padding: 0; max-width: none;
   display: flex;
-  overflow-x: auto; overflow-y: hidden;
+  overflow-x: auto; overflow-y: auto;
   scroll-snap-type: x mandatory;
 }
 body > * {
@@ -787,10 +793,13 @@ header::after {
 .status { font-weight: 400; font-size: 0.75rem; color: #777; }
 .status.approached, .status.missed { color: #777; }
 
-/* Letterbox: the frame is a pale plate; the whole photo shows. */
+/* The frame hugs the photo: emitted --ar sets the box ratio and the width
+   caps at the viewport's height budget — portrait boxes narrow instead of
+   letterboxing, landscape fills the column. */
 .photo-frame {
-  height: 46svh;
-  margin-top: 16px;
+  aspect-ratio: var(--ar, 4 / 3);
+  width: min(100%, calc(46svh * var(--ar, 1.3333)));
+  margin: 16px auto 0;
   border-radius: 2px;
   background: var(--surface);
   border: 1px solid var(--rule);

@@ -156,6 +156,15 @@ test('photos embed as plain img in a .photo-frame wrapper', async () => {
   assert.ok(html.includes('.photo-frame'));
 });
 
+test('photo frames carry the image aspect ratio as --ar for skins', async () => {
+  // Layout skins size frames exactly to the image (no letterboxing) via
+  // aspect-ratio: var(--ar). Emitted only when the ratio is known.
+  const withAr = await buildHTMLExport(WALK, [{ stopSeq: 0, dataUrl: 'data:image/jpeg;base64,QUJD', ar: 1.3333 }], '<svg></svg>');
+  assert.ok(withAr.includes('<div class="photo-frame" style="--ar:1.3333">'));
+  const without = await buildHTMLExport(WALK, [{ stopSeq: 0, dataUrl: 'data:image/jpeg;base64,QUJD' }], '<svg></svg>');
+  assert.ok(!without.includes('--ar:'));
+});
+
 test('without title/headHtml the head is the plain keepsake head', async () => {
   const html = await buildHTMLExport(WALK, [], '<svg></svg>');
   assert.ok(html.includes('<title>Aimless — Walk '));

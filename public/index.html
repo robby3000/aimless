@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-2199d5b0">
+  <meta name="aimless-build" content="aimless-v0.2.0-5359ae5e">
   <meta name="description" content="Go nowhere. Somewhere.">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/favicon-16.png" type="image/png" sizes="16x16">
@@ -1135,6 +1135,23 @@
        skin's :has(:checked) rules work identically. The extra .stop keeps
        this ahead of the scoped skin's #detail-content .stop-open rule. */
     #detail-content .stop .stop-open { display: none; }
+    /* In-app, Contact Sheet's expanded card must not cover the screen —
+       the Skin/Filter rail below has to stay reachable for the selection
+       to be useful. So the checked stop expands in place: a full-width
+       row inside the sheet. The export keeps the viewport lightbox — no
+       chrome to preserve there. [data-seq] outranks the scoped skin rule
+       on the same element. */
+    #detail-content .stop[data-seq]:has(.stop-open:checked) {
+      position: relative;
+      grid-column: 1 / -1;
+    }
+    /* The My Voice tail appended to the final card must not go fixed
+       either: in-app it becomes a plain row under the expanded card. */
+    #detail-content .myvoice-tail {
+      position: static;
+      width: auto;
+      grid-column: 1 / -1;
+    }
     .photo-loading {
       height: 120px;
       border-radius: 8px;
@@ -4452,7 +4469,7 @@
         const sp = photoMap.get(s.seq);
         const arStyle = sp?.ar ? ` style="aspect-ratio:${sp.ar.toFixed(4)};height:auto"` : '';
         const photoHtml = sp
-          ? `<div class="photo-frame" data-stopseq="${s.seq}"><div class="photo-loading"${arStyle}></div></div>`
+          ? `<div class="photo-frame" data-stopseq="${s.seq}"${sp.ar ? ` style="--ar:${sp.ar.toFixed(4)}"` : ''}><div class="photo-loading"${arStyle}></div></div>`
           : '';
         // Quiet status marks — every stop reports its outcome, but subtly:
         // small dim text, not a pill. The summary line carries the count.
@@ -4529,6 +4546,29 @@
       `;
 
       applySkin();
+
+      // Scroll-entry trace replay. Snap-scroller skins (Chapters) put the
+      // trace on its own screen, and retarget its draw-on animation to
+      // view() — but animation-timeline needs Safari 26+. Where it is
+      // missing the draw was spent at load, so restart it the first time
+      // the trace actually enters the scroller. Non-snap skins keep the
+      // load-time draw (the trace is already on screen).
+      if (!CSS.supports('animation-timeline: view()')
+          && getComputedStyle(detailContent).scrollSnapType !== 'none') {
+        const traceBox = detailContent.querySelector('.trace');
+        const traceSvg = traceBox?.querySelector('svg');
+        if (traceSvg?.querySelector('.tr-line')) {
+          const io = new IntersectionObserver((entries) => {
+            if (!entries.some((e) => e.isIntersecting)) return;
+            io.disconnect();
+            // Display-flip restarts the svg's inline animations (line + dots).
+            traceSvg.style.display = 'none';
+            void traceSvg.getBoundingClientRect();
+            traceSvg.style.display = '';
+          }, { root: detailContent, threshold: 0.4 });
+          io.observe(traceBox);
+        }
+      }
       showScreen('detail');
       // Restore the pre-rebuild viewport position now, and keep restoring it
       // as lazy photo renders grow the placeholders (no-op on first open —
@@ -4571,7 +4611,7 @@
       const rendered = [];
       for (const p of photos) {
         const url = await renderDetailPhoto(p);
-        if (url && url.startsWith('data:')) rendered.push({ stopSeq: p.stopSeq, dataUrl: url });
+        if (url && url.startsWith('data:')) rendered.push({ stopSeq: p.stopSeq, dataUrl: url, ar: p.ar });
       }
       // Every exported artifact carries OG meta. Title and description
       // always; the page/image URLs only once the walk has been published

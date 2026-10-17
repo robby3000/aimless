@@ -140,8 +140,10 @@ function myVoiceBlockHtml(block) {
  */
 export async function buildHTMLExport(walk, photos, svgTrace, skinCss = '', icon = 'sky', opts = {}) {
   const photoDataUrls = new Map();
+  const photoArs = new Map();
   for (const p of photos) {
     if (p.dataUrl) photoDataUrls.set(p.stopSeq, p.dataUrl);
+    if (p.ar) photoArs.set(p.stopSeq, p.ar);
   }
 
   // My Voice blocks map to photos in order (first block -> first photo),
@@ -157,7 +159,11 @@ export async function buildHTMLExport(walk, photos, svgTrace, skinCss = '', icon
 
   const stopCards = walk.stops.map((s, i) => {
     const photoUrl = photoDataUrls.get(s.seq);
-    const photoHtml = photoUrl ? `<div class="photo-frame"><img src="${esc(photoUrl)}" alt="photo"></div>` : '';
+    // The frame carries the photo's aspect ratio as a custom property, so
+    // skins can hug the image exactly in both orientations.
+    const ar = photoArs.get(s.seq);
+    const arStyle = ar ? ` style="--ar:${ar.toFixed(4)}"` : '';
+    const photoHtml = photoUrl ? `<div class="photo-frame"${arStyle}><img src="${esc(photoUrl)}" alt="photo"></div>` : '';
     // Quiet status marks — every stop reports its outcome, but subtly:
     // small dim text, not a pill. The summary line carries the count.
     const meta = s.approached
