@@ -101,18 +101,30 @@ test('base hides waypoint numbers; skins opt in', () => {
   assert.ok(BASE_CSS.includes('.stop-num { display: none; }'));
 });
 
-test('base hides the .stop-open expansion hook; skins opt in', () => {
-  // One hidden checkbox per stop backs CSS-only expand/collapse (Contact
-  // Sheet's lightbox). Skins that don't use it must never see it.
-  assert.ok(BASE_CSS.includes('.stop-open { display: none; }'));
+test('base hides the expansion hooks; skins opt in', () => {
+  // Hidden same-named radio pairs back CSS-only expand/collapse:
+  // .stop-open/.stop-shut per stop (Contact Sheet's lightbox) and
+  // .zoom-open/.zoom-shut per frame (tap-to-enlarge). Skins that don't
+  // use them must never see them.
+  assert.ok(BASE_CSS.includes('.stop-open, .stop-shut, .zoom-open, .zoom-shut { display: none; }'));
 });
 
-test('contact sheet reveals .stop-open as its tap surface', () => {
-  // The export is script-free, so the checkbox IS the interaction; in-app
-  // index.html overrides it back to display:none and JS drives .checked.
+test('contact sheet reveals .stop-open as its tap surface and .stop-shut as its close', () => {
+  // The export is script-free, so the radios ARE the interaction; in-app
+  // index.html overrides them back to display:none and JS drives .checked.
   const cs = getSkin('contactsheet');
   assert.ok(/\.stop-open\s*{[^}]*display:\s*block/.test(cs.css), 'contact sheet must un-hide .stop-open');
   assert.ok(cs.css.includes(':has(.stop-open:checked)'), 'contact sheet must wire :checked to expansion');
+  assert.ok(/\.stop-shut\s*{[^}]*display:\s*block/.test(cs.css), 'contact sheet must reveal .stop-shut on the open card');
+});
+
+test('chapters and carousel wire the tap-to-enlarge photo hook', () => {
+  for (const id of ['chapters', 'carousel']) {
+    const css = getSkin(id).css;
+    assert.ok(css.includes('.zoom-open'), `${id} must surface .zoom-open`);
+    assert.ok(css.includes('.photo-frame:has(> .zoom-open:checked)'), `${id} must expand the frame on :checked`);
+    assert.ok(css.includes('.zoom-shut'), `${id} must surface .zoom-shut for tap-to-close`);
+  }
 });
 
 test('chapters and carousel frames hug the photo via the emitted --ar', () => {
@@ -125,12 +137,13 @@ test('chapters and carousel frames hug the photo via the emitted --ar', () => {
   }
 });
 
-test('carousel keeps its cross axis scrollable for iOS scroll-snap', () => {
-  // iOS Safari ignores scroll-snap-type when the non-snap axis is
-  // overflow:hidden — the carousel port must stay overflow:auto both ways.
+test('carousel keeps its cross axis scrollable and its snap areas margin-free', () => {
+  // overflow:hidden on the non-snap axis can break scroll snapping, and
+  // margins between snap areas are dead space the port can rest in.
   const css = getSkin('carousel').css;
   assert.ok(css.includes('scroll-snap-type: x mandatory'));
-  assert.ok(!/overflow-y:\s*hidden/.test(css), 'overflow-y:hidden breaks iOS scroll snapping');
+  assert.ok(!/overflow-y:\s*hidden/.test(css), 'overflow-y:hidden breaks scroll snapping');
+  assert.ok(/body\s*>\s*\.trace[^}]*margin:\s*0/.test(css), 'snap children must not carry margins');
 });
 
 test('skins decorate .photo-frame, never the leaf photo element', () => {

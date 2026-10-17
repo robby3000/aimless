@@ -133,12 +133,27 @@ test('every stop emits a .stop-num element for skins to opt into', async () => {
   assert.ok(html.includes('<div class="stop-num">1</div>'));
 });
 
-test('every stop emits a .stop-open checkbox for skins to opt into', async () => {
-  // The expansion hook is a real input: exports are script-free, so CSS
-  // :has(:checked) needs it physically present. BASE_CSS hides it.
+test('every stop emits a .stop-open/.stop-shut radio pair for skins to opt into', async () => {
+  // The expansion hook is a real input pair: exports are script-free, so
+  // CSS :has(:checked) needs it physically present. Same-named radios give
+  // single-open for free, and the shut radio is the tap-to-close surface.
+  // BASE_CSS hides both.
   const html = await buildHTMLExport(WALK, [], '<svg></svg>');
   assert.equal((html.match(/class="stop-open"/g) || []).length, WALK.stops.length);
-  assert.ok(html.includes('<input type="checkbox" class="stop-open"'));
+  assert.equal((html.match(/class="stop-shut"/g) || []).length, WALK.stops.length);
+  assert.ok(html.includes('<input type="radio" name="stopcard" class="stop-open"'));
+  assert.ok(html.includes('<input type="radio" name="stopcard" class="stop-shut"'));
+});
+
+test('every photo frame emits a .zoom-open/.zoom-shut radio pair', async () => {
+  // Tap-to-enlarge hooks for skins that offer it (Chapters, Carousel):
+  // same-named radios keep it single-open and let the second tap close.
+  const html = await buildHTMLExport(WALK, [
+    { stopSeq: 0, dataUrl: 'data:image/jpeg;base64,QUJD' },
+    { stopSeq: 1, dataUrl: 'data:image/jpeg;base64,QUJD' },
+  ], '<svg></svg>');
+  assert.equal((html.match(/class="zoom-open"/g) || []).length, 2);
+  assert.equal((html.match(/class="zoom-shut"/g) || []).length, 2);
 });
 
 test('the title block is wrapped in a header element', async () => {
@@ -152,7 +167,7 @@ test('the title block is wrapped in a header element', async () => {
 
 test('photos embed as plain img in a .photo-frame wrapper', async () => {
   const html = await buildHTMLExport(WALK, [{ stopSeq: 0, dataUrl: 'data:image/jpeg;base64,QUJD' }], '<svg></svg>');
-  assert.ok(html.includes('<div class="photo-frame"><img src="data:image/jpeg;base64,QUJD" alt="photo"></div>'));
+  assert.ok(html.includes('<img src="data:image/jpeg;base64,QUJD" alt="photo">'));
   assert.ok(html.includes('.photo-frame'));
 });
 

@@ -5,9 +5,11 @@
 // .card-text, which gains .card-haiku containing one .haiku-line per line).
 // .stop-num is emitted for every stop but hidden by default in BASE_CSS -
 // a skin reveals it (and styles it) when numerals suit its design.
-// .stop-open is a hidden checkbox per stop: a CSS-only expansion hook
-// (Contact Sheet's tap-to-open lightbox). The export uses it as the tap
-// surface; in-app it stays display:none while JS flips .checked.
+// .stop-open/.stop-shut are a hidden radio pair per stop: CSS-only card
+// expansion with single-open and tap-to-close (Contact Sheet's lightbox).
+// .zoom-open/.zoom-shut are the same pair per photo frame: tap-to-enlarge.
+// The export uses them as tap surfaces; in-app they stay display:none
+// while JS flips .checked.
 // The same fragment skins the in-app detail view (scoped to #detail-content
 // via scopeCSS) and the self-contained HTML export (embedded as-is). CSS
 // only - exports must never contain scripts.
@@ -74,10 +76,12 @@ h1 a { color: inherit; text-decoration: none; }
 /* Waypoint numbers are a per-skin dial: always emitted, hidden here. A skin
    that wants them opts in and styles them itself (.stop-num { display: ... }). */
 .stop-num { display: none; }
-/* Expansion state hook: one hidden checkbox per stop, for skins that offer
-   CSS-only open/closed states. A skin that uses it re-shows and positions
-   it (Contact Sheet makes it a transparent full-cell tap surface). */
-.stop-open { display: none; }
+/* Expansion state hooks: hidden same-named radio pairs — .stop-open plus
+   .stop-shut per stop (open one card, previous closes; the shut surface on
+   the open card is tap-to-close) and .zoom-open plus .zoom-shut per photo
+   frame (tap-to-enlarge). A skin that wires a pair re-shows and positions
+   it (Contact Sheet makes .stop-open a transparent full-cell surface). */
+.stop-open, .stop-shut, .zoom-open, .zoom-shut { display: none; }
 /* Quiet status marks: every stop reports its outcome, but as small dim
    text, not a pill — it reports, it doesn't badge. */
 .status { font-size: 0.8rem; font-style: italic; color: var(--fg-dim); }
@@ -619,9 +623,11 @@ footer { color: #9a9a9a; font-size: 0.8rem; }
     id: 'chapters',
     name: 'Chapters',
     // Family A1: title screen, trace screen, then one full-viewport screen
-    // per waypoint, then the footer. Mandatory snap, letterboxed photos,
-    // a large faded chapter numeral via the .stop-num hook. Requires the
-    // <header> markup hook, which both emitters provide.
+    // per waypoint, then the footer. Mandatory snap, aspect-fitted photos,
+    // a large faded chapter numeral via the .stop-num hook, tap-to-enlarge
+    // photos via the .zoom-open/.zoom-shut hook, and the trace draws as
+    // its screen lands. Requires the <header> hook; both emitters provide
+    // it.
     css: `
 :root {
   --bg: #1e231e; --surface: #1e1e1a; --fg: #eceae2; --fg-dim: #8f8c80;
@@ -632,16 +638,25 @@ footer { color: #9a9a9a; font-size: 0.8rem; }
 
 /* The body is the scroll port: height 100% + own scroll, so children sized
    in % fill one viewport each. In-app body maps to #detail-content, which
-   is already the scroller — the same rules just work there. */
-html, body { height: 100%; }
+   is already the scroller — the same rules just work there. html overflow
+   hidden makes body a real scroll container in the export: iOS Safari
+   does not snap the document scroller. Dead selector in-app (html scopes
+   to #detail-content html, which matches nothing). */
+html { height: 100%; overflow: hidden; }
 body {
   margin: 0; padding: 0; max-width: none;
+  height: 100%;
   overflow-y: auto;
+  overscroll-behavior: none;
   scroll-snap-type: y mandatory;
 }
 
-/* Every top-level block can snap; the real screens take the full port. */
+/* Every top-level block can snap; the real screens take the full port.
+   No margins between snap areas — they are dead space the port can rest
+   in (and have defeated mandatory snap in the field). Spacing lives in
+   padding. Class selectors are needed: body > * loses to BASE margins. */
 body > * { scroll-snap-align: start; }
+body > header, body > .trace, body > .stop, body > .myvoice-tail, body > footer { margin: 0; }
 header, .trace, .stop, .myvoice-tail {
   min-height: 100%;
   display: flex;
@@ -659,15 +674,17 @@ header .summary { margin-bottom: 0; }
 .trace { align-items: center; background: none; padding-top: 0; padding-bottom: 0; }
 .trace svg { max-height: 72svh; }
 
-/* The trace draws itself — but only as its screen scrolls into view, so the
-   animation isn't spent before the viewer reaches it. view() ties progress
-   to visibility in the scroll port; the dots' inline delays still stagger
-   the pops within the entry range. Progressive enhancement: without support
-   the animation plays on load as it always has. */
+/* The trace draws itself — but only as its screen lands, so the animation
+   isn't spent before the viewer reaches it. view() ties progress to
+   visibility in the scroll port; the range runs over the last stretch of
+   entry so the draw completes exactly as the slide snaps into place (a
+   range ending past the rest position would leave it half-drawn).
+   Progressive enhancement: without support the animation plays on load
+   as it always has — in-app an IntersectionObserver replays it on entry. */
 @supports (animation-timeline: view()) {
   .trace svg .tr-line, .trace svg .tr-dot {
     animation-timeline: view();
-    animation-range: entry;
+    animation-range: entry 60% entry 100%;
   }
 }
 
@@ -693,6 +710,7 @@ header .summary { margin-bottom: 0; }
    emitted --ar sets the box's ratio, so portrait and landscape plates are
    exactly image-sized — no letterbox slack. */
 .photo-frame {
+  position: relative;
   aspect-ratio: var(--ar, 4 / 3);
   width: min(100%, calc(52svh * var(--ar, 1.3333)));
   margin: 16px auto 0;
@@ -702,6 +720,38 @@ header .summary { margin-bottom: 0; }
 }
 .photo-frame > * { display: block; width: 100%; height: 100%; object-fit: contain; }
 
+/* Tap the photo to enlarge: the .zoom-open radio covers the frame; once
+   checked, the frame pins to the viewport (in-app: the detail frame, via
+   #detail-content's transform) and .zoom-shut becomes the tap-to-close
+   surface. Same-named radios — only one photo can be enlarged at a time. */
+.zoom-open {
+  display: block;
+  appearance: none;
+  position: absolute; inset: 0;
+  width: auto; height: auto;
+  margin: 0; padding: 0;
+  opacity: 0;
+  cursor: zoom-in;
+  z-index: 2;
+}
+.photo-frame:has(> .zoom-open:checked) {
+  position: fixed; inset: 0; z-index: 30;
+  width: auto; aspect-ratio: auto;
+  margin: 0;
+  border: 0; border-radius: 0;
+  background: rgba(8, 9, 8, 0.94);
+}
+.photo-frame:has(> .zoom-open:checked) > .zoom-open { display: none; }
+.photo-frame:has(> .zoom-open:checked) > .zoom-shut {
+  display: block;
+  appearance: none;
+  position: fixed; inset: 0;
+  width: auto; height: auto;
+  margin: 0; padding: 0;
+  opacity: 0;
+  cursor: zoom-out;
+}
+
 footer { padding: 40px 24px; scroll-snap-align: end; }
 
 /* Print must not inherit the scroll port: an overflowed body clips the
@@ -709,6 +759,7 @@ footer { padding: 40px 24px; scroll-snap-align: end; }
    the shared print reset do the rest. */
 @media print {
   html, body { height: auto; }
+  html { overflow: visible; }
   body { overflow: visible; scroll-snap-type: none; }
   header, .trace, .stop, .myvoice-tail { min-height: 0; display: block; padding: 0; }
   .stop-num { font-size: 1.4rem; }
@@ -726,8 +777,10 @@ footer { padding: 40px 24px; scroll-snap-align: end; }
     name: 'Carousel',
     // Family B1: horizontal swipe — title slide, trace slide, one slide per
     // waypoint, then the footer. Mandatory x-snap with centred 92% slides
-    // so neighbours peek as the affordance. Letterboxed photos, large faded
-    // waypoint numeral via .stop-num. Requires the <header> hook.
+    // so neighbours peek as the affordance. Aspect-fitted photos, large
+    // faded waypoint numeral via .stop-num, tap-to-enlarge via the
+    // .zoom-open/.zoom-shut hook, trace draws as its slide lands.
+    // Requires the <header> hook.
     // No dot-nav: anchor targets would need emitting per stop — deferred.
     css: `
 :root {
@@ -740,13 +793,16 @@ footer { padding: 40px 24px; scroll-snap-align: end; }
 /* The body is the horizontal scroll port (in-app: #detail-content, already
    the scroller). Children are 92%-wide snap-centred slides. overflow-y must
    stay scrollable (auto), not hidden: iOS Safari ignores scroll-snap-type
-   when the cross axis is hidden. Slides are exactly port-height, so the
-   port itself never actually scrolls vertically. */
-html, body { height: 100%; }
+   when the cross axis is hidden. html overflow hidden makes body a real
+   scroll container in the export (iOS does not snap the document
+   scroller); it scopes to a dead selector in-app. */
+html { height: 100%; overflow: hidden; }
 body {
   margin: 0; padding: 0; max-width: none;
+  height: 100%;
   display: flex;
   overflow-x: auto; overflow-y: auto;
+  overscroll-behavior: none;
   scroll-snap-type: x mandatory;
 }
 body > * {
@@ -760,6 +816,10 @@ body > * {
   padding: 24px;
   overflow-y: auto;   /* a slide taller than the port scrolls inside itself */
 }
+/* Margins between snap areas are dead scrollable space (the BASE .trace
+   margin produced a phantom vertical scroll). Class selectors — body > *
+   loses to BASE's class rules. */
+body > .trace, body > .stop, body > .myvoice-tail, body > footer, body > header { margin: 0; }
 
 /* Title slide: centred, with the swipe hint as the affordance. */
 header { align-items: center; text-align: center; }
@@ -775,6 +835,17 @@ header::after {
 /* Trace slide. */
 .trace { align-items: center; background: none; padding-top: 0; padding-bottom: 0; }
 .trace svg { max-height: 70vh; margin: 0 auto; }
+
+/* The trace draws as its slide lands, not at load: view() ties progress
+   to visibility, ranged over the last stretch of entry so the draw
+   completes as the slide snaps centered. Without support it plays on
+   load; in-app an IntersectionObserver replays it on entry instead. */
+@supports (animation-timeline: view()) {
+  .trace svg .tr-line, .trace svg .tr-dot {
+    animation-timeline: view();
+    animation-range: entry 60% entry 100%;
+  }
+}
 
 /* A slide per waypoint. The text column stays narrow; the numeral looms. */
 .stop { border-bottom: none; margin-bottom: 0; }
@@ -797,6 +868,7 @@ header::after {
    caps at the viewport's height budget — portrait boxes narrow instead of
    letterboxing, landscape fills the column. */
 .photo-frame {
+  position: relative;
   aspect-ratio: var(--ar, 4 / 3);
   width: min(100%, calc(46svh * var(--ar, 1.3333)));
   margin: 16px auto 0;
@@ -806,12 +878,45 @@ header::after {
 }
 .photo-frame > * { display: block; width: 100%; height: 100%; object-fit: contain; }
 
+/* Tap the photo to enlarge: the .zoom-open radio covers the frame; once
+   checked, the frame pins to the viewport (in-app: the detail frame, via
+   #detail-content's transform) and .zoom-shut becomes the tap-to-close
+   surface. Same-named radios — only one photo can be enlarged at a time. */
+.zoom-open {
+  display: block;
+  appearance: none;
+  position: absolute; inset: 0;
+  width: auto; height: auto;
+  margin: 0; padding: 0;
+  opacity: 0;
+  cursor: zoom-in;
+  z-index: 2;
+}
+.photo-frame:has(> .zoom-open:checked) {
+  position: fixed; inset: 0; z-index: 30;
+  width: auto; aspect-ratio: auto;
+  margin: 0;
+  border: 0; border-radius: 0;
+  background: rgba(24, 22, 18, 0.94);
+}
+.photo-frame:has(> .zoom-open:checked) > .zoom-open { display: none; }
+.photo-frame:has(> .zoom-open:checked) > .zoom-shut {
+  display: block;
+  appearance: none;
+  position: fixed; inset: 0;
+  width: auto; height: auto;
+  margin: 0; padding: 0;
+  opacity: 0;
+  cursor: zoom-out;
+}
+
 footer { align-items: center; }
 
 /* Flatten to a plain sequential page on paper: a horizontal scroll port
    would clip everything right of slide one otherwise. */
 @media print {
   html, body { height: auto; }
+  html { overflow: visible; }
   body { display: block; overflow: visible; scroll-snap-type: none; }
   body > * { flex: none; height: auto; padding: 0; overflow: visible; }
   header::after { content: none; }
@@ -830,10 +935,13 @@ footer { align-items: center; }
     name: 'Contact Sheet',
     // Family D1: a dark proof sheet — numbered frames in a grid, number +
     // image only at each frame's own aspect. Tap opens a viewport-filling
-    // lightbox (photo large, caption alongside) via the .stop-open checkbox
-    // hook; tap anywhere closes. In-app the input stays display:none and JS
+    // lightbox (photo large, caption alongside) via the .stop-open radio
+    // hook; .stop-shut is the close surface, and the shared radio name
+    // keeps it single-open. In-app the inputs stay display:none and JS
     // flips .checked on short tap, so the long-press photo-selection
-    // gesture keeps working on grid and lightbox photos alike.
+    // gesture keeps working on grid and lightbox photos alike — and
+    // #detail-content's transform pins the lightbox to the preview frame
+    // instead of covering the whole screen.
     css: `
 :root {
   --bg: #17140f; --surface: #231e16; --fg: #e8e2d4; --fg-dim: #8d8574;
@@ -901,10 +1009,12 @@ body { align-items: start; }
 
 footer { margin-top: 8px; }
 
-/* Tap-to-expand: a hidden checkbox per stop is the tap surface in the
-   export (script-free, so the input IS the interaction); in-app the input
-   stays display:none and JS flips .checked. Unchecked frames show number +
-   photo only; checked frames become a viewport lightbox. */
+/* Tap-to-expand: a hidden radio per stop is the tap surface in the export
+   (script-free, so the input IS the interaction); in-app the inputs stay
+   display:none and JS flips .checked. .stop-open and .stop-shut share a
+   name, so only one card can be open — checking either clears the rest.
+   Unchecked frames show number + photo only; checked frames become a
+   viewport lightbox. */
 .stop { position: relative; }
 .stop-open {
   appearance: none;
@@ -927,8 +1037,21 @@ footer { margin-top: 8px; }
   }
 
   /* Expanded: the card becomes a viewport-filling lightbox — photo large,
-     caption alongside. The tap surface covers it all, so tap anywhere
-     closes. */
+     caption alongside. The open radio stops intercepting and .stop-shut
+     takes over as a full-viewport surface, so a tap anywhere checks it —
+     which unchecks .stop-open and closes the card. In-app position:fixed
+     pins to the detail frame instead (its transform is the containing
+     block), so the controls below stay reachable. */
+  .stop:has(.stop-open:checked) .stop-open { display: none; }
+  .stop:has(.stop-open:checked) .stop-shut {
+    display: block;
+    appearance: none;
+    position: fixed; inset: 0;
+    margin: 0; padding: 0;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 40;
+  }
   .stop:has(.stop-open:checked) {
     position: fixed; inset: 0; z-index: 20;
     background: rgba(13, 11, 8, 0.97);
@@ -990,7 +1113,7 @@ footer { margin-top: 8px; }
 @media print {
   body { display: block; padding: 0; }
   header, .stop { border: none; padding: 0; }
-  .stop-open { display: none; }
+  .stop-open, .stop-shut { display: none; }
   .photo-frame { aspect-ratio: auto; border: none; }
   .photo-frame > * { height: auto; }
 }
