@@ -1074,10 +1074,12 @@ footer { margin-top: 8px; }
   }
   /* The open card's frame hugs the photo: aspect-ratio from --ar plus a
      width capped by the height budget, so a portrait image is a tall frame,
-     not a square plate with blank wings. */
+     not a square plate with blank wings. It hugs the caption column too —
+     justify-self:end pins it against the text, so the image-to-caption gap
+     is the same whatever the photo's orientation. */
   .stop > input.stop-open:checked ~ .stop-body .photo-frame {
     grid-column: 1; grid-row: 1 / 6; margin: 0;
-    justify-self: center;
+    justify-self: end;
     aspect-ratio: var(--ar, 1.3333);
     width: 100%;
     width: min(100%, calc(76vh * var(--ar, 1.3333)));
