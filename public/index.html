@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-6d0e0106">
+  <meta name="aimless-build" content="aimless-v0.2.0-cfdaf6e1">
   <meta name="description" content="Go nowhere. Somewhere.">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/favicon-16.png" type="image/png" sizes="16x16">
@@ -1169,16 +1169,18 @@
       right: calc(var(--dc-right, 0px) + 20px) !important;
       bottom: calc(var(--dc-bottom, 0px) + 20px) !important;
     }
-    /* In-app the trace draw-on is JS-driven: an IntersectionObserver
-       restarts it once the slide is firmly in view. Scroll-linked
-       animation (view()) scrubs the draw during the gesture itself, so
-       the slide lands already drawn and reads as "not animating" — and on
-       browsers without view() the draw is spent at load. Kill the timeline
-       here so the observer controls the moment on every browser. The
-       export keeps view() — it's the only script-free gate available. */
+    /* In-app the trace draw-on is JS-gated: the scroll-centre check in
+       showWalkDetail releases the emitted (paused) animation once the
+       slide is firmly centred on the snap axis. The skin's own release
+       paths — scroll-state queries, the view() scrub, the no-support
+       unpause — would fire too early or spend the draw at load, so the
+       timeline and play-state are pinned here until JS releases them.
+       releaseTrace uses inline !important, the only thing that outranks
+       this. Exports have no such gate; the skin CSS handles them. */
     #detail-content .tr-line, #detail-content .tr-dot {
       animation-timeline: auto !important;
       animation-range: normal !important;
+      animation-play-state: paused !important;
     }
     .photo-loading {
       height: 120px;
@@ -4656,7 +4658,7 @@
         if (traceSvg?.querySelector('.tr-line')) {
           const releaseTrace = () => {
             for (const el of traceSvg.querySelectorAll('.tr-line, .tr-dot'))
-              el.style.animationPlayState = 'running';
+              el.style.setProperty('animation-play-state', 'running', 'important');
           };
           const snapType = getComputedStyle(detailContent).scrollSnapType;
           if (snapType === 'none') {

@@ -676,19 +676,26 @@ header .summary { margin-bottom: 0; }
 .trace { align-items: center; background: none; padding-top: 0; padding-bottom: 0; }
 .trace svg { max-height: 72vh; max-height: 72svh; }
 
-/* The trace draws itself — but only as its screen lands, so the animation
-   isn't spent before the viewer reaches it. view() ties progress to
-   visibility in the scroll port; the range runs over the final stretch of
-   entry so the draw happens during the snap settle, not spread over the
-   approach (a range ending past the rest position would leave it
-   half-drawn). Script-free exports can't start an animation after
-   landing, so this is the closest available gate — in-app the
-   IntersectionObserver restart is the driver instead. Without view()
-   support the animation plays on load as it always has. */
-@supports (animation-timeline: view()) {
-  .trace svg .tr-line, .trace svg .tr-dot {
-    animation-timeline: view();
-    animation-range: entry 75% entry 100%;
+/* The trace draws only once its slide is snapped central. scroll-state
+   container queries (Chrome 133+) expose "snapped" as a CSS state, so the
+   emitted animation can start paused and release as a real timed draw the
+   moment the slide lands — not scrubbed with the gesture, not spent at
+   load. Two fallbacks where the queries are missing: view() scrubs the
+   draw over the final entry stretch, and where neither exists it plays
+   on load as it always has. In-app the JS gate drives instead — its
+   !important pause outranks everything here until released. */
+.trace { container-type: scroll-state; }
+.trace svg .tr-line, .trace svg .tr-dot { animation-play-state: paused; }
+@container scroll-state(snapped: y) {
+  .trace svg .tr-line, .trace svg .tr-dot { animation-play-state: running; }
+}
+@supports not (container-type: scroll-state) {
+  .trace svg .tr-line, .trace svg .tr-dot { animation-play-state: running; }
+  @supports (animation-timeline: view()) {
+    .trace svg .tr-line, .trace svg .tr-dot {
+      animation-timeline: view();
+      animation-range: entry 75% entry 100%;
+    }
   }
 }
 
@@ -837,16 +844,26 @@ header::after {
 .trace { align-items: center; background: none; padding-top: 0; padding-bottom: 0; }
 .trace svg { max-height: 70vh; margin: 0 auto; }
 
-/* The trace draws as its slide lands, not at load: view() ties progress
-   to visibility, ranged over the final stretch of entry so the draw
-   happens during the snap settle, not spread over the approach. A
-   script-free export can't start an animation after landing, so this is
-   the closest gate available — in-app an IntersectionObserver restart is
-   the driver instead. Without view() support it plays on load. */
-@supports (animation-timeline: view()) {
-  .trace svg .tr-line, .trace svg .tr-dot {
-    animation-timeline: view();
-    animation-range: entry 75% entry 100%;
+/* The trace draws only once its slide is snapped central. scroll-state
+   container queries (Chrome 133+) expose "snapped" as a CSS state, so the
+   emitted animation can start paused and release as a real timed draw the
+   moment the slide lands — not scrubbed with the gesture, not spent at
+   load. Two fallbacks where the queries are missing: view() scrubs the
+   draw over the final entry stretch, and where neither exists it plays
+   on load as it always has. In-app the JS gate drives instead — its
+   !important pause outranks everything here until released. */
+.trace { container-type: scroll-state; }
+.trace svg .tr-line, .trace svg .tr-dot { animation-play-state: paused; }
+@container scroll-state(snapped: x) {
+  .trace svg .tr-line, .trace svg .tr-dot { animation-play-state: running; }
+}
+@supports not (container-type: scroll-state) {
+  .trace svg .tr-line, .trace svg .tr-dot { animation-play-state: running; }
+  @supports (animation-timeline: view()) {
+    .trace svg .tr-line, .trace svg .tr-dot {
+      animation-timeline: view();
+      animation-range: entry 75% entry 100%;
+    }
   }
 }
 
