@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-c9c34ac9">
+  <meta name="aimless-build" content="aimless-v0.2.0-18ef582d">
   <meta name="description" content="Go nowhere. Somewhere.">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/favicon-16.png" type="image/png" sizes="16x16">
@@ -1141,14 +1141,22 @@
       display: none !important;
     }
     /* In-app the artifact's viewport is the detail frame, not the screen.
-       Skin overlays (Contact Sheet's lightbox, a zoomed photo) use
-       position:fixed + inset:0 — viewport in the export. Pinning them to
-       the frame's rect via --dc-* insets (set in JS, refreshed on resize)
-       keeps the same skin rules while the rail stays reachable. [data-seq]
-       /[data-stopseq] outrank the scoped skin rule on the same element. */
-    #detail-content .stop[data-seq]:has(.stop-open:checked),
-    #detail-content .photo-frame[data-stopseq]:has(> .zoom-open:checked) {
+       Skin overlays (Contact Sheet's lightbox, a zoomed photo, the
+       tap-to-close surfaces) use position:fixed + inset:0 — the viewport
+       in the export. Pinning them to the frame's rect via --dc-* insets
+       (set in JS, refreshed on resize) keeps the same skin rules while
+       the rail stays reachable. The [data-seq]/[data-stopseq] attributes
+       keep these rules ahead of the scoped skin's identical selectors. */
+    #detail-content .stop[data-seq] > input.stop-open:checked ~ .stop-body,
+    #detail-content .stop[data-seq] > input.stop-open:checked ~ input.stop-shut,
+    #detail-content .photo-frame[data-stopseq] > input.zoom-open:checked ~ :not(input),
+    #detail-content .photo-frame[data-stopseq] > input.zoom-open:checked ~ input.zoom-shut {
       inset: var(--dc-top, 0px) var(--dc-right, 0px) var(--dc-bottom, 0px) var(--dc-left, 0px);
+    }
+    /* The expanded card's frame number goes fixed too — pin its corner. */
+    #detail-content .stop[data-seq] > input.stop-open:checked ~ .stop-num {
+      top: calc(var(--dc-top, 0px) + 16px);
+      left: calc(var(--dc-left, 0px) + 20px);
     }
     /* The last card's My Voice tail is fixed too — keep it inside the
        frame, clear of the rail. */
@@ -4120,9 +4128,10 @@
           if (!frame) return;
           if (!img) {
             if (rawSrc && (p.specEpoch || 0) === epoch) {
-              const hooks = frameHooks(frame);
+              const [open, shut] = frameHooks(frame);
               frame.innerHTML = `<img src="${rawSrc}" alt="photo">`;
-              frame.append(...hooks);
+              frame.prepend(open);
+              frame.append(shut);
             }
             return;
           }
@@ -4134,7 +4143,10 @@
             canvas.getContext('2d').drawImage(rendered, 0, 0);
           } catch { canvas.width = canvas.height = 0; }
           if ((p.specEpoch || 0) !== epoch) return;
-          frame.replaceChildren(canvas, ...frameHooks(frame));
+          // Sibling selectors drive the zoom: zoom-open stays before the
+          // leaf, zoom-shut after it.
+          const [open, shut] = frameHooks(frame);
+          frame.replaceChildren(open, canvas, shut);
         } catch { /* unreadable photo — leave shimmer */ }
         finally { finished++; tick(); restoreScrollAnchor(); }
       };
@@ -4323,11 +4335,13 @@
               canvas.height = rendered.height;
               canvas.getContext('2d').drawImage(rendered, 0, 0);
             } catch { canvas.width = canvas.height = 0; }
-            frame.replaceChildren(canvas, ...frameHooks(frame));
+            const [open, shut] = frameHooks(frame);
+            frame.replaceChildren(open, canvas, shut);
           } else if (rawSrc) {
-            const hooks = frameHooks(frame);
+            const [open, shut] = frameHooks(frame);
             frame.innerHTML = `<img src="${rawSrc}" alt="photo">`;
-            frame.append(...hooks);
+            frame.prepend(open);
+            frame.append(shut);
           }
           // No source at all: leave the frame. A placeholder still
           // decoding is filled by fillDetailPhotos, which resolves
@@ -4505,8 +4519,11 @@
         // rebuilds stop shifting the layout while renders fill in.
         const sp = photoMap.get(s.seq);
         const arStyle = sp?.ar ? ` style="aspect-ratio:${sp.ar.toFixed(4)};height:auto"` : '';
+        // The zoom-open input precedes the leaf so skins drive the expansion
+        // with sibling selectors (input:checked ~ leaf), no :has() required —
+        // older Safari fails to re-render :has(:checked) on state change.
         const photoHtml = sp
-          ? `<div class="photo-frame" data-stopseq="${s.seq}"${sp.ar ? ` style="--ar:${sp.ar.toFixed(4)}"` : ''}><div class="photo-loading"${arStyle}></div><input type="radio" name="zoomopen" class="zoom-open" aria-label="enlarge photo"><input type="radio" name="zoomopen" class="zoom-shut" aria-label="close photo"></div>`
+          ? `<div class="photo-frame" data-stopseq="${s.seq}"${sp.ar ? ` style="--ar:${sp.ar.toFixed(4)}"` : ''}><input type="radio" name="zoomopen" class="zoom-open" aria-label="enlarge photo"><div class="photo-loading"${arStyle}></div><input type="radio" name="zoomopen" class="zoom-shut" aria-label="close photo"></div>`
           : '';
         // Quiet status marks — every stop reports its outcome, but subtly:
         // small dim text, not a pill. The summary line carries the count.

@@ -48,7 +48,7 @@ export const BASE_CSS = `
      font-family fall back to inherit, so headings follow body font unless
      a skin sets it explicitly. */
   --mono-font: monospace;
-  --rule: #222;
+  --rule: #3d3c36;
   --badge-reached-bg: #2a4a2a;    --badge-reached-fg: #8c8;
   --badge-approached-bg: #4a3a2a; --badge-approached-fg: #fc8;
   --badge-missed-bg: #4a2a2a;     --badge-missed-fg: #e0a3a3;
@@ -66,11 +66,11 @@ h1 a { color: inherit; text-decoration: none; }
 .date { color: var(--fg-dim); font-size: 0.9rem; margin-bottom: 16px; }
 .summary { color: var(--fg-dim); font-size: 0.9rem; margin-bottom: 24px; }
 .summary b { color: var(--fg); }
-.trace { background: var(--surface); border-radius: 12px; padding: 16px; margin-bottom: 24px; text-align: center; }
+.trace { background: var(--surface); border-radius: 12px; padding: 16px; margin-bottom: 36px; text-align: center; }
 .trace svg { max-width: 100%; height: auto; }
 .stop {
-  margin-bottom: 20px;
-  border-bottom: 1px solid var(--rule); padding-bottom: 16px;
+  margin-bottom: 28px;
+  border-bottom: 1px solid var(--rule); padding-bottom: 24px;
 }
 .stop-meta { margin-bottom: 8px; }
 /* Waypoint numbers are a per-skin dial: always emitted, hidden here. A skin
@@ -79,9 +79,10 @@ h1 a { color: inherit; text-decoration: none; }
 /* Expansion state hooks: hidden same-named radio pairs — .stop-open plus
    .stop-shut per stop (open one card, previous closes; the shut surface on
    the open card is tap-to-close) and .zoom-open plus .zoom-shut per photo
-   frame (tap-to-enlarge). A skin that wires a pair re-shows and positions
-   it (Contact Sheet makes .stop-open a transparent full-cell surface). */
-.stop-open, .stop-shut, .zoom-open, .zoom-shut { display: none; }
+   frame (tap-to-enlarge). The input. prefix matters: bare class selectors
+   tie with a skin's .photo-frame > * rules on specificity and lose by
+   source order — which once leaked visible radio pills into the sheet. */
+input.stop-open, input.stop-shut, input.zoom-open, input.zoom-shut { display: none; }
 /* Quiet status marks: every stop reports its outcome, but as small dim
    text, not a pill — it reports, it doesn't badge. */
 .status { font-size: 0.8rem; font-style: italic; color: var(--fg-dim); }
@@ -721,10 +722,13 @@ header .summary { margin-bottom: 0; }
 .photo-frame > * { display: block; width: 100%; height: 100%; object-fit: contain; }
 
 /* Tap the photo to enlarge: the .zoom-open radio covers the frame; once
-   checked, the frame pins to the viewport (in-app: the detail frame, via
-   #detail-content's transform) and .zoom-shut becomes the tap-to-close
-   surface. Same-named radios — only one photo can be enlarged at a time. */
-.zoom-open {
+   checked, the leaf itself becomes the lightbox — fixed to the viewport
+   (in-app: the detail frame's --dc-* rect), object-fit centred on a dim
+   field — and .zoom-shut becomes the tap-to-close surface. Same-named
+   radios, so only one photo can be enlarged at a time. Sibling selectors
+   (:checked ~), not :has(): older Safari parses :has() but fails to
+   re-render it when the :checked state flips — the tap would look dead. */
+.photo-frame > input.zoom-open {
   display: block;
   appearance: none;
   position: absolute; inset: 0;
@@ -734,15 +738,15 @@ header .summary { margin-bottom: 0; }
   cursor: zoom-in;
   z-index: 2;
 }
-.photo-frame:has(> .zoom-open:checked) {
+.photo-frame > input.zoom-open:checked { display: none; }
+.photo-frame > input.zoom-open:checked ~ :not(input) {
   position: fixed; inset: 0; z-index: 30;
-  width: auto; aspect-ratio: auto;
+  width: 100%; height: 100%; max-width: none; max-height: none;
   margin: 0;
-  border: 0; border-radius: 0;
+  object-fit: contain;
   background: rgba(8, 9, 8, 0.94);
 }
-.photo-frame:has(> .zoom-open:checked) > .zoom-open { display: none; }
-.photo-frame:has(> .zoom-open:checked) > .zoom-shut {
+.photo-frame > input.zoom-open:checked ~ input.zoom-shut {
   display: block;
   appearance: none;
   position: fixed; inset: 0;
@@ -750,6 +754,7 @@ header .summary { margin-bottom: 0; }
   margin: 0; padding: 0;
   opacity: 0;
   cursor: zoom-out;
+  z-index: 40;
 }
 
 footer { padding: 40px 24px; scroll-snap-align: end; }
@@ -879,10 +884,13 @@ header::after {
 .photo-frame > * { display: block; width: 100%; height: 100%; object-fit: contain; }
 
 /* Tap the photo to enlarge: the .zoom-open radio covers the frame; once
-   checked, the frame pins to the viewport (in-app: the detail frame, via
-   #detail-content's transform) and .zoom-shut becomes the tap-to-close
-   surface. Same-named radios — only one photo can be enlarged at a time. */
-.zoom-open {
+   checked, the leaf itself becomes the lightbox — fixed to the viewport
+   (in-app: the detail frame's --dc-* rect), object-fit centred on a dim
+   field — and .zoom-shut becomes the tap-to-close surface. Same-named
+   radios, so only one photo can be enlarged at a time. Sibling selectors
+   (:checked ~), not :has(): older Safari parses :has() but fails to
+   re-render it when the :checked state flips — the tap would look dead. */
+.photo-frame > input.zoom-open {
   display: block;
   appearance: none;
   position: absolute; inset: 0;
@@ -892,15 +900,15 @@ header::after {
   cursor: zoom-in;
   z-index: 2;
 }
-.photo-frame:has(> .zoom-open:checked) {
+.photo-frame > input.zoom-open:checked { display: none; }
+.photo-frame > input.zoom-open:checked ~ :not(input) {
   position: fixed; inset: 0; z-index: 30;
-  width: auto; aspect-ratio: auto;
+  width: 100%; height: 100%; max-width: none; max-height: none;
   margin: 0;
-  border: 0; border-radius: 0;
+  object-fit: contain;
   background: rgba(24, 22, 18, 0.94);
 }
-.photo-frame:has(> .zoom-open:checked) > .zoom-open { display: none; }
-.photo-frame:has(> .zoom-open:checked) > .zoom-shut {
+.photo-frame > input.zoom-open:checked ~ input.zoom-shut {
   display: block;
   appearance: none;
   position: fixed; inset: 0;
@@ -908,6 +916,7 @@ header::after {
   margin: 0; padding: 0;
   opacity: 0;
   cursor: zoom-out;
+  z-index: 40;
 }
 
 footer { align-items: center; }
@@ -1016,7 +1025,7 @@ footer { margin-top: 8px; }
    Unchecked frames show number + photo only; checked frames become a
    viewport lightbox. */
 .stop { position: relative; }
-.stop-open {
+.stop > input.stop-open {
   appearance: none;
   display: block;   /* BASE_CSS hides the hook; this skin uses it */
   position: absolute; inset: 0;
@@ -1025,25 +1034,29 @@ footer { margin-top: 8px; }
   cursor: pointer;
   z-index: 5;
 }
-.stop-open:focus-visible { opacity: 1; outline: 2px solid var(--accent); }
+input.stop-open:focus-visible { opacity: 1; outline: 2px solid var(--accent); }
 
 @media screen {
-  /* Collapsed frames show number + image only. */
-  .stop:not(:has(.stop-open:checked)) .stop-meta,
-  .stop:not(:has(.stop-open:checked)) .card-hex,
-  .stop:not(:has(.stop-open:checked)) .card-text {
+  /* Collapsed frames show number + image only — hidden until the card's
+     open radio is checked. Sibling selectors (:checked ~), not :has():
+     older Safari parses :has() but fails to re-render it when :checked
+     flips, so a :has-driven card would look dead on tap there. */
+  .stop-body .stop-meta,
+  .stop-body .card-hex,
+  .stop-body .card-text {
     position: absolute;
     visibility: hidden;
   }
 
-  /* Expanded: the card becomes a viewport-filling lightbox — photo large,
-     caption alongside. The open radio stops intercepting and .stop-shut
-     takes over as a full-viewport surface, so a tap anywhere checks it —
-     which unchecks .stop-open and closes the card. In-app position:fixed
-     pins to the detail frame instead (its transform is the containing
-     block), so the controls below stay reachable. */
-  .stop:has(.stop-open:checked) .stop-open { display: none; }
-  .stop:has(.stop-open:checked) .stop-shut {
+  /* Expanded: the card body becomes the viewport-filling lightbox — photo
+     large, caption alongside. The open radio stops intercepting and
+     .stop-shut takes over as a full-viewport surface, so a tap anywhere
+     checks it — which unchecks .stop-open and closes the card. In-app the
+     same fixed elements are pinned to the detail frame via --dc-* insets,
+     so the rail stays reachable. The .stop cell keeps its grid slot while
+     open (it stays put behind the lightbox) — no reflow on open/close. */
+  .stop > input.stop-open:checked { display: none; }
+  .stop > input.stop-open:checked ~ input.stop-shut {
     display: block;
     appearance: none;
     position: fixed; inset: 0;
@@ -1052,57 +1065,68 @@ footer { margin-top: 8px; }
     cursor: pointer;
     z-index: 40;
   }
-  .stop:has(.stop-open:checked) {
+  .stop > input.stop-open:checked ~ .stop-num {
+    position: fixed; top: 16px; left: 20px; z-index: 21;
+    margin: 0;
+  }
+  .stop > input.stop-open:checked ~ .stop-body {
     position: fixed; inset: 0; z-index: 20;
     background: rgba(13, 11, 8, 0.97);
-    padding: 20px;
     overflow-y: auto;
+    display: grid;
+    grid-template-columns: minmax(0, 3fr) minmax(200px, 2fr);
+    gap: 10px 20px;
+    align-items: center;
+    align-content: center;
+    padding: 20px max(20px, calc((100vw - 1040px) / 2));
   }
-  .stop:has(.stop-open:checked)::after {
+  .stop > input.stop-open:checked ~ .stop-body::after {
     content: "tap to close";
     position: absolute; top: 16px; right: 20px;
     font-family: var(--mono-font); font-size: 0.7rem;
     letter-spacing: 0.15em; color: var(--fg-dim);
   }
-  .stop:has(.stop-open:checked) .stop-body {
-    display: grid;
-    grid-template-columns: minmax(0, 3fr) minmax(200px, 2fr);
-    gap: 10px 20px;
-    align-items: center;
-    max-width: 1000px;
-    margin: 4vh auto;
+  .stop > input.stop-open:checked ~ .stop-body .photo-frame {
+    grid-column: 1; grid-row: 1 / 6; margin: 0;
   }
-  .stop:has(.stop-open:checked) .photo-frame { grid-column: 1; grid-row: 1 / 6; margin: 0; }
-  .stop:has(.stop-open:checked) .photo-frame > * { max-height: 76vh; object-fit: contain; }
-  .stop:has(.stop-open:checked) .stop-meta,
-  .stop:has(.stop-open:checked) .card-hex,
-  .stop:has(.stop-open:checked) .card-text { grid-column: 2; }
+  .stop > input.stop-open:checked ~ .stop-body .photo-frame > * {
+    max-height: 76vh; object-fit: contain;
+  }
+  .stop > input.stop-open:checked ~ .stop-body .stop-meta,
+  .stop > input.stop-open:checked ~ .stop-body .card-hex,
+  .stop > input.stop-open:checked ~ .stop-body .card-text {
+    position: static;
+    visibility: visible;
+    grid-column: 2;
+  }
 
-  /* My Voice overflow belongs to the final card: hidden in the sheet,
-     appended inside the last card's lightbox when it opens. The tail is a
-     sibling after the last .stop, so :has(+ .myvoice-tail) identifies the
-     final card. pointer-events: none lets taps fall through to close. */
-  .myvoice-tail { display: none; }
+  /* My Voice overflow belongs to the final card: it sits as a plain
+     trailing row under the sheet, and where :has() works it moves into
+     the last card's lightbox while that card is open (fixed elements
+     leave the grid, so the sheet shows it normally again on close).
+     The tail is a sibling after the last .stop, so :has(+ .myvoice-tail)
+     identifies the final card. pointer-events: none lets taps fall
+     through to close. */
+  .myvoice-tail { font-style: italic; font-size: 0.85rem; color: var(--fg-dim); }
   .stop:has(+ .myvoice-tail):has(.stop-open:checked) ~ .myvoice-tail {
-    display: block;
     position: fixed; z-index: 21;
     right: calc(20px + max(0px, (100vw - 1040px) / 2));
     bottom: 20px;
     width: min(38%, 380px);
     pointer-events: none;
-    font-size: 0.85rem;
-    font-style: italic;
-    color: var(--fg-dim);
   }
 }
 
 /* Narrow ports stack: photo on top, caption under. */
 @media screen and (max-width: 640px) {
-  .stop:has(.stop-open:checked) .stop-body { grid-template-columns: 1fr; }
-  .stop:has(.stop-open:checked) .photo-frame { grid-column: 1; grid-row: auto; }
-  .stop:has(.stop-open:checked) .stop-meta,
-  .stop:has(.stop-open:checked) .card-hex,
-  .stop:has(.stop-open:checked) .card-text { grid-column: 1; }
+  .stop > input.stop-open:checked ~ .stop-body {
+    grid-template-columns: 1fr;
+    padding: 20px;
+  }
+  .stop > input.stop-open:checked ~ .stop-body .photo-frame { grid-column: 1; grid-row: auto; }
+  .stop > input.stop-open:checked ~ .stop-body .stop-meta,
+  .stop > input.stop-open:checked ~ .stop-body .card-hex,
+  .stop > input.stop-open:checked ~ .stop-body .card-text { grid-column: 1; }
   .stop:has(+ .myvoice-tail):has(.stop-open:checked) ~ .myvoice-tail {
     left: 20px; right: 20px; width: auto;
   }
@@ -1113,7 +1137,7 @@ footer { margin-top: 8px; }
 @media print {
   body { display: block; padding: 0; }
   header, .stop { border: none; padding: 0; }
-  .stop-open, .stop-shut { display: none; }
+  input.stop-open, input.stop-shut { display: none; }
   .photo-frame { aspect-ratio: auto; border: none; }
   .photo-frame > * { height: auto; }
 }

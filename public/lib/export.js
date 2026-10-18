@@ -164,8 +164,12 @@ export async function buildHTMLExport(walk, photos, svgTrace, skinCss = '', icon
     const ar = photoArs.get(s.seq);
     const arStyle = ar ? ` style="--ar:${ar.toFixed(4)}"` : '';
     // The zoom hooks ride inside the frame: same-named radios, so at most
-    // one photo is enlarged at a time and a second tap closes it.
-    const photoHtml = photoUrl ? `<div class="photo-frame"${arStyle}><img src="${esc(photoUrl)}" alt="photo"><input type="radio" name="zoomopen" class="zoom-open" aria-label="enlarge photo"><input type="radio" name="zoomopen" class="zoom-shut" aria-label="close photo"></div>` : '';
+    // one photo is enlarged at a time and a second tap closes it. The open
+    // input precedes the leaf so skins can drive the expansion with plain
+    // sibling selectors (input:checked ~ img) — no :has() needed, which
+    // matters because older Safari parses :has() but fails to re-render
+    // when the :checked state changes.
+    const photoHtml = photoUrl ? `<div class="photo-frame"${arStyle}><input type="radio" name="zoomopen" class="zoom-open" aria-label="enlarge photo"><img src="${esc(photoUrl)}" alt="photo"><input type="radio" name="zoomopen" class="zoom-shut" aria-label="close photo"></div>` : '';
     // Quiet status marks — every stop reports its outcome, but subtly:
     // small dim text, not a pill. The summary line carries the count.
     const meta = s.approached

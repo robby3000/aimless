@@ -106,7 +106,10 @@ test('base hides the expansion hooks; skins opt in', () => {
   // .stop-open/.stop-shut per stop (Contact Sheet's lightbox) and
   // .zoom-open/.zoom-shut per frame (tap-to-enlarge). Skins that don't
   // use them must never see them.
-  assert.ok(BASE_CSS.includes('.stop-open, .stop-shut, .zoom-open, .zoom-shut { display: none; }'));
+  // The input. prefix is load-bearing: it keeps the hide rule ahead of a
+  // skin's .photo-frame > * selectors, which tie bare classes and win on
+  // source order — that once leaked visible radio pills into exports.
+  assert.ok(BASE_CSS.includes('input.stop-open, input.stop-shut, input.zoom-open, input.zoom-shut { display: none; }'));
 });
 
 test('contact sheet reveals .stop-open as its tap surface and .stop-shut as its close', () => {
@@ -119,11 +122,15 @@ test('contact sheet reveals .stop-open as its tap surface and .stop-shut as its 
 });
 
 test('chapters and carousel wire the tap-to-enlarge photo hook', () => {
+  // Expansion is driven by sibling selectors (input:checked ~ leaf), not
+  // :has() — older Safari parses :has() but does not re-render it when the
+  // :checked state flips, so a :has-driven zoom looks dead on tap there.
   for (const id of ['chapters', 'carousel']) {
     const css = getSkin(id).css;
     assert.ok(css.includes('.zoom-open'), `${id} must surface .zoom-open`);
-    assert.ok(css.includes('.photo-frame:has(> .zoom-open:checked)'), `${id} must expand the frame on :checked`);
-    assert.ok(css.includes('.zoom-shut'), `${id} must surface .zoom-shut for tap-to-close`);
+    assert.ok(css.includes('input.zoom-open:checked ~ :not(input)'), `${id} must expand the leaf on :checked`);
+    assert.ok(css.includes('input.zoom-open:checked ~ input.zoom-shut'), `${id} must surface .zoom-shut for tap-to-close`);
+    assert.ok(!css.includes('has(:checked)'), `${id} must not rely on :has for expansion`);
   }
 });
 
