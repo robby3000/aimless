@@ -1072,20 +1072,21 @@ footer { margin-top: 8px; }
     font-family: var(--mono-font); font-size: 0.7rem;
     letter-spacing: 0.15em; color: var(--fg-dim);
   }
-  /* The open card's frame hugs the photo: aspect-ratio from --ar plus a
-     width capped by the height budget, so a portrait image is a tall frame,
-     not a square plate with blank wings. It hugs the caption column too —
-     justify-self:end pins it against the text, so the image-to-caption gap
-     is the same whatever the photo's orientation. */
+  /* The open card's frame shrink-wraps the photo — max-height sets the
+     height budget, max-width the column, and the image's own aspect does
+     the rest. No --ar needed, so older walks without recorded ratios hug
+     just as tightly. justify-self:end pins the frame against the caption
+     column, so image-to-text gap is identical whatever the orientation. */
   .stop > input.stop-open:checked ~ .stop-body .photo-frame {
     grid-column: 1; grid-row: 1 / 6; margin: 0;
     justify-self: end;
-    aspect-ratio: var(--ar, 1.3333);
-    width: 100%;
-    width: min(100%, calc(76vh * var(--ar, 1.3333)));
+    width: auto;
+    max-width: 100%;
   }
   .stop > input.stop-open:checked ~ .stop-body .photo-frame > * {
-    width: 100%; height: 100%; object-fit: contain;
+    width: auto; height: auto;
+    max-width: 100%; max-height: 76vh;
+    object-fit: contain;
   }
   .stop > input.stop-open:checked ~ .stop-body .stop-meta,
   .stop > input.stop-open:checked ~ .stop-body .card-hex,
