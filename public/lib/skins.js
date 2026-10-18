@@ -1072,11 +1072,18 @@ footer { margin-top: 8px; }
     font-family: var(--mono-font); font-size: 0.7rem;
     letter-spacing: 0.15em; color: var(--fg-dim);
   }
+  /* The open card's frame hugs the photo: aspect-ratio from --ar plus a
+     width capped by the height budget, so a portrait image is a tall frame,
+     not a square plate with blank wings. */
   .stop > input.stop-open:checked ~ .stop-body .photo-frame {
     grid-column: 1; grid-row: 1 / 6; margin: 0;
+    justify-self: center;
+    aspect-ratio: var(--ar, 1.3333);
+    width: 100%;
+    width: min(100%, calc(76vh * var(--ar, 1.3333)));
   }
   .stop > input.stop-open:checked ~ .stop-body .photo-frame > * {
-    max-height: 76vh; object-fit: contain;
+    width: 100%; height: 100%; object-fit: contain;
   }
   .stop > input.stop-open:checked ~ .stop-body .stop-meta,
   .stop > input.stop-open:checked ~ .stop-body .card-hex,
