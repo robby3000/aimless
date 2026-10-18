@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-164f3f8b">
+  <meta name="aimless-build" content="aimless-v0.2.0-c1045bf5">
   <meta name="description" content="Go nowhere. Somewhere.">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/favicon-16.png" type="image/png" sizes="16x16">
@@ -4083,6 +4083,9 @@
     // whole set, and rendered canvases are shared with the export path.
     let detailRenderToken = 0;
     let detailObserver = null;
+    // Snap-skin trace replay: the scroll listener armed by showWalkDetail,
+    // held here so a rebuild can detach the one bound to dead nodes.
+    let traceScrollCheck = null;
     // A detail rebuild parks the viewport on the topmost visible stop — but
     // remounted photo frames start as small placeholders and grow as they
     // render, pushing that stop down. Keep the anchor alive through the lazy
@@ -4623,32 +4626,43 @@
 
       applySkin();
 
+      showScreen('detail');
+      updateDetailFrameVars();
+
       // Scroll-entry trace replay. Snap-scroller skins (Chapters, Carousel)
       // put the trace on its own screen, and the draw-on animation must
-      // only start once the diagram is firmly in view — not scrubbed with
-      // the gesture (that lands it already drawn) and not at load (spent
-      // before arrival). An observer restart at ~85% visibility — the
-      // slide fills the port, so that means it has snapped into place —
-      // gives the trigger on every browser. In-app CSS already killed the
-      // skin's view() timeline so this observer is the sole driver.
-      // Non-snap skins keep the load-time draw — the trace is on screen.
+      // only start once the diagram is firmly centred in the port — not
+      // scrubbed with the gesture (that lands it already drawn) and not
+      // at load (spent before arrival). A visibility-threshold observer
+      // is fragile here: a slide slightly taller than the port can never
+      // reach the ratio and the restart never fires. Instead watch scroll
+      // and restart once the slide's centre sits within ~10% of the
+      // port's centre — mandatory snap guarantees it settles there. In-app
+      // CSS already killed the skin's view() timeline so this check is
+      // the sole driver. Non-snap skins keep the load-time draw.
+      // NB: must run after showScreen — while the screen is hidden all
+      // rects are zero, the check passes vacuously, and the animation
+      // would restart invisibly and disarm.
       if (getComputedStyle(detailContent).scrollSnapType !== 'none') {
         const traceBox = detailContent.querySelector('.trace');
         const traceSvg = traceBox?.querySelector('svg');
         if (traceSvg?.querySelector('.tr-line')) {
-          const io = new IntersectionObserver((entries) => {
-            if (!entries.some((e) => e.isIntersecting)) return;
-            io.disconnect();
+          if (traceScrollCheck) detailContent.removeEventListener('scroll', traceScrollCheck);
+          traceScrollCheck = () => {
+            const port = detailContent.getBoundingClientRect();
+            const box = traceBox.getBoundingClientRect();
+            if (Math.abs((box.top + box.height / 2) - (port.top + port.height / 2)) > port.height * 0.1) return;
+            detailContent.removeEventListener('scroll', traceScrollCheck);
+            traceScrollCheck = null;
             // Display-flip restarts the svg's inline animations (line + dots).
             traceSvg.style.display = 'none';
             void traceSvg.getBoundingClientRect();
             traceSvg.style.display = '';
-          }, { root: detailContent, threshold: 0.85 });
-          io.observe(traceBox);
+          };
+          detailContent.addEventListener('scroll', traceScrollCheck, { passive: true });
+          traceScrollCheck();
         }
       }
-      showScreen('detail');
-      updateDetailFrameVars();
       // Restore the pre-rebuild viewport position now, and keep restoring it
       // as lazy photo renders grow the placeholders (no-op on first open —
       // the screen was hidden so no anchor was found).
