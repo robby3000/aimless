@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-a42e0e48">
+  <meta name="aimless-build" content="aimless-v0.2.0-164f3f8b">
   <meta name="description" content="Go nowhere. Somewhere.">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/favicon-16.png" type="image/png" sizes="16x16">
@@ -1168,6 +1168,17 @@
     #detail-content .myvoice-tail {
       right: calc(var(--dc-right, 0px) + 20px) !important;
       bottom: calc(var(--dc-bottom, 0px) + 20px) !important;
+    }
+    /* In-app the trace draw-on is JS-driven: an IntersectionObserver
+       restarts it once the slide is firmly in view. Scroll-linked
+       animation (view()) scrubs the draw during the gesture itself, so
+       the slide lands already drawn and reads as "not animating" — and on
+       browsers without view() the draw is spent at load. Kill the timeline
+       here so the observer controls the moment on every browser. The
+       export keeps view() — it's the only script-free gate available. */
+    #detail-content .tr-line, #detail-content .tr-dot {
+      animation-timeline: auto !important;
+      animation-range: normal !important;
     }
     .photo-loading {
       height: 120px;
@@ -4613,14 +4624,15 @@
       applySkin();
 
       // Scroll-entry trace replay. Snap-scroller skins (Chapters, Carousel)
-      // put the trace on its own screen, and retarget its draw-on animation
-      // to view() — but animation-timeline needs Safari 26+. Where it is
-      // missing the draw was spent at load, so restart it the first time
-      // the trace is nearly fully in view (its slide fills the port, so
-      // ~85% visible means it has snapped into place). Non-snap skins keep
-      // the load-time draw — the trace is already on screen.
-      if (!CSS.supports('animation-timeline: view()')
-          && getComputedStyle(detailContent).scrollSnapType !== 'none') {
+      // put the trace on its own screen, and the draw-on animation must
+      // only start once the diagram is firmly in view — not scrubbed with
+      // the gesture (that lands it already drawn) and not at load (spent
+      // before arrival). An observer restart at ~85% visibility — the
+      // slide fills the port, so that means it has snapped into place —
+      // gives the trigger on every browser. In-app CSS already killed the
+      // skin's view() timeline so this observer is the sole driver.
+      // Non-snap skins keep the load-time draw — the trace is on screen.
+      if (getComputedStyle(detailContent).scrollSnapType !== 'none') {
         const traceBox = detailContent.querySelector('.trace');
         const traceSvg = traceBox?.querySelector('svg');
         if (traceSvg?.querySelector('.tr-line')) {

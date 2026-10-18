@@ -678,15 +678,17 @@ header .summary { margin-bottom: 0; }
 
 /* The trace draws itself — but only as its screen lands, so the animation
    isn't spent before the viewer reaches it. view() ties progress to
-   visibility in the scroll port; the range runs over the last stretch of
-   entry so the draw completes exactly as the slide snaps into place (a
-   range ending past the rest position would leave it half-drawn).
-   Progressive enhancement: without support the animation plays on load
-   as it always has — in-app an IntersectionObserver replays it on entry. */
+   visibility in the scroll port; the range runs over the final stretch of
+   entry so the draw happens during the snap settle, not spread over the
+   approach (a range ending past the rest position would leave it
+   half-drawn). Script-free exports can't start an animation after
+   landing, so this is the closest available gate — in-app the
+   IntersectionObserver restart is the driver instead. Without view()
+   support the animation plays on load as it always has. */
 @supports (animation-timeline: view()) {
   .trace svg .tr-line, .trace svg .tr-dot {
     animation-timeline: view();
-    animation-range: entry 60% entry 100%;
+    animation-range: entry 75% entry 100%;
   }
 }
 
@@ -836,13 +838,15 @@ header::after {
 .trace svg { max-height: 70vh; margin: 0 auto; }
 
 /* The trace draws as its slide lands, not at load: view() ties progress
-   to visibility, ranged over the last stretch of entry so the draw
-   completes as the slide snaps centered. Without support it plays on
-   load; in-app an IntersectionObserver replays it on entry instead. */
+   to visibility, ranged over the final stretch of entry so the draw
+   happens during the snap settle, not spread over the approach. A
+   script-free export can't start an animation after landing, so this is
+   the closest gate available — in-app an IntersectionObserver restart is
+   the driver instead. Without view() support it plays on load. */
 @supports (animation-timeline: view()) {
   .trace svg .tr-line, .trace svg .tr-dot {
     animation-timeline: view();
-    animation-range: entry 60% entry 100%;
+    animation-range: entry 75% entry 100%;
   }
 }
 
