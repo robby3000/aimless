@@ -133,16 +133,22 @@ test('every stop emits a .stop-num element for skins to opt into', async () => {
   assert.ok(html.includes('<div class="stop-num">1</div>'));
 });
 
-test('every stop emits a .stop-open/.stop-shut radio pair for skins to opt into', async () => {
+test('every stop emits a radio pair + label surfaces for skins to opt into', async () => {
   // The expansion hook is a real input pair: exports are script-free, so
-  // CSS :has(:checked) needs it physically present. Same-named radios give
-  // single-open for free, and the shut radio is the tap-to-close surface.
-  // BASE_CSS hides both.
+  // CSS :checked ~ needs it physically present. Same-named radios give
+  // single-open for free. Labels are the tap surfaces — label->input
+  // activation works on iOS versions that ignore taps on styled inputs.
+  // BASE_CSS hides all four hooks.
   const html = await buildHTMLExport(WALK, [], '<svg></svg>');
   assert.equal((html.match(/class="stop-open"/g) || []).length, WALK.stops.length);
   assert.equal((html.match(/class="stop-shut"/g) || []).length, WALK.stops.length);
-  assert.ok(html.includes('<input type="radio" name="stopcard" class="stop-open"'));
-  assert.ok(html.includes('<input type="radio" name="stopcard" class="stop-shut"'));
+  assert.equal((html.match(/class="stop-face"/g) || []).length, WALK.stops.length);
+  assert.equal((html.match(/class="stop-back"/g) || []).length, WALK.stops.length);
+  for (const s of WALK.stops) {
+    assert.ok(html.includes(`id="stopopen-${s.seq}"`), 'open input needs a unique id');
+    assert.ok(html.includes(`for="stopopen-${s.seq}"`), 'face label must point at its input');
+    assert.ok(html.includes(`for="stopshut-${s.seq}"`), 'back label must point at its input');
+  }
 });
 
 test('every photo frame emits a .zoom-open/.zoom-shut radio pair', async () => {

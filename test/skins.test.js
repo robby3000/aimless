@@ -106,19 +106,22 @@ test('base hides the expansion hooks; skins opt in', () => {
   // .stop-open/.stop-shut per stop (Contact Sheet's lightbox) and
   // .zoom-open/.zoom-shut per frame (tap-to-enlarge). Skins that don't
   // use them must never see them.
-  // The input. prefix is load-bearing: it keeps the hide rule ahead of a
-  // skin's .photo-frame > * selectors, which tie bare classes and win on
-  // source order — that once leaked visible radio pills into exports.
-  assert.ok(BASE_CSS.includes('input.stop-open, input.stop-shut, input.zoom-open, input.zoom-shut { display: none; }'));
+  // The input./label. prefixes are load-bearing: they keep the hide rule
+  // ahead of a skin's .photo-frame > * selectors, which tie bare classes
+  // and win on source order — that once leaked visible radio pills into
+  // exports.
+  assert.ok(BASE_CSS.includes('input.stop-open, input.stop-shut, input.zoom-open, input.zoom-shut,'));
+  assert.ok(BASE_CSS.includes('label.stop-face, label.stop-back, label.zoom-face, label.zoom-back { display: none; }'));
 });
 
-test('contact sheet reveals .stop-open as its tap surface and .stop-shut as its close', () => {
-  // The export is script-free, so the radios ARE the interaction; in-app
-  // index.html overrides them back to display:none and JS drives .checked.
+test('contact sheet reveals label surfaces bound to its radio state', () => {
+  // The export is script-free, so the label->radio activation IS the
+  // interaction (labels survive iOS versions that ignore input taps);
+  // in-app index.html keeps every hook display:none and JS drives .checked.
   const cs = getSkin('contactsheet');
-  assert.ok(/\.stop-open\s*{[^}]*display:\s*block/.test(cs.css), 'contact sheet must un-hide .stop-open');
-  assert.ok(cs.css.includes(':has(.stop-open:checked)'), 'contact sheet must wire :checked to expansion');
-  assert.ok(/\.stop-shut\s*{[^}]*display:\s*block/.test(cs.css), 'contact sheet must reveal .stop-shut on the open card');
+  assert.ok(/label\.stop-face\s*{[^}]*display:\s*block/.test(cs.css), 'contact sheet must un-hide .stop-face');
+  assert.ok(cs.css.includes('input.stop-open:checked ~ .stop-body'), 'contact sheet must wire :checked to expansion');
+  assert.ok(/label\.stop-back\s*{[^}]*display:\s*block/.test(cs.css), 'contact sheet must reveal .stop-back on the open card');
 });
 
 test('chapters and carousel wire the tap-to-enlarge photo hook', () => {
@@ -128,8 +131,8 @@ test('chapters and carousel wire the tap-to-enlarge photo hook', () => {
   for (const id of ['chapters', 'carousel']) {
     const css = getSkin(id).css;
     assert.ok(css.includes('.zoom-open'), `${id} must surface .zoom-open`);
-    assert.ok(css.includes('input.zoom-open:checked ~ :not(input)'), `${id} must expand the leaf on :checked`);
-    assert.ok(css.includes('input.zoom-open:checked ~ input.zoom-shut'), `${id} must surface .zoom-shut for tap-to-close`);
+    assert.ok(css.includes('input.zoom-open:checked ~ :not(input):not(label)'), `${id} must expand the leaf on :checked`);
+    assert.ok(css.includes('input.zoom-open:checked ~ label.zoom-back'), `${id} must surface .zoom-back for tap-to-close`);
     assert.ok(!css.includes('has(:checked)'), `${id} must not rely on :has for expansion`);
   }
 });

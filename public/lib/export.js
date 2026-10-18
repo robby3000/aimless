@@ -168,8 +168,10 @@ export async function buildHTMLExport(walk, photos, svgTrace, skinCss = '', icon
     // input precedes the leaf so skins can drive the expansion with plain
     // sibling selectors (input:checked ~ img) — no :has() needed, which
     // matters because older Safari parses :has() but fails to re-render
-    // when the :checked state changes.
-    const photoHtml = photoUrl ? `<div class="photo-frame"${arStyle}><input type="radio" name="zoomopen" class="zoom-open" aria-label="enlarge photo"><img src="${esc(photoUrl)}" alt="photo"><input type="radio" name="zoomopen" class="zoom-shut" aria-label="close photo"></div>` : '';
+    // when the :checked state changes. The labels are the tap surfaces:
+    // label->input activation works on iOS versions where tapping a styled
+    // input directly does not.
+    const photoHtml = photoUrl ? `<div class="photo-frame"${arStyle}><input type="radio" name="zoomopen" id="zoomopen-${s.seq}" class="zoom-open" aria-label="enlarge photo"><img src="${esc(photoUrl)}" alt="photo"><input type="radio" name="zoomopen" id="zoomshut-${s.seq}" class="zoom-shut" aria-label="close photo"><label class="zoom-face" for="zoomopen-${s.seq}" aria-hidden="true"></label><label class="zoom-back" for="zoomshut-${s.seq}" aria-hidden="true"></label></div>` : '';
     // Quiet status marks — every stop reports its outcome, but subtly:
     // small dim text, not a pill. The summary line carries the count.
     const meta = s.approached
@@ -196,8 +198,10 @@ export async function buildHTMLExport(walk, photos, svgTrace, skinCss = '', icon
     const myIdx = photoSeqs.indexOf(s.seq);
     const myVoiceHtml = myIdx >= 0 && myVoice[myIdx] ? myVoiceBlockHtml(myVoice[myIdx]) : '';
     return `<div class="stop">
-      <input type="radio" name="stopcard" class="stop-open" aria-label="waypoint ${i + 1} details">
-      <input type="radio" name="stopcard" class="stop-shut" aria-label="close waypoint ${i + 1}">
+      <input type="radio" name="stopcard" id="stopopen-${s.seq}" class="stop-open" aria-label="waypoint ${i + 1} details">
+      <input type="radio" name="stopcard" id="stopshut-${s.seq}" class="stop-shut" aria-label="close waypoint ${i + 1}">
+      <label class="stop-face" for="stopopen-${s.seq}" aria-hidden="true"></label>
+      <label class="stop-back" for="stopshut-${s.seq}" aria-hidden="true"></label>
       <div class="stop-num">${i + 1}</div>
       <div class="stop-body">
         ${meta}

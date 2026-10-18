@@ -82,7 +82,8 @@ h1 a { color: inherit; text-decoration: none; }
    frame (tap-to-enlarge). The input. prefix matters: bare class selectors
    tie with a skin's .photo-frame > * rules on specificity and lose by
    source order — which once leaked visible radio pills into the sheet. */
-input.stop-open, input.stop-shut, input.zoom-open, input.zoom-shut { display: none; }
+input.stop-open, input.stop-shut, input.zoom-open, input.zoom-shut,
+label.stop-face, label.stop-back, label.zoom-face, label.zoom-back { display: none; }
 /* Quiet status marks: every stop reports its outcome, but as small dim
    text, not a pill — it reports, it doesn't badge. */
 .status { font-size: 0.8rem; font-style: italic; color: var(--fg-dim); }
@@ -673,7 +674,7 @@ header .summary { margin-bottom: 0; }
 
 /* Trace slide: diagram centred on the field. */
 .trace { align-items: center; background: none; padding-top: 0; padding-bottom: 0; }
-.trace svg { max-height: 72svh; }
+.trace svg { max-height: 72vh; max-height: 72svh; }
 
 /* The trace draws itself — but only as its screen lands, so the animation
    isn't spent before the viewer reaches it. view() ties progress to
@@ -713,6 +714,7 @@ header .summary { margin-bottom: 0; }
 .photo-frame {
   position: relative;
   aspect-ratio: var(--ar, 4 / 3);
+  width: 100%;
   width: min(100%, calc(52svh * var(--ar, 1.3333)));
   margin: 16px auto 0;
   border-radius: 0;
@@ -728,31 +730,23 @@ header .summary { margin-bottom: 0; }
    radios, so only one photo can be enlarged at a time. Sibling selectors
    (:checked ~), not :has(): older Safari parses :has() but fails to
    re-render it when the :checked state flips — the tap would look dead. */
-.photo-frame > input.zoom-open {
+.photo-frame > label.zoom-face {
   display: block;
-  appearance: none;
-  position: absolute; inset: 0;
-  width: auto; height: auto;
-  margin: 0; padding: 0;
-  opacity: 0;
+  position: absolute; top: 0; right: 0; bottom: 0; left: 0;
   cursor: zoom-in;
   z-index: 2;
 }
-.photo-frame > input.zoom-open:checked { display: none; }
-.photo-frame > input.zoom-open:checked ~ :not(input) {
-  position: fixed; inset: 0; z-index: 30;
+.photo-frame > input.zoom-open:checked ~ label.zoom-face { display: none; }
+.photo-frame > input.zoom-open:checked ~ :not(input):not(label) {
+  position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 30;
   width: 100%; height: 100%; max-width: none; max-height: none;
   margin: 0;
   object-fit: contain;
   background: rgba(8, 9, 8, 0.94);
 }
-.photo-frame > input.zoom-open:checked ~ input.zoom-shut {
+.photo-frame > input.zoom-open:checked ~ label.zoom-back {
   display: block;
-  appearance: none;
-  position: fixed; inset: 0;
-  width: auto; height: auto;
-  margin: 0; padding: 0;
-  opacity: 0;
+  position: fixed; top: 0; right: 0; bottom: 0; left: 0;
   cursor: zoom-out;
   z-index: 40;
 }
@@ -875,6 +869,7 @@ header::after {
 .photo-frame {
   position: relative;
   aspect-ratio: var(--ar, 4 / 3);
+  width: 100%;
   width: min(100%, calc(46svh * var(--ar, 1.3333)));
   margin: 16px auto 0;
   border-radius: 2px;
@@ -890,31 +885,23 @@ header::after {
    radios, so only one photo can be enlarged at a time. Sibling selectors
    (:checked ~), not :has(): older Safari parses :has() but fails to
    re-render it when the :checked state flips — the tap would look dead. */
-.photo-frame > input.zoom-open {
+.photo-frame > label.zoom-face {
   display: block;
-  appearance: none;
-  position: absolute; inset: 0;
-  width: auto; height: auto;
-  margin: 0; padding: 0;
-  opacity: 0;
+  position: absolute; top: 0; right: 0; bottom: 0; left: 0;
   cursor: zoom-in;
   z-index: 2;
 }
-.photo-frame > input.zoom-open:checked { display: none; }
-.photo-frame > input.zoom-open:checked ~ :not(input) {
-  position: fixed; inset: 0; z-index: 30;
+.photo-frame > input.zoom-open:checked ~ label.zoom-face { display: none; }
+.photo-frame > input.zoom-open:checked ~ :not(input):not(label) {
+  position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 30;
   width: 100%; height: 100%; max-width: none; max-height: none;
   margin: 0;
   object-fit: contain;
   background: rgba(24, 22, 18, 0.94);
 }
-.photo-frame > input.zoom-open:checked ~ input.zoom-shut {
+.photo-frame > input.zoom-open:checked ~ label.zoom-back {
   display: block;
-  appearance: none;
-  position: fixed; inset: 0;
-  width: auto; height: auto;
-  margin: 0; padding: 0;
-  opacity: 0;
+  position: fixed; top: 0; right: 0; bottom: 0; left: 0;
   cursor: zoom-out;
   z-index: 40;
 }
@@ -1018,23 +1005,23 @@ body { align-items: start; }
 
 footer { margin-top: 8px; }
 
-/* Tap-to-expand: a hidden radio per stop is the tap surface in the export
-   (script-free, so the input IS the interaction); in-app the inputs stay
-   display:none and JS flips .checked. .stop-open and .stop-shut share a
-   name, so only one card can be open — checking either clears the rest.
-   Unchecked frames show number + photo only; checked frames become a
-   viewport lightbox. */
+/* Tap-to-expand: a hidden radio pair per stop carries the open state;
+   in the export (script-free) the label surfaces ARE the interaction —
+   label->input activation works on Safari versions that ignore taps on
+   styled inputs. In-app every hook stays display:none and JS flips
+   .checked. .stop-open and .stop-shut share a name, so only one card can
+   be open — checking either clears the rest. Unchecked frames show
+   number + photo only; checked frames become a viewport lightbox. */
 .stop { position: relative; }
-.stop > input.stop-open {
-  appearance: none;
-  display: block;   /* BASE_CSS hides the hook; this skin uses it */
-  position: absolute; inset: 0;
-  margin: 0; padding: 0;
-  opacity: 0;
+.stop > label.stop-face {
+  display: block;
+  position: absolute; top: 0; right: 0; bottom: 0; left: 0;
   cursor: pointer;
   z-index: 5;
 }
-input.stop-open:focus-visible { opacity: 1; outline: 2px solid var(--accent); }
+.stop > input.stop-open:focus-visible ~ label.stop-face {
+  outline: 2px solid var(--accent);
+}
 
 @media screen {
   /* Collapsed frames show number + image only — hidden until the card's
@@ -1055,13 +1042,10 @@ input.stop-open:focus-visible { opacity: 1; outline: 2px solid var(--accent); }
      same fixed elements are pinned to the detail frame via --dc-* insets,
      so the rail stays reachable. The .stop cell keeps its grid slot while
      open (it stays put behind the lightbox) — no reflow on open/close. */
-  .stop > input.stop-open:checked { display: none; }
-  .stop > input.stop-open:checked ~ input.stop-shut {
+  .stop > input.stop-open:checked ~ label.stop-face { display: none; }
+  .stop > input.stop-open:checked ~ label.stop-back {
     display: block;
-    appearance: none;
-    position: fixed; inset: 0;
-    margin: 0; padding: 0;
-    opacity: 0;
+    position: fixed; top: 0; right: 0; bottom: 0; left: 0;
     cursor: pointer;
     z-index: 40;
   }
@@ -1070,7 +1054,7 @@ input.stop-open:focus-visible { opacity: 1; outline: 2px solid var(--accent); }
     margin: 0;
   }
   .stop > input.stop-open:checked ~ .stop-body {
-    position: fixed; inset: 0; z-index: 20;
+    position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 20;
     background: rgba(13, 11, 8, 0.97);
     overflow-y: auto;
     display: grid;
@@ -1078,7 +1062,9 @@ input.stop-open:focus-visible { opacity: 1; outline: 2px solid var(--accent); }
     gap: 10px 20px;
     align-items: center;
     align-content: center;
-    padding: 20px max(20px, calc((100vw - 1040px) / 2));
+    padding: 20px;
+    padding-left: max(20px, calc((100vw - 1040px) / 2));
+    padding-right: max(20px, calc((100vw - 1040px) / 2));
   }
   .stop > input.stop-open:checked ~ .stop-body::after {
     content: "tap to close";
@@ -1110,9 +1096,10 @@ input.stop-open:focus-visible { opacity: 1; outline: 2px solid var(--accent); }
   .myvoice-tail { font-style: italic; font-size: 0.85rem; color: var(--fg-dim); }
   .stop:has(+ .myvoice-tail):has(.stop-open:checked) ~ .myvoice-tail {
     position: fixed; z-index: 21;
+    right: 20px;
     right: calc(20px + max(0px, (100vw - 1040px) / 2));
     bottom: 20px;
-    width: min(38%, 380px);
+    width: 38%; max-width: 380px;
     pointer-events: none;
   }
 }

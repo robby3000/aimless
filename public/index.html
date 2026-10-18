@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-18ef582d">
+  <meta name="aimless-build" content="aimless-v0.2.0-0876f44d">
   <meta name="description" content="Go nowhere. Somewhere.">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/favicon-16.png" type="image/png" sizes="16x16">
@@ -1137,7 +1137,9 @@
        identically. !important because a skin's :has() compound selector
        would otherwise outrank this on an expanded card's .stop-shut. */
     #detail-content .stop-open, #detail-content .stop-shut,
-    #detail-content .zoom-open, #detail-content .zoom-shut {
+    #detail-content .zoom-open, #detail-content .zoom-shut,
+    #detail-content .stop-face, #detail-content .stop-back,
+    #detail-content .zoom-face, #detail-content .zoom-back {
       display: none !important;
     }
     /* In-app the artifact's viewport is the detail frame, not the screen.
@@ -1148,10 +1150,13 @@
        the rail stays reachable. The [data-seq]/[data-stopseq] attributes
        keep these rules ahead of the scoped skin's identical selectors. */
     #detail-content .stop[data-seq] > input.stop-open:checked ~ .stop-body,
-    #detail-content .stop[data-seq] > input.stop-open:checked ~ input.stop-shut,
-    #detail-content .photo-frame[data-stopseq] > input.zoom-open:checked ~ :not(input),
-    #detail-content .photo-frame[data-stopseq] > input.zoom-open:checked ~ input.zoom-shut {
-      inset: var(--dc-top, 0px) var(--dc-right, 0px) var(--dc-bottom, 0px) var(--dc-left, 0px);
+    #detail-content .stop[data-seq] > input.stop-open:checked ~ .stop-back,
+    #detail-content .photo-frame[data-stopseq] > input.zoom-open:checked ~ :not(input):not(label),
+    #detail-content .photo-frame[data-stopseq] > input.zoom-open:checked ~ .zoom-back {
+      top: var(--dc-top, 0px);
+      right: var(--dc-right, 0px);
+      bottom: var(--dc-bottom, 0px);
+      left: var(--dc-left, 0px);
     }
     /* The expanded card's frame number goes fixed too — pin its corner. */
     #detail-content .stop[data-seq] > input.stop-open:checked ~ .stop-num {
@@ -4128,10 +4133,10 @@
           if (!frame) return;
           if (!img) {
             if (rawSrc && (p.specEpoch || 0) === epoch) {
-              const [open, shut] = frameHooks(frame);
+              const [open, shut, face, back] = frameHooks(frame);
               frame.innerHTML = `<img src="${rawSrc}" alt="photo">`;
               frame.prepend(open);
-              frame.append(shut);
+              frame.append(shut, face, back);
             }
             return;
           }
@@ -4145,8 +4150,8 @@
           if ((p.specEpoch || 0) !== epoch) return;
           // Sibling selectors drive the zoom: zoom-open stays before the
           // leaf, zoom-shut after it.
-          const [open, shut] = frameHooks(frame);
-          frame.replaceChildren(open, canvas, shut);
+          const [open, shut, face, back] = frameHooks(frame);
+          frame.replaceChildren(open, canvas, shut, face, back);
         } catch { /* unreadable photo — leave shimmer */ }
         finally { finished++; tick(); restoreScrollAnchor(); }
       };
@@ -4232,7 +4237,7 @@
     // The frame's expansion-hook inputs (.zoom-open/.zoom-shut) must
     // survive lazy photo fills and filter re-renders — both replace the
     // frame's contents.
-    const frameHooks = (frame) => [...frame.querySelectorAll('.zoom-open, .zoom-shut')];
+    const frameHooks = (frame) => [...frame.querySelectorAll('.zoom-open, .zoom-shut, .zoom-face, .zoom-back')];
 
     function togglePhotoSelected(seq) {
       const selected = !selectedPhotoSeqs.has(seq);
@@ -4335,13 +4340,13 @@
               canvas.height = rendered.height;
               canvas.getContext('2d').drawImage(rendered, 0, 0);
             } catch { canvas.width = canvas.height = 0; }
-            const [open, shut] = frameHooks(frame);
-            frame.replaceChildren(open, canvas, shut);
+            const [open, shut, face, back] = frameHooks(frame);
+            frame.replaceChildren(open, canvas, shut, face, back);
           } else if (rawSrc) {
-            const [open, shut] = frameHooks(frame);
+            const [open, shut, face, back] = frameHooks(frame);
             frame.innerHTML = `<img src="${rawSrc}" alt="photo">`;
             frame.prepend(open);
-            frame.append(shut);
+            frame.append(shut, face, back);
           }
           // No source at all: leave the frame. A placeholder still
           // decoding is filled by fillDetailPhotos, which resolves
@@ -4522,8 +4527,11 @@
         // The zoom-open input precedes the leaf so skins drive the expansion
         // with sibling selectors (input:checked ~ leaf), no :has() required —
         // older Safari fails to re-render :has(:checked) on state change.
+        // The labels are tap surfaces for the export path (label->input
+        // activation works on iOS versions that ignore taps on styled
+        // inputs); in-app everything stays display:none and JS drives state.
         const photoHtml = sp
-          ? `<div class="photo-frame" data-stopseq="${s.seq}"${sp.ar ? ` style="--ar:${sp.ar.toFixed(4)}"` : ''}><input type="radio" name="zoomopen" class="zoom-open" aria-label="enlarge photo"><div class="photo-loading"${arStyle}></div><input type="radio" name="zoomopen" class="zoom-shut" aria-label="close photo"></div>`
+          ? `<div class="photo-frame" data-stopseq="${s.seq}"${sp.ar ? ` style="--ar:${sp.ar.toFixed(4)}"` : ''}><input type="radio" name="zoomopen" id="zoomopen-${s.seq}" class="zoom-open" aria-label="enlarge photo"><div class="photo-loading"${arStyle}></div><input type="radio" name="zoomopen" id="zoomshut-${s.seq}" class="zoom-shut" aria-label="close photo"><label class="zoom-face" for="zoomopen-${s.seq}" aria-hidden="true"></label><label class="zoom-back" for="zoomshut-${s.seq}" aria-hidden="true"></label></div>`
           : '';
         // Quiet status marks — every stop reports its outcome, but subtly:
         // small dim text, not a pill. The summary line carries the count.
@@ -4553,8 +4561,10 @@
           ? `<div class="card-text card-haiku myvoice-text">${myVoiceBlocks[myIdx].split('\n').map((l) => `<span class="haiku-line">${esc(l)}</span>`).join('')}</div>`
           : '';
         return `<div class="stop" data-seq="${s.seq}">
-          <input type="radio" name="stopcard" class="stop-open" aria-label="waypoint ${i + 1} details">
-          <input type="radio" name="stopcard" class="stop-shut" aria-label="close waypoint ${i + 1}">
+          <input type="radio" name="stopcard" id="stopopen-${s.seq}" class="stop-open" aria-label="waypoint ${i + 1} details">
+          <input type="radio" name="stopcard" id="stopshut-${s.seq}" class="stop-shut" aria-label="close waypoint ${i + 1}">
+          <label class="stop-face" for="stopopen-${s.seq}" aria-hidden="true"></label>
+          <label class="stop-back" for="stopshut-${s.seq}" aria-hidden="true"></label>
           <div class="stop-num">${i + 1}</div>
           <div class="stop-body">
             ${meta}
