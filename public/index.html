@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-c1045bf5">
+  <meta name="aimless-build" content="aimless-v0.2.0-6d0e0106">
   <meta name="description" content="Go nowhere. Somewhere.">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/favicon-16.png" type="image/png" sizes="16x16">
@@ -1722,6 +1722,10 @@
       // The detail screen drops the global header — the artifact frame
       // keeps a uniform teal border on all four sides.
       document.body.classList.toggle('detail-active', name === 'detail');
+      // Leaving the detail ends the visit: the trace draw-on is per-visit,
+      // so re-opening the walk animates it again. (In-visit rebuilds — skin
+      // switches — re-render without leaving, and stay un-animated.)
+      if (name !== 'detail') lastAnimatedDetailWalk = null;
     }
 
     navButtons.go.addEventListener('click', () => {
@@ -3752,7 +3756,9 @@
     // without touching the detail view or the HTML export. When animate is
     // set the walked line draws itself then the markers pop in — pure CSS
     // inside the SVG, so it survives into the script-free HTML artifact.
-    function traceSVG(plan, trace, colors = {}, { animate = true } = {}) {
+    // gate emits the animations paused (trace undrawn): in-app JS releases
+    // them at the right moment, instead of replaying a spent animation.
+    function traceSVG(plan, trace, colors = {}, { animate = true, gate = false } = {}) {
       const { planStroke = '#333', traceStroke = '#7ab8ff', originFill = '#7ab8ff', stopFill = '#e8e8e8' } = colors;
       const pts = [plan.origin, ...plan.stops];
       const all = [...trace, ...pts];
@@ -3800,9 +3806,10 @@
         return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
       }).join(' ');
 
+      const hold = gate ? ';animation-play-state:paused' : '';
       const animStyle = animate && trace.length > 1 ? `<style>
-        .tr-line{stroke-dasharray:1;stroke-dashoffset:1;animation:tr-draw ${drawDur.toFixed(2)}s ease-in-out 0.25s forwards}
-        .tr-dot{opacity:0;animation:tr-pop .35s ease-out forwards}
+        .tr-line{stroke-dasharray:1;stroke-dashoffset:1;animation:tr-draw ${drawDur.toFixed(2)}s ease-in-out 0.25s forwards${hold}}
+        .tr-dot{opacity:0;animation:tr-pop .35s ease-out forwards${hold}}
         @keyframes tr-draw{to{stroke-dashoffset:0}}
         @keyframes tr-pop{to{opacity:var(--o,1)}}
         @media (prefers-reduced-motion:reduce),print{.tr-line{stroke-dashoffset:0;animation:none}.tr-dot{opacity:var(--o,1);animation:none}}
@@ -4520,7 +4527,7 @@
       const trace = walk.trace || [];
       const animateTrace = lastAnimatedDetailWalk !== walkId;
       lastAnimatedDetailWalk = walkId;
-      const svg = traceSVG({ origin: walk.origin, stops: walk.stops }, trace, getSkin(currentSkin).trace, { animate: animateTrace });
+      const svg = traceSVG({ origin: walk.origin, stops: walk.stops }, trace, getSkin(currentSkin).trace, { animate: animateTrace, gate: true });
 
       // Photo frames mount empty and fill asynchronously — the screen
       // appears instantly; a 480px pass lands fast, then upgrades to full
@@ -4629,38 +4636,47 @@
       showScreen('detail');
       updateDetailFrameVars();
 
-      // Scroll-entry trace replay. Snap-scroller skins (Chapters, Carousel)
-      // put the trace on its own screen, and the draw-on animation must
-      // only start once the diagram is firmly centred in the port — not
-      // scrubbed with the gesture (that lands it already drawn) and not
-      // at load (spent before arrival). A visibility-threshold observer
-      // is fragile here: a slide slightly taller than the port can never
-      // reach the ratio and the restart never fires. Instead watch scroll
-      // and restart once the slide's centre sits within ~10% of the
-      // port's centre — mandatory snap guarantees it settles there. In-app
-      // CSS already killed the skin's view() timeline so this check is
-      // the sole driver. Non-snap skins keep the load-time draw.
+      // Gated trace draw. The svg's animations are emitted paused — the
+      // trace does not exist yet, there is nothing to replay — and in-app
+      // JS releases them at the right moment. Snap-scroller skins
+      // (Chapters, Carousel) put the trace on its own screen, so the draw
+      // is released only once the slide's centre reaches the port's
+      // centre on the scroll axis — mandatory snap guarantees it settles
+      // there (checked per scroll event; a visibility ratio would fail
+      // for slides taller than the port). Other skins release at open:
+      // their trace plays on load, as it always has.
       // NB: must run after showScreen — while the screen is hidden all
-      // rects are zero, the check passes vacuously, and the animation
-      // would restart invisibly and disarm.
-      if (getComputedStyle(detailContent).scrollSnapType !== 'none') {
-        const traceBox = detailContent.querySelector('.trace');
-        const traceSvg = traceBox?.querySelector('svg');
+      // rects are zero and the centring test would pass vacuously.
+      {
+        if (traceScrollCheck) {
+          detailContent.removeEventListener('scroll', traceScrollCheck);
+          traceScrollCheck = null;
+        }
+        const traceSvg = detailContent.querySelector('.trace svg');
         if (traceSvg?.querySelector('.tr-line')) {
-          if (traceScrollCheck) detailContent.removeEventListener('scroll', traceScrollCheck);
-          traceScrollCheck = () => {
-            const port = detailContent.getBoundingClientRect();
-            const box = traceBox.getBoundingClientRect();
-            if (Math.abs((box.top + box.height / 2) - (port.top + port.height / 2)) > port.height * 0.1) return;
-            detailContent.removeEventListener('scroll', traceScrollCheck);
-            traceScrollCheck = null;
-            // Display-flip restarts the svg's inline animations (line + dots).
-            traceSvg.style.display = 'none';
-            void traceSvg.getBoundingClientRect();
-            traceSvg.style.display = '';
+          const releaseTrace = () => {
+            for (const el of traceSvg.querySelectorAll('.tr-line, .tr-dot'))
+              el.style.animationPlayState = 'running';
           };
-          detailContent.addEventListener('scroll', traceScrollCheck, { passive: true });
-          traceScrollCheck();
+          const snapType = getComputedStyle(detailContent).scrollSnapType;
+          if (snapType === 'none') {
+            releaseTrace();
+          } else {
+            const axis = snapType.startsWith('x') ? 'x' : 'y';
+            traceScrollCheck = () => {
+              const port = detailContent.getBoundingClientRect();
+              const box = traceSvg.getBoundingClientRect();
+              const delta = axis === 'x'
+                ? Math.abs((box.left + box.width / 2) - (port.left + port.width / 2))
+                : Math.abs((box.top + box.height / 2) - (port.top + port.height / 2));
+              if (delta > (axis === 'x' ? port.width : port.height) * 0.1) return;
+              detailContent.removeEventListener('scroll', traceScrollCheck);
+              traceScrollCheck = null;
+              releaseTrace();
+            };
+            detailContent.addEventListener('scroll', traceScrollCheck, { passive: true });
+            traceScrollCheck();
+          }
         }
       }
       // Restore the pre-rebuild viewport position now, and keep restoring it
