@@ -826,7 +826,7 @@ function fillDetailPhotos(photos, walkId) {
   // queued renders are in flight. m is the observed queue size, not the
   // photo count — off-screen photos are never queued.
   const busy = document.getElementById('filter-busy');
-  busy.dataset.token = token; // a superseded fill's tick must not hide a newer fill's indicator
+  busy.dataset.token = String(token); // a superseded fill's tick must not hide a newer fill's indicator
   if (!photos.length) { busy.hidden = true; return; }
   let queued = 0;
   let finished = 0;
