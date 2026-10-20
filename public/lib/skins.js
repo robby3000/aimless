@@ -643,8 +643,12 @@ footer { color: #9a9a9a; font-size: 0.8rem; }
    is already the scroller — the same rules just work there. html overflow
    hidden makes body a real scroll container in the export: iOS Safari
    does not snap the document scroller. Dead selector in-app (html scopes
-   to #detail-content html, which matches nothing). */
-html { height: 100%; overflow: hidden; }
+   to #detail-content html, which matches nothing). svh (small viewport)
+   over % where supported: on iOS/Android, % heights resolve to the LARGE
+   viewport, which is taller than the visible area under the browser bars —
+   slides sized 100% overflow the screen, content rides low and footer
+   links sink under the bottom bar, untappable. svh is the visible area. */
+html { height: 100%; height: 100svh; overflow: hidden; }
 body {
   margin: 0; padding: 0; max-width: none;
   height: 100%;
@@ -807,8 +811,11 @@ footer { padding: 40px 24px; align-items: center; text-align: center; }
    stay scrollable (auto), not hidden: iOS Safari ignores scroll-snap-type
    when the cross axis is hidden. html overflow hidden makes body a real
    scroll container in the export (iOS does not snap the document
-   scroller); it scopes to a dead selector in-app. */
-html { height: 100%; overflow: hidden; }
+   scroller); it scopes to a dead selector in-app. svh over % where
+   supported: % heights resolve to the LARGE viewport on iOS/Android,
+   taller than the visible area under the browser bars — footer links sink
+   under the bottom bar, untappable; svh is the visible area. */
+html { height: 100%; height: 100svh; overflow: hidden; }
 body {
   margin: 0; padding: 0; max-width: none;
   height: 100%;
@@ -846,7 +853,7 @@ header::after {
 
 /* Trace slide. */
 .trace { align-items: center; background: none; padding-top: 0; padding-bottom: 0; }
-.trace svg { max-height: 70vh; margin: 0 auto; }
+.trace svg { max-height: 70vh; max-height: 70svh; margin: 0 auto; }
 
 /* The trace draws only once its slide is snapped central. scroll-state
    container queries (Chrome 133+) expose "snapped" as a CSS state, so the
