@@ -115,8 +115,10 @@ test('neocitiesTargets builds urls, paths and names', () => {
     imageUrl: 'https://rob.neocities.org/aimless/walk-20261004-abc.jpg',
     htmlPath: 'aimless/walk-20261004-abc.html',
     imagePath: 'aimless/walk-20261004-abc.jpg',
+    kmlPath: 'aimless/walk-20261004-abc.kml',
     htmlName: 'walk-20261004-abc.html',
     imageName: 'walk-20261004-abc.jpg',
+    kmlName: 'walk-20261004-abc.kml',
   });
 });
 
