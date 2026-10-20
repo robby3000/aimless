@@ -20,7 +20,11 @@ GitHub; the links below resolve for whoever holds the working copy.
 4. `docs/verdict.md` — the template the human fills in after five real walks.
    Do not delete it and do not fill it in yourself.
 5. `docs/ignore/` — working drafts and discussion docs (voice pools, UI proposals). Nothing in
-   it is load-bearing.
+   it is load-bearing. Two worth reading anyway:
+   - `docs/ignore/20261020-architectural-principles-and-description.md` — the architecture
+     rationale: why the code is shaped the way it is, written for human maintainers.
+   - `docs/ignore/20261018-codebase-review-and-refactor-plan.md` — the risk register the
+     refactor worked from, with a status section recording what landed vs what is deferred.
 
 ## Commands
 
@@ -75,8 +79,8 @@ public/
       detail.js         # Walk Detail: artifact view, skin/filter rails, filter management,
                         # publish hand-off, export sheet, share/OG cards. Owns detail-visit
                         # state; shared deps injected via initDetail({dbPromise, showScreen,
-                        # showToast, savePrefs}); prefs round-trip via loadDetailPrefs()/
-                        # detailPrefValues()
+                        # showToast, savePrefs, toastHold, toastRelease}); prefs round-trip
+                        # via loadDetailPrefs()/detailPrefValues()
   data/
     crow.json  threshold.json  lattice.json    # oracle pools (the seeded-deck format is replaced)
     stray.json small.json slow.json echo.json  # oracle pools
@@ -143,6 +147,15 @@ in the sibling `glyph-drift` repo at `docs/device-reality.md`.
   is impossible for a PWA — the wake lock is the mitigation.
 - **The focused walk state** (`body.walk-focused`, 10s idle) blanks everything but the compass and
   disables taps; it must never engage while a card is showing, and any interaction resets the clock.
+- **`height: 100%` is NOT the visible viewport on iOS/Android.** Percentage heights resolve to the
+  *large* viewport — taller than the visible area under the browser chrome. Slides sized `100%`
+  overflow the screen, centered content rides low, and anything near the bottom edge (footer
+  links!) lands in the untappable zone under Safari's bar. Size scroll ports and full-screen
+  slides with `100svh` (small viewport = visible area), keeping `100%` as the fallback
+  declaration. Headless Chrome passes every check while iOS is broken — this bug shipped.
+- **A short trailing element has no stable snap point under mandatory scroll-snap in WebKit.**
+  The Chapters footer was unreachable until it became a full-height slide like every other
+  snap child. Any trailing strip in a snap skin must be a full slide, not a sliver.
 
 ## Conventions
 
@@ -197,6 +210,18 @@ paths (button, backdrop, Escape) must honor the checkbox.
   One photo selected → its filter lit; multiple selected with the same filter → that filter lit;
   empty or mixed selection → nothing lit. Skins always light (a skin always applies). Scroll-settle
   alone never lights a filter with no photos selected, and never fires action tokens (Surprise, +).
+- **Extracted modules must never reach into index.html's scope.** A bare reference to a shell
+  variable (`elToast`, `toastTimer`) fails at runtime, not at import time — the export build
+  silently produced nothing once. Shared plumbing crosses the boundary only via `init*(deps)`
+  or module-scope state the module owns. When moving code, scan for *bare* references too —
+  a scan of called names misses them.
+
+**Artifact footer contract** (`export.js`, test-pinned): `Created with Aimless` plus, for walks
+with a published Neocities page, a `Walk index` link derived from `walk.neocities.pageUrl`.
+Published builds pass `opts.indexHref` from `neocitiesTargets().indexUrl` (`…/aimless/`).
+Nothing else goes in the footer: Neocities rejects `.kml` uploads, and embedded route links
+leaked GPS into every shared copy — footer KML was removed for both reasons. Route export
+survives only as the explicit **Export Route** action (a real `.kml` download).
 
 Vanilla ES modules. Pure logic in `public/lib/*.js`, tested with `node --test`; DOM code lives in
 `public/index.html` (go/walk/archive/done screens + boot) and `public/lib/ui/` (self-wiring
