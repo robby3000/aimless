@@ -13,6 +13,7 @@ const PRECACHE = [
   './index.html',
   './sim.html',
   './manifest.json',
+  './style.css',
   './icons/apple-touch-icon.png',
   './icons/favicon-16.png',
   './icons/favicon-32.png',
