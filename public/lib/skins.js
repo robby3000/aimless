@@ -659,7 +659,11 @@ body {
    padding. Class selectors are needed: body > * loses to BASE margins. */
 body > * { scroll-snap-align: start; }
 body > header, body > .trace, body > .stop, body > .myvoice-tail, body > footer { margin: 0; }
-header, .trace, .stop, .myvoice-tail {
+/* The footer is a full slide, not a short trailing strip: a short last
+   child has no stable snap point in WebKit (mandatory snap either hides
+   it or bounces back before it can be tapped). Same full-port rule as
+   the other blocks, content centred on its screen. */
+header, .trace, .stop, .myvoice-tail, footer {
   min-height: 100%;
   display: flex;
   flex-direction: column;
@@ -760,11 +764,7 @@ header .summary { margin-bottom: 0; }
   z-index: 40;
 }
 
-/* scroll-snap-align: start, not end — the footer is a short last child,
-   and end-alignment on short trailing children is a WebKit bug path that
-   leaves it without a reachable snap point (invisible on iOS). Start
-   alignment clamps to max scroll anyway, so the visual is identical. */
-footer { padding: 40px 24px; scroll-snap-align: start; }
+footer { padding: 40px 24px; align-items: center; text-align: center; }
 
 /* Print must not inherit the scroll port: an overflowed body clips the
    export to a single page. Flatten to the plain sequential page and let
