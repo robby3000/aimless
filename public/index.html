@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-a3fcb183">
+  <meta name="aimless-build" content="aimless-v0.2.0-1f3633e9">
   <meta name="description" content="Go nowhere. Somewhere.">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/favicon-16.png" type="image/png" sizes="16x16">
@@ -536,6 +536,18 @@
       if (!action || !action.sticky) toastTimer = setTimeout(() => { elToast.hidden = true; }, action ? 5000 : 2200);
     }
 
+    // Held-open toast for async work (export/publish builds) — detail.js
+    // calls these via initDetail; always pair toastHold with toastRelease.
+    function toastHold(msg) {
+      clearTimeout(toastTimer);
+      elToast.replaceChildren();
+      const message = document.createElement('span');
+      message.textContent = msg;
+      elToast.appendChild(message);
+      elToast.hidden = false;
+    }
+    function toastRelease() { elToast.hidden = true; }
+
     // --- Service worker registration + update detection ---
     // Three overlapping signals — a fast network can complete install→activate
     // →claim before register()'s promise resolves, so no single one suffices.
@@ -740,7 +752,7 @@
       });
     }
 
-    detail.initDetail({ dbPromise, showScreen, showToast, savePrefs });
+    detail.initDetail({ dbPromise, showScreen, showToast, savePrefs, toastHold, toastRelease });
     loadPrefs();
 
     // --- Voice loading ---

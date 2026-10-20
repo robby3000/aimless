@@ -29,8 +29,10 @@ import { traceSVG } from '../markup.js';
 import { askConfirm, askText } from './modals.js';
 
 // Injected by index.html — shared with the go/walk/archive screens.
-let dbPromise, showScreen, showToast, savePrefs;
-export function initDetail(deps) { ({ dbPromise, showScreen, showToast, savePrefs } = deps); }
+let dbPromise, showScreen, showToast, savePrefs, toastHold, toastRelease;
+export function initDetail(deps) {
+  ({ dbPromise, showScreen, showToast, savePrefs, toastHold, toastRelease } = deps);
+}
 
 // --- Walk Result skins ---
 // The Skin and Filter rails' tokens are generated from SKINS and FILTERS,
@@ -511,11 +513,7 @@ document.getElementById('btn-publish-build').addEventListener('click', async () 
 
   // Same "rendering…" toast as the HTML export - the engine render of
   // the card photo and the keepsake takes a beat.
-  clearTimeout(toastTimer);
-  const msg = document.createElement('span');
-  msg.textContent = 'rendering…';
-  elToast.replaceChildren(msg);
-  elToast.hidden = false;
+  toastHold('rendering…');
   await new Promise((r) => requestAnimationFrame(r));
   try {
     const db = await dbPromise;
@@ -581,7 +579,7 @@ document.getElementById('btn-publish-build').addEventListener('click', async () 
     document.getElementById('neocities-sub').textContent = targets.pageUrl.replace(/^https:\/\//, '');
     showPublishStep('handoff');
   } finally {
-    elToast.hidden = true;
+    toastRelease();
   }
 });
 
@@ -1460,16 +1458,12 @@ async function buildCurrentDetailHTML(extraOpts = {}) {
 // synchronous-feeling wait. Show a persistent "rendering…" toast for the
 // duration; the rAF gap lets it paint before the work hogs the thread.
 async function buildDetailHTMLWithFeedback() {
-  clearTimeout(toastTimer);
-  const msg = document.createElement('span');
-  msg.textContent = 'rendering…';
-  elToast.replaceChildren(msg);
-  elToast.hidden = false;
+  toastHold('rendering…');
   await new Promise((r) => requestAnimationFrame(r));
   try {
     return await buildCurrentDetailHTML();
   } finally {
-    elToast.hidden = true;
+    toastRelease();
   }
 }
 
