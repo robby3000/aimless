@@ -760,7 +760,11 @@ header .summary { margin-bottom: 0; }
   z-index: 40;
 }
 
-footer { padding: 40px 24px; scroll-snap-align: end; }
+/* scroll-snap-align: start, not end — the footer is a short last child,
+   and end-alignment on short trailing children is a WebKit bug path that
+   leaves it without a reachable snap point (invisible on iOS). Start
+   alignment clamps to max scroll anyway, so the visual is identical. */
+footer { padding: 40px 24px; scroll-snap-align: start; }
 
 /* Print must not inherit the scroll port: an overflowed body clips the
    export to a single page. Flatten to the plain sequential page and let
