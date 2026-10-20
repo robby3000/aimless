@@ -48,7 +48,8 @@ offline. If you add a file under `public/`, add it in both places.
 
 ```
 public/
-  index.html          # the app: inline CSS + UI JS, all screens
+  index.html          # boot + shell markup + go/walk/archive/done screens (UI JS)
+  style.css           # all app styles (extracted from index.html; link, not @import)
   sim.html            # GPS simulator (roadmap A11)
   manifest.json       # no "id" (defaults to start_url) and no "version" (not a manifest member)
   sw.js               # precaches the shell for offline use; cache name is generated, see below
@@ -57,6 +58,7 @@ public/
                       # media query hides it past the image bounds (no bare edges)
   lib/
     geo.js  rng.js  walk.js  deck.js  store.js  dexie.mjs  proximity.js  export.js  skins.js
+    markup.js           # pure markup builders (traceSVG); string in, string out, node-testable
     platform.js         # UA detection: isIOS, isInAppBrowser, isStandalone
     inner.js            # The Inner voice: I Ching hexagram from coordinates (docs/iching/)
     filters.js          # Filter Spec presets ({id,name,spec}) + Wobbletone translation
@@ -68,6 +70,13 @@ public/
     surprise.js         # Surprise rail action: seeded-random effect stack onto one photo
     oracle.js           # oracle voices: coordinate -> 4 pool indices (titles/l1/l2/l3)
     publish.js          # Neocities hand-off: slug, sitename, OG head, target URLs
+    ui/
+      modals.js         # promise dialogs: askConfirm, askText (self-wiring, no deps)
+      detail.js         # Walk Detail: artifact view, skin/filter rails, filter management,
+                        # publish hand-off, export sheet, share/OG cards. Owns detail-visit
+                        # state; shared deps injected via initDetail({dbPromise, showScreen,
+                        # showToast, savePrefs}); prefs round-trip via loadDetailPrefs()/
+                        # detailPrefValues()
   data/
     crow.json  threshold.json  lattice.json    # oracle pools (the seeded-deck format is replaced)
     stray.json small.json slow.json echo.json  # oracle pools
@@ -76,7 +85,7 @@ test/
   geo.test.js  rng.test.js  walk.test.js  deck.test.js  proximity.test.js  skins.test.js
   platform.test.js  export.test.js  inner.test.js  filters.test.js  backup.test.js  filter-renderer.test.js
   kml.test.js  walk-nav.test.js  engine.test.js  surprise.test.js  oracle.test.js
-  publish.test.js
+  publish.test.js  markup.test.js
 scripts/
   make-icons.mjs      # npm run icons
   stamp-sw.mjs        # npm run stamp -- rewrites the sw.js cache name
@@ -109,8 +118,8 @@ package.json          # no dependencies; "test": "node --test test/**/*.test.js"
 ## Scope
 
 Before adding anything, check `blueprint.md` §8 and the temptations table in `roadmap.md` §6. The
-plan is small deliberately. If it grows past a weekend, the experiment has failed on its own terms
-even if the app is good.
+app stays deliberately small — new features are integrations at the edges (more skins, webring,
+publish targets), not growth of the core loop.
 
 ## Device gotchas
 
@@ -189,9 +198,12 @@ paths (button, backdrop, Escape) must honor the checkbox.
   empty or mixed selection → nothing lit. Skins always light (a skin always applies). Scroll-settle
   alone never lights a filter with no photos selected, and never fires action tokens (Surprise, +).
 
-Vanilla ES modules. Pure logic in `public/lib/*.js`, tested with `node --test`; anything touching
-the DOM, storage or geolocation stays in `public/index.html` or `sim.html` and is verified manually
-via the simulator. Inline CSS and UI JS in `index.html` (the `pomo-day-sync` pattern). Dark, high
+Vanilla ES modules. Pure logic in `public/lib/*.js`, tested with `node --test`; DOM code lives in
+`public/index.html` (go/walk/archive/done screens + boot) and `public/lib/ui/` (self-wiring
+screen modules), verified manually via the simulator. Styles live in `public/style.css`, never
+inline. `lib/ui/` modules own their state at module level by lifetime (detail.js owns
+detail-visit state; index.html owns walk-session state) and receive shared dependencies via an
+`init*(deps)` call — they must not import index.html state directly. Dark, high
 contrast — this is read outdoors in daylight. No emojis. **No em dashes in shipped copy** —
 user-facing text stays short, dry and human; instructions may be explicit, mechanics stay
 unexplained. One logical change per commit, prefixed
