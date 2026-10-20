@@ -10,8 +10,9 @@ can keep. Zero dependencies, zero build step, zero server.
 **`docs/` is gitignored — everything in it is local-only.** The files exist on disk but not on
 GitHub; the links below resolve for whoever holds the working copy.
 
-1. `docs/roadmap.md` — the build plan. Executive summary, 16 decisions (A1–A16), six
-   steps. **It is short on purpose.**
+1. `docs/roadmap.md` — **historical build plan, superseded** (the experiment shipped; the app is
+   now a product). Still consult §1 decisions A1–A16, §2 algorithm spec, §5 device notes, §6 scope
+   discipline. Its "weekend build" scale framing is obsolete — ignore it.
 2. `docs/blueprint.md` — what and why.
 3. `docs/deck.md` — the original card grammar. Historical: the seeded deck is gone (cards now
    come from oracle pools, see Conventions → Voice model). `deck.js` survives only for the SVG
