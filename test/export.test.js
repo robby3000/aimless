@@ -92,6 +92,12 @@ test('the footer has an Export KML data URI link when includeKml is set', async 
   assert.ok(html.includes('download="aimless-moss-fern-quartz.kml"'));
 });
 
+test('kmlHref links a real file instead of a data URI (published pages)', async () => {
+  const html = await buildHTMLExport(WALK, [], '<svg></svg>', '', 'sky', { includeKml: true, kmlHref: 'walk-abc.kml' });
+  assert.ok(html.includes('href="walk-abc.kml"'));
+  assert.ok(!html.includes('data:application/vnd.google-earth.kml+xml'));
+});
+
 test('the footer no longer says "self-contained"', async () => {
   const html = await buildHTMLExport(WALK, [], '<svg></svg>');
   assert.ok(!html.includes('self-contained'));

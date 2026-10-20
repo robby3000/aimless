@@ -530,7 +530,12 @@ document.getElementById('btn-publish-build').addEventListener('click', async () 
       height: 630,
       alt: `The route of an Aimless walk on ${formatWalkDate(walk.started)}`,
     });
-    const html = await buildCurrentDetailHTML({ title, headHtml });
+    // The published page's footer KML link points at a real file uploaded
+    // beside it - a data: URI can't be trusted to download everywhere.
+    const kmlBlob = kmlIncluded
+      ? new Blob([buildKmlString(walk)], { type: 'application/vnd.google-earth.kml+xml' })
+      : null;
+    const html = await buildCurrentDetailHTML({ title, headHtml, ...(kmlIncluded ? { kmlHref: targets.kmlName } : {}) });
 
     walk.neocities = {
       sitename: neocitiesSitename,
@@ -556,14 +561,17 @@ document.getElementById('btn-publish-build').addEventListener('click', async () 
       htmlName: targets.htmlName,
       imageName: targets.imageName,
       indexName: 'index.html',
+      kmlName: targets.kmlName,
       htmlBlob: new Blob([html], { type: 'text/html' }),
       jpgBlob,
       indexBlob: index.blob,
+      kmlBlob,
     };
     const files = document.getElementById('publish-files');
     files.replaceChildren(...[
       [targets.htmlName, publishBuilt.htmlBlob.size, ''],
       [targets.imageName, jpgBlob.size, ''],
+      ...(kmlBlob ? [[targets.kmlName, kmlBlob.size, '']] : []),
       [publishBuilt.indexName, publishBuilt.indexBlob.size, index.unchanged ? 'unchanged' : ''],
     ].map(([name, size, note]) => {
       const li = document.createElement('li');
@@ -583,13 +591,18 @@ document.getElementById('btn-publish-build').addEventListener('click', async () 
   }
 });
 
-// Hand-off step: download all three (staggered - immediate multi-clicks
-// get swallowed by some browsers), then upload via the dashboard.
+// Hand-off step: download all built files (staggered - immediate
+// multi-clicks get swallowed by some browsers), then upload via the
+// dashboard.
 document.getElementById('publish-download').addEventListener('click', () => {
   if (!publishBuilt) return;
-  downloadFile(publishBuilt.htmlName, publishBuilt.htmlBlob, 'text/html');
-  setTimeout(() => downloadFile(publishBuilt.imageName, publishBuilt.jpgBlob, 'image/jpeg'), 300);
-  setTimeout(() => downloadFile(publishBuilt.indexName, publishBuilt.indexBlob, 'text/html'), 600);
+  const parts = [
+    [publishBuilt.htmlName, publishBuilt.htmlBlob, 'text/html'],
+    [publishBuilt.imageName, publishBuilt.jpgBlob, 'image/jpeg'],
+    ...(publishBuilt.kmlBlob ? [[publishBuilt.kmlName, publishBuilt.kmlBlob, 'application/vnd.google-earth.kml+xml']] : []),
+    [publishBuilt.indexName, publishBuilt.indexBlob, 'text/html'],
+  ];
+  parts.forEach(([name, blob, type], i) => setTimeout(() => downloadFile(name, blob, type), i * 300));
 });
 document.getElementById('publish-open-dashboard').addEventListener('click', () => {
   window.open('https://neocities.org/dashboard', '_blank', 'noopener');

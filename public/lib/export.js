@@ -234,9 +234,13 @@ export async function buildHTMLExport(walk, photos, svgTrace, skinCss = '', icon
   // with no scripts — just an anchor with a download attribute. The KML is
   // tiny (coordinates only, no images), so the data URI adds negligible weight.
   // Opt-in only: the coordinates make a shared artifact traceable to real
-  // places the author walked.
+  // places the author walked. Published pages pass opts.kmlHref instead:
+  // a real .kml file uploaded next to the page, because data: URIs are an
+  // unreliable download path in several browsers (Safari especially).
   const kmlLinkHtml = opts.includeKml
-    ? ` <a href="data:application/vnd.google-earth.kml+xml;charset=utf-8,${encodeURIComponent(buildKmlString(walk))}" download="aimless-${walk.seed}.kml">Export KML</a>`
+    ? (opts.kmlHref
+        ? ` <a href="${esc(opts.kmlHref)}" download>Export KML</a>`
+        : ` <a href="data:application/vnd.google-earth.kml+xml;charset=utf-8,${encodeURIComponent(buildKmlString(walk))}" download="aimless-${walk.seed}.kml">Export KML</a>`)
     : '';
 
   return `<!DOCTYPE html>
