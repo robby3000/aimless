@@ -39,6 +39,7 @@ const PRECACHE = [
   './lib/backup.js',
   './lib/filter-renderer.js',
   './lib/walk-nav.js',
+  './lib/markup.js',
   './lib/oracle.js',
   './lib/surprise.js',
   './lib/publish.js',
