@@ -722,26 +722,6 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .sheet-row .row-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .sheet-row .row-title { font-weight: 500; }
 .sheet-row .row-sub { font-size: 0.78rem; color: var(--fg-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.sheet-toggle { cursor: pointer; }
-.sheet-toggle input { margin-left: auto; width: 18px; height: 18px; accent-color: var(--accent); flex-shrink: 0; }
-.sheet-kml {
-  border-top: 1px solid var(--surface-2);
-  margin-top: 8px;
-  padding-top: 6px;
-}
-.sheet-kml .kml-head { padding: 10px 20px 6px; }
-.sheet-kml .kml-title {
-  font-size: 0.68rem;
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--fg-dim);
-}
-.sheet-kml .kml-sub {
-  font-size: 0.78rem;
-  font-style: italic;
-  color: var(--fg-dim);
-  margin-top: 3px;
-}
 @media (prefers-reduced-motion: reduce) {
   .sheet-overlay, .sheet { transition: none; }
 }
@@ -908,7 +888,6 @@ body > nav button.active {
 .link-btn { background: none; border: none; padding: 0; color: var(--fg-dim); font-size: 0.8rem; text-decoration: underline; cursor: pointer; margin-bottom: 12px; }
 .publish-contents { margin: 0 0 14px 18px; padding: 0; font-size: 0.85rem; color: var(--fg-dim); }
 .publish-contents li { margin-bottom: 2px; }
-.publish-contents .warn { color: var(--danger); }
 .publish-label { display: block; font-size: 0.85rem; color: var(--fg-dim); margin-bottom: 6px; }
 .publish-count { font-size: 0.75rem; color: var(--fg-dim); text-align: right; margin-bottom: 12px; }
 .publish-files { list-style: none; margin: 0 0 14px; padding: 0; font-size: 0.85rem; }

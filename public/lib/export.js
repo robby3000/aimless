@@ -4,7 +4,7 @@
 import { unreachableRate } from './proximity.js';
 import { formatKm } from './geo.js';
 import { BASE_CSS, PRINT_CSS } from './skins.js';
-import { buildKmlString } from './kml.js';
+
 
 export const esc = (value) => String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
@@ -131,12 +131,12 @@ function myVoiceBlockHtml(block) {
  *   embedded after the base styles. CSS only - no scripts, ever.
  * @param {string} [icon]  Logo variant ('light' | 'dark' | 'sky') - the
  *   active skin's `icon` field, chosen for contrast against its background.
- * @param {object} [opts]  Options: `includeKml` embeds a KML data-URI link in
- *   the footer so the walk can be opened in mapping apps (opt-in - the link
- *   leaks the walked coordinates into every shared copy); `title` replaces
- *   the default `<title>` text (escaped); `headHtml` is emitted verbatim on
- *   its own line after the viewport meta, for caller-built OG tags
- *   (see publish.js `ogHeadHtml`).
+ * @param {object} [opts]  Options: `indexHref` links the walk's Neocities
+ *   index from the footer (published walks only — standalone artifacts
+ *   have no index to point at); `title` replaces the default `<title>`
+ *   text (escaped); `headHtml` is emitted verbatim on its own line after
+ *   the viewport meta, for caller-built OG tags (see publish.js
+ *   `ogHeadHtml`).
  */
 export async function buildHTMLExport(walk, photos, svgTrace, skinCss = '', icon = 'sky', opts = {}) {
   const photoDataUrls = new Map();
@@ -230,18 +230,11 @@ export async function buildHTMLExport(walk, photos, svgTrace, skinCss = '', icon
   // skin's pale text would otherwise come out invisible on white).
   const embeddedCss = stripFilterDeclarations(`${BASE_CSS}\n${PHOTO_CSS}\n${skinCss}\n@media print {\n${PRINT_CSS}\n}`);
 
-  // Embed the KML route as a data URI so the keepsake offers a route export
-  // with no scripts — just an anchor with a download attribute. The KML is
-  // tiny (coordinates only, no images), so the data URI adds negligible weight.
-  // Opt-in only: the coordinates make a shared artifact traceable to real
-  // places the author walked. Published pages pass opts.kmlHref instead:
-  // a real .kml file uploaded next to the page, because data: URIs are an
-  // unreliable download path in several browsers (Safari especially).
-  const kmlLinkHtml = opts.includeKml
-    ? (opts.kmlHref
-        ? ` <a href="${esc(opts.kmlHref)}" download>Export KML</a>`
-        : ` <a href="data:application/vnd.google-earth.kml+xml;charset=utf-8,${encodeURIComponent(buildKmlString(walk))}" download="aimless-${walk.seed}.kml">Export KML</a>`)
-    : '';
+  // Published walks link their Neocities walk index from the footer: an
+  // ordinary relative/absolute anchor, script-free, so visitors landing on
+  // one page can reach the rest. Only emitted when the artifact knows the
+  // index URL — standalone keepsakes carry no site link.
+  const indexLinkHtml = opts.indexHref ? ` <a href="${esc(opts.indexHref)}">Walk index</a>` : '';
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -267,7 +260,7 @@ ${embeddedCss}
   <div class="trace">${svgTrace}</div>
   ${stopCards}
   ${myVoiceTail}
-  <footer>Created with <a href="https://aimless.earth">Aimless</a>.${kmlLinkHtml}</footer>
+  <footer>Created with <a href="https://aimless.earth">Aimless</a>.${indexLinkHtml}</footer>
 </body>
 </html>`;
 }

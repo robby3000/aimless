@@ -459,12 +459,6 @@ function renderPublishConsent() {
     li.textContent = t;
     return li;
   }));
-  if (document.getElementById('opt-kml-link').checked) {
-    const li = document.createElement('li');
-    li.className = 'warn';
-    li.textContent = 'Includes the GPS link to the real route';
-    contents.appendChild(li);
-  }
   publishDesc.value = walk.neocities?.description ?? defaultDescription(walk);
   publishCount.textContent = `${publishDesc.value.length}/200`;
   // New builds default to listed; a previously-built walk keeps its choice.
@@ -509,7 +503,6 @@ document.getElementById('btn-publish-build').addEventListener('click', async () 
   const targets = neocitiesTargets(neocitiesSitename, slug);
   let description = publishDesc.value.replace(/\s+/g, ' ').trim().slice(0, 200);
   if (!description) description = defaultDescription(walk);
-  const kmlIncluded = document.getElementById('opt-kml-link').checked;
 
   // Same "rendering…" toast as the HTML export - the engine render of
   // the card photo and the keepsake takes a beat.
@@ -530,12 +523,9 @@ document.getElementById('btn-publish-build').addEventListener('click', async () 
       height: 630,
       alt: `The route of an Aimless walk on ${formatWalkDate(walk.started)}`,
     });
-    // The published page's footer KML link points at a real file uploaded
-    // beside it - a data: URI can't be trusted to download everywhere.
-    const kmlBlob = kmlIncluded
-      ? new Blob([buildKmlString(walk)], { type: 'application/vnd.google-earth.kml+xml' })
-      : null;
-    const html = await buildCurrentDetailHTML({ title, headHtml, ...(kmlIncluded ? { kmlHref: targets.kmlName } : {}) });
+    // The published page's footer links back to the walk index alongside
+    // it: an extra path for visitors who land on one page.
+    const html = await buildCurrentDetailHTML({ title, headHtml, indexHref: targets.indexUrl });
 
     walk.neocities = {
       sitename: neocitiesSitename,
@@ -544,7 +534,6 @@ document.getElementById('btn-publish-build').addEventListener('click', async () 
       pageUrl: targets.pageUrl,
       imageUrl: targets.imageUrl,
       builtAt: Date.now(),
-      kmlIncluded,
       description,
       indexed: document.getElementById('publish-indexed').checked,
     };
@@ -561,17 +550,14 @@ document.getElementById('btn-publish-build').addEventListener('click', async () 
       htmlName: targets.htmlName,
       imageName: targets.imageName,
       indexName: 'index.html',
-      kmlName: targets.kmlName,
       htmlBlob: new Blob([html], { type: 'text/html' }),
       jpgBlob,
       indexBlob: index.blob,
-      kmlBlob,
     };
     const files = document.getElementById('publish-files');
     files.replaceChildren(...[
       [targets.htmlName, publishBuilt.htmlBlob.size, ''],
       [targets.imageName, jpgBlob.size, ''],
-      ...(kmlBlob ? [[targets.kmlName, kmlBlob.size, '']] : []),
       [publishBuilt.indexName, publishBuilt.indexBlob.size, index.unchanged ? 'unchanged' : ''],
     ].map(([name, size, note]) => {
       const li = document.createElement('li');
@@ -599,7 +585,6 @@ document.getElementById('publish-download').addEventListener('click', () => {
   const parts = [
     [publishBuilt.htmlName, publishBuilt.htmlBlob, 'text/html'],
     [publishBuilt.imageName, publishBuilt.jpgBlob, 'image/jpeg'],
-    ...(publishBuilt.kmlBlob ? [[publishBuilt.kmlName, publishBuilt.kmlBlob, 'application/vnd.google-earth.kml+xml']] : []),
     [publishBuilt.indexName, publishBuilt.indexBlob, 'text/html'],
   ];
   parts.forEach(([name, blob, type], i) => setTimeout(() => downloadFile(name, blob, type), i * 300));
@@ -1460,8 +1445,11 @@ async function buildCurrentDetailHTML(extraOpts = {}) {
       alt: `The route of an Aimless walk on ${formatWalkDate(currentDetailWalk.started)}`,
     } : {}),
   });
+  // A walk with a published page also links its walk index from the
+  // footer - the index sits in the page's own `aimless/` folder.
+  const indexHref = currentDetailWalk.neocities?.pageUrl?.replace(/[^/]*$/, '');
   return buildHTMLExport(currentDetailWalk, rendered, svg, skin.css, skin.icon, {
-    includeKml: document.getElementById('opt-kml-link').checked,
+    indexHref,
     headHtml,
     ...extraOpts,
   });
@@ -1638,7 +1626,6 @@ document.getElementById('btn-detail-export').addEventListener('click', () => {
     : 'Build a page for your Neocities site';
   exportSheetCtl.open();
 });
-document.getElementById('opt-kml-link').addEventListener('change', savePrefs);
 
 // My Voice: the file's blank-line-separated blocks map to the walk's
 // photos in order, and persist on the walk record for re-exports.
@@ -1736,8 +1723,6 @@ exportSheet.addEventListener('click', async (e) => {
     showToast('Text removed');
   } else if (action === 'route') {
     // KML route export: plan path + walked trace + stop placemarks.
-    // The file carries real coordinates, so confirm first.
-    if (!await askConfirm("Export KML route? It contains the walk's real GPS coordinates.", 'Export')) return;
     const kml = buildKmlString(currentDetailWalk);
     const filename = `aimless-${currentDetailWalk.seed}.kml`;
     const file = new File([kml], filename, { type: 'application/vnd.google-earth.kml+xml' });

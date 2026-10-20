@@ -113,12 +113,11 @@ test('neocitiesTargets builds urls, paths and names', () => {
   assert.deepEqual(neocitiesTargets('rob', 'walk-20261004-abc'), {
     pageUrl: 'https://rob.neocities.org/aimless/walk-20261004-abc.html',
     imageUrl: 'https://rob.neocities.org/aimless/walk-20261004-abc.jpg',
+    indexUrl: 'https://rob.neocities.org/aimless/',
     htmlPath: 'aimless/walk-20261004-abc.html',
     imagePath: 'aimless/walk-20261004-abc.jpg',
-    kmlPath: 'aimless/walk-20261004-abc.kml',
     htmlName: 'walk-20261004-abc.html',
     imageName: 'walk-20261004-abc.jpg',
-    kmlName: 'walk-20261004-abc.kml',
   });
 });
 

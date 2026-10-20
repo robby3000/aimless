@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-24629262">
+  <meta name="aimless-build" content="aimless-v0.2.0-dda98401">
   <meta name="description" content="Go nowhere. Somewhere.">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/favicon-16.png" type="image/png" sizes="16x16">
@@ -232,8 +232,8 @@
         <p>Use Aimless in punk mode: start a walk but don't follow the arrow. Capture a series of 3, 5 or 7 photos on the way: when you get to a good spot tap "Close as I can get", take a photo, OK, Continue. It's fine to turn your screen off between photos, but the GPS trace is only recorded while the app is open.</p>
       </details>
       <details>
-        <summary>What are the KML options?</summary>
-        <p>KML is the route format mapping apps understand. "Export Route" downloads a .kml; "Add KML link to footer" embeds the route inside the HTML artifact. Use the link knowingly: it contains the walk's real GPS coordinates, so if you started from your front door, anyone holding the file can find it.</p>
+        <summary>What is Export Route?</summary>
+        <p>KML is the route format mapping apps understand. On a walk's export sheet, "Export Route" downloads a .kml file: the plan path, your walked trace and each stop. It contains the walk's real GPS coordinates, so share the file knowingly.</p>
       </details>
       <details>
         <summary>What is Wobbletone?</summary>
@@ -316,6 +316,10 @@
       <span class="row-text"><span class="row-title">Card</span><span class="row-sub">Send a card via the share menu</span></span>
     </button>
     <button class="sheet-row" data-export="neocities" id="row-neocities"><span class="row-ico">&#9741;</span><span class="row-text"><span class="row-title">Neocities page</span><span class="row-sub" id="neocities-sub">Build a page for your Neocities site</span></span></button>
+    <button class="sheet-row" data-export="route">
+      <span class="row-ico">&#9874;</span>
+      <span class="row-text"><span class="row-title">Export Route</span><span class="row-sub">To open your walk routes in mapping apps</span></span>
+    </button>
     <button class="sheet-row" data-export="add-text" id="row-add-text" hidden>
       <span class="row-ico">&#9998;</span>
       <span class="row-text"><span class="row-title" id="add-text-title">Add text</span><span class="row-sub">Select a text file — blocks map to photos in order</span></span>
@@ -324,21 +328,6 @@
       <span class="row-ico">&#10005;</span>
       <span class="row-text"><span class="row-title">Remove text</span><span class="row-sub">Detach the imported text from this walk</span></span>
     </button>
-    <div class="sheet-kml">
-      <div class="kml-head">
-        <div class="kml-title">KML settings</div>
-        <div class="kml-sub">To open your walk routes in mapping apps</div>
-      </div>
-      <button class="sheet-row" data-export="route">
-        <span class="row-ico">&#9874;</span>
-        <span class="row-text"><span class="row-title">Export Route</span></span>
-      </button>
-      <label class="sheet-row sheet-toggle">
-        <span class="row-ico">&#8599;</span>
-        <span class="row-text"><span class="row-title">Add KML link to footer</span><span class="row-sub">Embeds walk GPS coordinates</span></span>
-        <input type="checkbox" id="opt-kml-link">
-      </label>
-    </div>
   </div>
   <input type="file" id="myvoice-file" accept=".txt,text/plain" hidden>
   <input type="file" id="backup-file" accept=".json,application/json" hidden>
@@ -677,7 +666,7 @@
     const elStops = document.getElementById('setting-stops');
     const elBudget = document.getElementById('setting-budget');
     const elVoice = document.getElementById('setting-voice');
-    const DEFAULT_PREFS = { stops: 5, budgetMin: 45, voice: 'crow', skin: 'default', filter: 'original', hiddenFilters: [], kmlLink: false, seenPhotoSelectHint: false, neocitiesSitename: '', neocitiesIndex: '' };
+    const DEFAULT_PREFS = { stops: 5, budgetMin: 45, voice: 'crow', skin: 'default', filter: 'original', hiddenFilters: [], seenPhotoSelectHint: false, neocitiesSitename: '', neocitiesIndex: '' };
 
     // Scroll-snap wheel: keeps `input` (a hidden input carrying the setting's
     // value) in sync with the centred item, and saves prefs on user scrolls.
@@ -735,7 +724,7 @@
       // the same artifact, so saved selections fold into it.
       const savedVoice = prefs.voice === 'none' ? 'myvoice' : (prefs.voice ?? DEFAULT_PREFS.voice);
       wheelVoice.setValue(savedVoice);
-      document.getElementById('opt-kml-link').checked = prefs.kmlLink ?? DEFAULT_PREFS.kmlLink;
+
       await detail.loadDetailPrefs(prefs);
       return prefs;
     }
@@ -747,7 +736,6 @@
         stops: parseInt(elStops.value, 10),
         budgetMin: parseInt(elBudget.value, 10),
         voice: elVoice.value,
-        kmlLink: document.getElementById('opt-kml-link').checked,
         ...detail.detailPrefValues(),
       });
     }

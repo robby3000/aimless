@@ -61,16 +61,14 @@ export function normalizeSitename(raw) {
 export function neocitiesTargets(sitename, slug) {
   const htmlName = `${slug}.html`;
   const imageName = `${slug}.jpg`;
-  const kmlName = `${slug}.kml`;
   return {
     pageUrl: `https://${sitename}.neocities.org/${NEOCITIES_FOLDER}/${htmlName}`,
     imageUrl: `https://${sitename}.neocities.org/${NEOCITIES_FOLDER}/${imageName}`,
+    indexUrl: `https://${sitename}.neocities.org/${NEOCITIES_FOLDER}/`,
     htmlPath: `${NEOCITIES_FOLDER}/${htmlName}`,
     imagePath: `${NEOCITIES_FOLDER}/${imageName}`,
-    kmlPath: `${NEOCITIES_FOLDER}/${kmlName}`,
     htmlName,
     imageName,
-    kmlName,
   };
 }
 

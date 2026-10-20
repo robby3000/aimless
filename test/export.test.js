@@ -79,23 +79,21 @@ test('the summary does not include the "close as I can get" count', async () => 
   assert.ok(!html.includes('%)'));
 });
 
-test('the footer omits the KML link unless opted in', async () => {
-  const html = await buildHTMLExport(WALK, [], '<svg></svg>');
-  assert.ok(!html.includes('Export KML</a>'));
-  assert.ok(!html.includes('vnd.google-earth.kml'));
-});
-
-test('the footer has an Export KML data URI link when includeKml is set', async () => {
-  const html = await buildHTMLExport(WALK, [], '<svg></svg>', '', 'sky', { includeKml: true });
-  assert.ok(html.includes('Export KML</a>'));
-  assert.ok(html.includes('data:application/vnd.google-earth.kml+xml'));
-  assert.ok(html.includes('download="aimless-moss-fern-quartz.kml"'));
-});
-
-test('kmlHref links a real file instead of a data URI (published pages)', async () => {
+test('the footer never carries a KML link (Neocities rejects .kml uploads)', async () => {
   const html = await buildHTMLExport(WALK, [], '<svg></svg>', '', 'sky', { includeKml: true, kmlHref: 'walk-abc.kml' });
-  assert.ok(html.includes('href="walk-abc.kml"'));
-  assert.ok(!html.includes('data:application/vnd.google-earth.kml+xml'));
+  assert.ok(!html.includes('Export KML'));
+  assert.ok(!html.includes('vnd.google-earth.kml'));
+  assert.ok(!html.includes('.kml'));
+});
+
+test('the footer links the walk index when indexHref is given', async () => {
+  const html = await buildHTMLExport(WALK, [], '<svg></svg>', '', 'sky', { indexHref: 'https://rob.neocities.org/aimless/' });
+  assert.ok(html.includes('<a href="https://rob.neocities.org/aimless/">Walk index</a>'));
+});
+
+test('the footer omits the walk index link without indexHref', async () => {
+  const html = await buildHTMLExport(WALK, [], '<svg></svg>');
+  assert.ok(!html.includes('Walk index'));
 });
 
 test('the footer no longer says "self-contained"', async () => {
