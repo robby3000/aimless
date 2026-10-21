@@ -1222,7 +1222,7 @@ html:not(.app) .desktop-page {
 .dp-text { flex: 1 1 auto; min-width: 0; }
 .dp-logo { width: 30px; height: 30px; vertical-align: -5px; margin-right: 10px; }
 .dp-word { font-size: 1.35rem; font-weight: 600; letter-spacing: 0.03em; margin-bottom: 34px; }
-.dp-accent { color: #7ab8ff; }
+.dp-accent { color: var(--accent); }
 .dp-lines {
   font-family: Georgia, 'Times New Roman', serif;
   font-size: clamp(2.75rem, 7vw, 5.25rem);
