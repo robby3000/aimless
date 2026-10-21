@@ -39,8 +39,8 @@ No build step, no `node_modules`.
 - Deploy: push to `main`. `.github/workflows/pages.yml` runs the tests and the stamp check,
   then publishes `public/` to GitHub Pages. All paths in the app are relative, so it works at a
   domain root or under a `/aimless/` project-site prefix.
-- Phone testing: needs HTTPS. Use the Tailscale + `*.ts.net` certificate pattern already set up for
-  the sibling `pomo-day-sync` project.
+- Phone testing: needs HTTPS (geolocation and friends refuse a plain LAN IP). The local
+  setup lives in `docs/ignore/local-ops.md`.
 - Icons: `npm run icons` → `node scripts/make-icons.mjs` (uses `sips` on macOS).
 - Simulator: `public/sim.html` — drives the walk logic from a synthetic track. Use it constantly.
 
@@ -112,10 +112,11 @@ package.json          # no dependencies; "test": "node --test test/**/*.test.js"
 - **Seeded randomness only** (A7). Never call `Math.random()` in generation code.
 - **Do not build Phase 2 (AI cards) until five real walks are logged in `verdict.md`** (A12). This
   is the entire reason the repo exists.
-- **This repo is PUBLIC.** `docs/` is gitignored so local planning drafts are safe there, but
-  durable private/competition research and strategy belongs in the **private KnowledgeVault**
-  (`/mnt/d/KnowledgeVault/…`). Respect the no-public-exposure posture: the NUC/Tailscale is never
-  an origin for anything Aimless publishes.
+- **This repo is PUBLIC.** `docs/` is gitignored so local planning drafts are safe there;
+  durable private research and personal-infrastructure details belong in
+  `docs/ignore/local-ops.md` or the private vault it points at. Respect the
+  no-public-exposure posture: personal infrastructure is never an origin for anything
+  Aimless publishes.
 - **Count the "close as I can get" presses** and surface the total. See `blueprint.md` §6 for
   why that number is collected.
 
