@@ -6,8 +6,23 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-6f35ca0e">
+  <meta name="aimless-build" content="aimless-v0.2.0-0b7fa229">
   <meta name="description" content="Go nowhere. Somewhere.">
+  <!-- Share card for aimless.earth links. og:image must be absolute:
+       crawlers do not resolve relative paths, and the all-relative
+       convention cannot apply here. -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://aimless.earth/">
+  <meta property="og:title" content="Aimless">
+  <meta property="og:description" content="Go nowhere. Somewhere.">
+  <meta property="og:image" content="https://aimless.earth/images/og.jpg">
+  <meta property="og:image:type" content="image/jpeg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Aimless">
+  <meta name="twitter:description" content="Go nowhere. Somewhere.">
+  <meta name="twitter:image" content="https://aimless.earth/images/og.jpg">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/favicon-16.png" type="image/png" sizes="16x16">
   <link rel="icon" href="./icons/favicon-32.png" type="image/png" sizes="32x32">

@@ -28,6 +28,7 @@ walk-*.json
 *.png
 !public/icons/**
 !public/fur-bg.webp
+!public/images/**
 
 # Secrets. Phase 2 adds an AI key - it lives in the environment, never here.
 .env

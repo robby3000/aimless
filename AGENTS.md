@@ -60,6 +60,8 @@ public/
   icons/              # generated PNGs (192, 512, 512-maskable)
   fur-bg.webp         # #screen-go fur texture, 3x portrait export (1152x2082);
                       # media query hides it past the image bounds (no bare edges)
+  images/
+    og.jpg            # link-share card for aimless.earth (1200x630 JPEG)
   lib/
     geo.js  rng.js  walk.js  deck.js  store.js  dexie.mjs  proximity.js  export.js  skins.js
     markup.js           # pure markup builders (traceSVG); string in, string out, node-testable
