@@ -841,10 +841,15 @@ body > nav button.active {
   inset: 0;
   background: rgba(0, 0, 0, 0.55);
   display: flex;
-  align-items: center;
+  /* Top half, not centred: the mobile keyboard covers the lower half of
+     the screen, so a centred input dialog sits behind it. svh over vh:
+     the small viewport is the visible area on iOS/Android (fallback
+     keeps the same value where svh is unsupported). */
+  align-items: flex-start;
   justify-content: center;
   z-index: 70;   /* above bottom sheets (51); toast sits higher again (80) for held progress toasts */
-  padding: 24px;
+  padding: 15vh 24px 24px;
+  padding-top: 15svh;
 }
 #confirm-overlay[hidden], #filename-overlay[hidden], #photo-hint-overlay[hidden], #publish-overlay[hidden] { display: none; }
 #confirm-box, #filename-box, #photo-hint-box, #publish-box {
