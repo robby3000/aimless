@@ -29,6 +29,19 @@ test('traceSVG gate pauses the animations for in-app release', () => {
   assert.doesNotMatch(traceSVG(PLAN, TRACE), /animation-play-state:paused/);
 });
 
+test('traceSVG scope prefixes the emitted selectors', () => {
+  const svg = traceSVG(PLAN, TRACE, {}, { scope: '#done-trace' });
+  assert.match(svg, /#done-trace \.tr-line\{stroke-dasharray:1/);
+  assert.match(svg, /#done-trace \.tr-dot\{opacity:0/);
+  // Scoped rules must not match foreign trace SVGs (a gated detail view
+  // left in the DOM would otherwise pause the done screen's draw-on) —
+  // every .tr-line/.tr-dot rule in the block must carry the prefix.
+  assert.equal(
+    (svg.match(/\.tr-(?:line|dot)\{/g) || []).length,
+    (svg.match(/#done-trace \.tr-(?:line|dot)\{/g) || []).length,
+  );
+});
+
 test('traceSVG emits a static drawn trace when there is nothing to animate', () => {
   const svg = traceSVG(PLAN, [TRACE[0]]);   // single point: no line to draw
   assert.doesNotMatch(svg, /tr-draw|animation-play-state/);

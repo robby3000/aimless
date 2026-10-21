@@ -15,8 +15,12 @@ import { bounds } from './geo.js';
  * inside the SVG, so it survives into the script-free HTML artifact.
  * gate emits the animations paused (trace undrawn): in-app JS releases
  * them at the right moment, instead of replaying a spent animation.
+ * scope prefixes the emitted selectors so the rules only match this
+ * SVG's host — bare .tr-line/.tr-dot would leak into every other trace
+ * SVG in the document (a gated detail view left in the DOM would freeze
+ * the done screen's draw-on).
  */
-export function traceSVG(plan, trace, colors = {}, { animate = true, gate = false } = {}) {
+export function traceSVG(plan, trace, colors = {}, { animate = true, gate = false, scope = '' } = {}) {
   const { planStroke = '#333', traceStroke = '#7ab8ff', originFill = '#7ab8ff', stopFill = '#e8e8e8' } = colors;
   const pts = [plan.origin, ...plan.stops];
   const all = [...trace, ...pts];
@@ -64,12 +68,13 @@ export function traceSVG(plan, trace, colors = {}, { animate = true, gate = fals
   }).join(' ');
 
   const hold = gate ? ';animation-play-state:paused' : '';
+  const p = scope ? `${scope} ` : '';
   const animStyle = animate && trace.length > 1 ? `<style>
-    .tr-line{stroke-dasharray:1;stroke-dashoffset:1;animation:tr-draw ${drawDur.toFixed(2)}s ease-in-out 0.25s forwards${hold}}
-    .tr-dot{opacity:0;animation:tr-pop .35s ease-out forwards${hold}}
+    ${p}.tr-line{stroke-dasharray:1;stroke-dashoffset:1;animation:tr-draw ${drawDur.toFixed(2)}s ease-in-out 0.25s forwards${hold}}
+    ${p}.tr-dot{opacity:0;animation:tr-pop .35s ease-out forwards${hold}}
     @keyframes tr-draw{to{stroke-dashoffset:0}}
     @keyframes tr-pop{to{opacity:var(--o,1)}}
-    @media (prefers-reduced-motion:reduce),print{.tr-line{stroke-dashoffset:0;animation:none}.tr-dot{opacity:var(--o,1);animation:none}}
+    @media (prefers-reduced-motion:reduce),print{${p}.tr-line{stroke-dashoffset:0;animation:none}${p}.tr-dot{opacity:var(--o,1);animation:none}}
   </style>` : '';
 
   return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">

@@ -1234,7 +1234,7 @@ export async function showWalkDetail(walkId) {
   const trace = walk.trace || [];
   const animateTrace = lastAnimatedDetailWalk !== walkId;
   lastAnimatedDetailWalk = walkId;
-  const svg = traceSVG({ origin: walk.origin, stops: walk.stops }, trace, getSkin(currentSkin).trace, { animate: animateTrace, gate: true });
+  const svg = traceSVG({ origin: walk.origin, stops: walk.stops }, trace, getSkin(currentSkin).trace, { animate: animateTrace, gate: true, scope: '#detail-content' });
 
   // Photo frames mount empty and fill asynchronously — the screen
   // appears instantly; a 480px pass lands fast, then upgrades to full

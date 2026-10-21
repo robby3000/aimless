@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-72bb5d05">
+  <meta name="aimless-build" content="aimless-v0.2.0-77f26e3c">
   <meta name="description" content="Go nowhere. Somewhere.">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/favicon-16.png" type="image/png" sizes="16x16">
@@ -1755,7 +1755,7 @@
       document.getElementById('done-title').textContent = gaveUp ? 'Walk ended' : 'Walk complete';
       document.getElementById('done-trace').innerHTML = traceSVG(walk.plan, trace, {
         planStroke: '#e6f7f9', traceStroke: '#20b2aa', originFill: '#20b2aa', stopFill: '#e6f7f9',
-      });
+      }, { scope: '#done-trace' });
       document.getElementById('done-summary').innerHTML = `
         <b>${reached}</b> of ${walk.plan.stops.length} stops reached.
         <br>Walked ~${formatDistance(distanceM)} in ${formatElapsed(Date.now() - walk.startTime)}.
