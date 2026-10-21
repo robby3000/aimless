@@ -1198,3 +1198,31 @@ body > nav button.active {
   }
   #detail-content * { color: black !important; }
 }
+
+/* --- Desktop landing page ---
+   The app is phone software. On devices whose primary pointer is not
+   coarse the head script leaves <html> without .app, every top-level app
+   element is hidden, and this page shows instead. With no JS at all the
+   visitor still gets a readable page, which beats a dead app shell. */
+html:not(.app) body > :not(.desktop-page) { display: none !important; }
+.desktop-page { display: none; }
+html:not(.app) .desktop-page {
+  display: flex;
+  min-height: 100svh;
+  align-items: center;
+  justify-content: center;
+}
+.dp { max-width: 440px; padding: 48px 32px; text-align: center; }
+.dp-word {
+  font-size: 1rem; font-weight: 600; letter-spacing: 0.28em;
+  text-transform: uppercase; color: var(--fg-dim); margin-bottom: 28px;
+}
+.dp-lines { font-size: 2rem; line-height: 1.25; margin-bottom: 40px; }
+.dp-lines span { display: block; }
+.dp-lines span + span { color: var(--fg-dim); }
+.dp-trace svg { display: block; margin: 0 auto 40px; cursor: pointer; }
+.dp-pitch { font-size: 1rem; line-height: 1.55; margin-bottom: 10px; }
+.dp-calm { color: var(--fg-dim); font-style: italic; margin-bottom: 40px; }
+.dp-cta { font-size: 0.95rem; margin-bottom: 48px; }
+.dp-links { display: flex; gap: 28px; justify-content: center; font-size: 0.8rem; }
+.dp-links a { color: var(--fg-dim); }

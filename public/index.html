@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-04e2d209">
+  <meta name="aimless-build" content="aimless-v0.2.0-84f5bb40">
   <meta name="description" content="Go nowhere. Somewhere.">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/favicon-16.png" type="image/png" sizes="16x16">
@@ -18,10 +18,57 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Aimless">
   <title>Aimless</title>
+  <script>
+    // Phones get the app; everything else gets the landing page. The app is
+    // for a phone in a hand — a desktop visitor gets a readable page instead
+    // of a dead shell, and fur-bg never downloads. "#app" forces the app for
+    // dev/testing/the curious; without JS the page defaults to the readable
+    // side. Runs synchronously before first paint so nothing flashes.
+    (function () {
+      function classify() {
+        var phoneish = matchMedia('(pointer: coarse)').matches ||
+          'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        document.documentElement.classList.toggle('app', phoneish || location.hash === '#app');
+      }
+      classify();
+      addEventListener('hashchange', classify);
+      // The desktop trace replays its draw on click.
+      document.addEventListener('click', function (e) {
+        var svg = e.target.closest && e.target.closest('.dp-trace svg');
+        if (svg) svg.replaceWith(svg.cloneNode(true));
+      });
+    })();
+  </script>
   <link rel="stylesheet" href="./style.css">
 
 </head>
 <body>
+  <main class="desktop-page">
+    <div class="dp">
+      <h1 class="dp-word">Aimless</h1>
+      <p class="dp-lines"><span>Go nowhere.</span><span>Somewhere.</span></p>
+      <div class="dp-trace">
+<svg class="dp-svg" viewBox="0 0 300 300" width="300" height="300">
+    <style>
+    .dp-trace .tr-line{stroke-dasharray:1;stroke-dashoffset:1;animation:tr-draw 5.00s ease-in-out 0.25s forwards}
+    .dp-trace .tr-dot{opacity:0;animation:tr-pop .35s ease-out forwards}
+    @keyframes tr-draw{to{stroke-dashoffset:0}}
+    @keyframes tr-pop{to{opacity:var(--o,1)}}
+    @media (prefers-reduced-motion:reduce),print{.dp-trace .tr-line{stroke-dashoffset:0;animation:none}.dp-trace .tr-dot{opacity:var(--o,1);animation:none}}
+    </style><path d="M22.5,40.4 L118.8,48.1 L90.8,91.1 L112.8,148.7 L223.9,126.4 L201.9,210.0 L257.9,260.5 L137.3,225.9" fill="none" stroke="#54727c" stroke-width="1" stroke-dasharray="3,3"/>
+    <path class="tr-line" pathLength="1" d="M22.5,40.4 L30.8,48.5 L76.5,36.0 L110.0,44.1 L120.4,59.8 L115.6,80.2 L109.3,88.8 L97.1,87.2 L97.5,91.6 L95.9,86.4 L95.4,90.3 L112.6,96.1 L127.8,121.4 L136.0,119.8 L146.7,127.9 L115.2,150.6 L149.0,128.0 L164.7,139.1 L190.4,112.5 L199.3,122.4 L222.8,118.9 L214.2,157.3 L183.5,175.1 L179.9,195.6 L186.9,202.8 L200.2,202.6 L181.5,213.6 L210.9,236.3 L242.7,235.0 L251.5,242.6 L254.7,234.5 L269.7,236.2 L276.2,250.7 L270.8,264.0 L277.5,246.6 L268.1,235.8 L208.0,236.2 L183.8,219.0 L145.5,239.6 L131.2,241.8 L128.6,236.7 L135.9,238.1 L90.8,258.6" fill="none" stroke="#7ab8ff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle class="tr-dot" style="--o:1;animation-delay:4.25s" cx="22.5" cy="40.4" r="5" fill="#7ab8ff" opacity="1"/><circle class="tr-dot" style="--o:0.7;animation-delay:4.37s" cx="118.8" cy="48.1" r="4" fill="#e6f7f9" opacity="0.7"/><circle class="tr-dot" style="--o:0.7;animation-delay:4.49s" cx="90.8" cy="91.1" r="4" fill="#e6f7f9" opacity="0.7"/><circle class="tr-dot" style="--o:0.7;animation-delay:4.61s" cx="112.8" cy="148.7" r="4" fill="#e6f7f9" opacity="0.7"/><circle class="tr-dot" style="--o:0.7;animation-delay:4.73s" cx="223.9" cy="126.4" r="4" fill="#e6f7f9" opacity="0.7"/><circle class="tr-dot" style="--o:0.7;animation-delay:4.85s" cx="201.9" cy="210.0" r="4" fill="#e6f7f9" opacity="0.7"/><circle class="tr-dot" style="--o:0.7;animation-delay:4.97s" cx="257.9" cy="260.5" r="4" fill="#e6f7f9" opacity="0.7"/><circle class="tr-dot" style="--o:0.7;animation-delay:5.09s" cx="137.3" cy="225.9" r="4" fill="#e6f7f9" opacity="0.7"/>
+    </svg>
+      </div>
+      <p class="dp-pitch">A walking app with no map. Follow an arrow to random points. Collect what chance puts there. Keep the shape you walked.</p>
+      <p class="dp-calm">A machine for serendipity.</p>
+      <p class="dp-cta">On a phone: <b>aimless.earth</b></p>
+      <nav class="dp-links">
+        <a href="#app">Open the app anyway</a>
+        <a href="https://github.com/robby3000/aimless">Source</a>
+      </nav>
+    </div>
+  </main>
   <header>
     <div class="logo">Aimless<span>.</span></div>
   </header>

@@ -156,6 +156,11 @@ in the sibling `glyph-drift` repo at `docs/device-reality.md`.
 - **A short trailing element has no stable snap point under mandatory scroll-snap in WebKit.**
   The Chapters footer was unreachable until it became a full-height slide like every other
   snap child. Any trailing strip in a snap skin must be a full slide, not a sliver.
+- **Desktops get the landing page, not the app.** A head script leaves `html` without the
+  `app` class when the primary pointer isn't coarse; CSS hides the app shell and shows
+  `.desktop-page`. **Use `#app` to force the real app on desktop** — every headless/manual
+  desktop test needs it. Phones can't regress (coarse pointer → app), and no-JS visitors get
+  the readable page rather than a dead shell.
 
 ## Conventions
 
