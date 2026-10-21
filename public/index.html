@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-77f26e3c">
+  <meta name="aimless-build" content="aimless-v0.2.0-6f35ca0e">
   <meta name="description" content="Go nowhere. Somewhere.">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/favicon-16.png" type="image/png" sizes="16x16">
@@ -19,15 +19,21 @@
   <meta name="apple-mobile-web-app-title" content="Aimless">
   <title>Aimless</title>
   <script>
-    // Phones get the app; everything else gets the landing page. The app is
-    // for a phone in a hand — a desktop visitor gets a readable page instead
+    // Phones get the app; desktops and tablets get the landing page. The app
+    // is for a phone in a hand — anything else gets a readable page instead
     // of a dead shell, and fur-bg never downloads. "#app" forces the app for
     // dev/testing/the curious; without JS the page defaults to the readable
     // side. Runs synchronously before first paint so nothing flashes.
     (function () {
       function classify() {
-        var phoneish = matchMedia('(pointer: coarse)').matches ||
-          'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        // Phone-ish = coarse primary pointer AND a small short edge.
+        // Phones top out ~480px on the short side, the smallest tablets
+        // (iPad mini) start at 744px — 600 sits in the empty gap. screen.*
+        // not innerWidth: an iPad in a split-view sliver is still a tablet.
+        // Dropping the ontouchstart/maxTouchPoints fallbacks keeps
+        // touchscreen laptops on the landing page where they belong.
+        var phoneish = matchMedia('(pointer: coarse)').matches &&
+          Math.min(screen.width, screen.height) < 600;
         document.documentElement.classList.toggle('app', phoneish || location.hash === '#app');
       }
       classify();
