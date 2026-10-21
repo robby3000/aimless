@@ -95,6 +95,10 @@ test/
 scripts/
   make-icons.mjs      # npm run icons
   stamp-sw.mjs        # npm run stamp -- rewrites the sw.js cache name
+  dev-serve.sh        # push public/ to a dev box + restart a tailnet-only TLS static
+                      # server for phone testing; box details live in gitignored
+                      # scripts/dev-serve.env (see docs/ignore/local-ops.md)
+  dev-serve-tls.mjs   # the server dev-serve.sh runs (generic, no infra details)
 docs/                 # GITIGNORED, local only — planning, specs, drafts in docs/ignore/
 .github/workflows/
   pages.yml           # test + stamp check, then deploy public/ to GitHub Pages

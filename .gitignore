@@ -47,6 +47,9 @@ node_modules/
 .DS_Store
 *.log
 
+# Dev-serve config — holds the dev box's tailnet details (see scripts/dev-serve.sh)
+scripts/dev-serve.env
+
 # Styling playground — local design experiments, not part of the app
 test/styling/
 # All docs are local planning material — none belong in the public repo
