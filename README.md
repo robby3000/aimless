@@ -46,6 +46,5 @@ nothing.
 
 ## Why it is this small
 
-Small is the design, not a phase. It began scoped as the minimal version of a larger concept
-and outgrew the frame: the sketch became the thing. The map, the account and the feed are
-absent on purpose. What remains is the arrow, the point, and what chance put there.
+Small is the design, not a phase. The map, the account and the feed are absent on purpose.
+What remains is the arrow, the point, and what chance put there.

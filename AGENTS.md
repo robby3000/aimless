@@ -116,8 +116,8 @@ package.json          # no dependencies; "test": "node --test test/**/*.test.js"
   durable private/competition research and strategy belongs in the **private KnowledgeVault**
   (`/mnt/d/KnowledgeVault/…`). Respect the no-public-exposure posture: the NUC/Tailscale is never
   an origin for anything Aimless publishes.
-- **Count the "close as I can get" presses** and surface the total. See `blueprint.md` §6 — that
-  number decides whether the sibling `glyph-drift` project gets built.
+- **Count the "close as I can get" presses** and surface the total. See `blueprint.md` §6 for
+  why that number is collected.
 
 ## Scope
 
@@ -127,8 +127,7 @@ publish targets), not growth of the core loop.
 
 ## Device gotchas
 
-Things that will each cost an afternoon. Full detail in `roadmap.md` §5, and a longer treatment
-in the sibling `glyph-drift` repo at `docs/device-reality.md`.
+Things that will each cost an afternoon. Full detail in `roadmap.md` §5.
 
 - **iOS has no vibration API** and never will. Tone plus screen flash on all platforms; haptics are
   an Android bonus.
