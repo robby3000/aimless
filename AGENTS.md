@@ -236,5 +236,6 @@ detail-visit state; index.html owns walk-session state) and receive shared depen
 `init*(deps)` call — they must not import index.html state directly. Dark, high
 contrast — this is read outdoors in daylight. No emojis. **No em dashes in shipped copy** —
 user-facing text stays short, dry and human; instructions may be explicit, mechanics stay
-unexplained. One logical change per commit, prefixed
+unexplained. `punk mode` is deliberately lowercase on the Info page — not a typo to fix.
+One logical change per commit, prefixed
 with the area (`detail:`, `walk:`, `filters:`, `echo:` …).
