@@ -1212,17 +1212,45 @@ html:not(.app) .desktop-page {
   align-items: center;
   justify-content: center;
 }
-.dp { max-width: 440px; padding: 48px 32px; text-align: center; }
-.dp-word {
-  font-size: 1rem; font-weight: 600; letter-spacing: 0.28em;
-  text-transform: uppercase; color: var(--fg-dim); margin-bottom: 28px;
+/* Editorial two-column: the words on the left, the walk drawing itself on
+   the right. Serif/sans contrast and the delayed second line carry the
+   typography — standard fonts only. */
+.dp {
+  display: flex; align-items: center; gap: clamp(48px, 9vw, 140px);
+  max-width: 1080px; padding: 56px 48px;
 }
-.dp-lines { font-size: 2rem; line-height: 1.25; margin-bottom: 40px; }
+.dp-text { flex: 1 1 auto; min-width: 0; }
+.dp-logo { width: 30px; height: 30px; vertical-align: -5px; margin-right: 10px; }
+.dp-word { font-size: 1.35rem; font-weight: 600; letter-spacing: 0.03em; margin-bottom: 34px; }
+.dp-accent { color: #7ab8ff; }
+.dp-lines {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: clamp(2.75rem, 7vw, 5.25rem);
+  line-height: 1.02; letter-spacing: -0.01em;
+  margin-bottom: 44px;
+}
 .dp-lines span { display: block; }
-.dp-lines span + span { color: var(--fg-dim); }
-.dp-trace svg { display: block; margin: 0 auto 40px; cursor: pointer; }
-.dp-pitch { font-size: 1rem; line-height: 1.55; margin-bottom: 10px; }
+/* The turn lands as the trace finishes drawing: italic, accent-coloured,
+   stair-stepped right — choreography borrowed from the app's own SVG. */
+.dp-turn {
+  font-style: italic; color: #7ab8ff; margin-left: 0.9em;
+  opacity: 0; animation: dp-turn-in 0.9s ease-out 5.35s forwards;
+}
+@keyframes dp-turn-in { to { opacity: 1; } }
+.dp-trace svg { display: block; width: clamp(240px, 26vw, 380px); height: auto; cursor: pointer; }
+.dp-pitch { max-width: 33em; font-size: 1.02rem; line-height: 1.6; margin-bottom: 12px; }
 .dp-calm { color: var(--fg-dim); font-style: italic; margin-bottom: 40px; }
-.dp-cta { font-size: 0.95rem; margin-bottom: 48px; }
-.dp-links { display: flex; gap: 28px; justify-content: center; font-size: 0.8rem; }
-.dp-links a { color: var(--fg-dim); }
+.dp-cta { font-size: 0.95rem; margin-bottom: 52px; }
+.dp-cta b {
+  font-family: Georgia, 'Times New Roman', serif; font-style: italic;
+  font-weight: 400; font-size: 1.2em; color: #7ab8ff;
+}
+.dp-links { display: flex; gap: 30px; font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase; }
+.dp-links a { color: var(--fg-dim); text-decoration: none; }
+.dp-links a:hover { color: var(--fg); }
+@media (max-width: 720px) {
+  .dp { flex-direction: column; align-items: flex-start; gap: 40px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dp-turn { opacity: 1; animation: none; }
+}
