@@ -20,7 +20,8 @@ GitHub; the links below resolve for whoever holds the working copy.
 4. `docs/verdict.md` — the template the human fills in after five real walks.
    Do not delete it and do not fill it in yourself.
 5. `docs/ignore/` — working drafts and discussion docs (voice pools, UI proposals). Nothing in
-   it is load-bearing. Two worth reading anyway:
+   it is load-bearing. `docs/archive/` holds retired dev plans and superseded drafts —
+   historical only, moved not deleted. Two worth reading anyway:
    - `docs/ignore/20261020-architectural-principles-and-description.md` — the architecture
      rationale: why the code is shaped the way it is, written for human maintainers.
    - `docs/ignore/20261018-codebase-review-and-refactor-plan.md` — the risk register the
