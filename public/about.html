@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>About Aimless</title>
+<meta name="description" content="Aimless is a walking app with no map. An arrow, hidden waypoints, a verse chosen by your coordinates and one photograph at each stop, and a walk you can keep.">
+<!--
+  Desktop About page. Same palette, type and trace motif as the landing
+  page. The left rail is the page's own route: the coral dot walks down
+  it as you read.
+-->
+<style>
+:root {
+  --bg: #062a35;
+  --bg-2: #0a3240;
+  --fg: #e6f7f9;
+  --fg-dim: #9fc6cf;
+  --fg-faint: #5f8a95;
+  --rule: rgba(178, 224, 230, 0.14);
+  --trace: #7ab8ff;
+  --plan: #54727c;
+  --coral: #ff7f6b;
+  --paper: #e9e6df;
+  --ink: #201d18;
+  --serif: Georgia, 'Times New Roman', serif;
+  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 16px; line-height: 1.6; -webkit-font-smoothing: antialiased; scroll-behavior: smooth; }
+a { color: inherit; }
+img { display: block; max-width: 100%; }
+.wrap { max-width: 1160px; margin: 0 auto; padding: 0 56px; }
+
+/* ---------- Top bar (as landing page) ---------- */
+.bar { position: fixed; inset: 0 0 auto 0; z-index: 20; display: flex; align-items: center; justify-content: space-between; padding: 22px 36px 34px; pointer-events: none; background: linear-gradient(var(--bg) 55%, rgba(6, 42, 53, 0)); }
+.bar > * { pointer-events: auto; }
+.word { font-size: 1.15rem; font-weight: 600; letter-spacing: 0.03em; display: flex; align-items: center; gap: 9px; text-decoration: none; }
+.word img { width: 26px; height: 26px; }
+.word .dot { color: var(--coral); }
+.bar nav { display: flex; gap: 26px; font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; }
+.bar nav a { color: var(--fg-dim); text-decoration: none; }
+.bar nav a:hover, .bar nav a.on { color: var(--fg); }
+
+/* ---------- Opening ---------- */
+.open { padding: 150px 0 90px; }
+.open .wrap { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: clamp(40px, 7vw, 110px); align-items: center; }
+.eyebrow { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--fg-faint); margin-bottom: 18px; }
+h1 { font-family: var(--serif); font-weight: 400; font-size: clamp(2.6rem, 5.4vw, 4.4rem); line-height: 1.06; letter-spacing: -0.01em; margin-bottom: 30px; text-wrap: balance; }
+h1 em { color: var(--trace); }
+.lead { font-size: 1.16rem; line-height: 1.65; max-width: 32em; text-wrap: pretty; }
+.lead + .lead { margin-top: 16px; color: var(--fg-dim); font-size: 1.06rem; }
+.open svg { width: 100%; max-width: 340px; height: auto; margin-left: auto; display: block; overflow: visible; cursor: pointer; }
+.tr-line { stroke-dasharray: 1; stroke-dashoffset: 1; animation: tr-draw 5s ease-in-out 0.25s forwards; }
+.tr-dot { opacity: 0; animation: tr-pop 0.35s ease-out forwards; }
+@keyframes tr-draw { to { stroke-dashoffset: 0; } }
+@keyframes tr-pop { to { opacity: var(--o, 1); } }
+
+/* ---------- Body: route rail + prose ---------- */
+.body { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: clamp(40px, 6vw, 96px); border-top: 1px solid var(--rule); }
+.rail { position: sticky; top: 0; align-self: start; height: 100vh; height: 100svh; display: flex; align-items: center; }
+.rail ol { list-style: none; position: relative; padding-left: 26px; }
+.rail ol::before { content: ""; position: absolute; left: 5px; top: 10px; bottom: 10px; border-left: 1px dashed var(--plan); }
+.rail li { position: relative; padding: 9px 0; }
+.rail li::before { content: ""; position: absolute; left: -25px; top: 50%; width: 9px; height: 9px; margin-top: -4.5px; border-radius: 50%; background: var(--fg); opacity: 0.22; transition: opacity 0.4s, background 0.4s, transform 0.4s; }
+.rail li.seen::before { opacity: 0.7; }
+.rail li.now::before { background: var(--coral); opacity: 1; transform: scale(1.35); }
+.rail a { text-decoration: none; font-size: 0.86rem; color: var(--fg-faint); transition: color 0.3s; }
+.rail li.seen a { color: var(--fg-dim); }
+.rail li.now a { color: var(--fg); }
+.rail a:hover { color: var(--fg); }
+
+.prose { padding: 40px 0 60px; }
+.chapter { padding: 90px 0; border-bottom: 1px solid var(--rule); scroll-margin-top: 40px; }
+.chapter:last-child { border-bottom: 0; }
+.chapter > p.num { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.14em; color: var(--fg-faint); margin-bottom: 14px; }
+h2 { font-family: var(--serif); font-weight: 400; font-size: clamp(1.9rem, 3.2vw, 2.6rem); line-height: 1.15; margin-bottom: 26px; text-wrap: balance; }
+.chapter > p { max-width: 36em; font-size: 1.06rem; color: var(--fg-dim); text-wrap: pretty; }
+.chapter > p + p { margin-top: 16px; }
+.chapter p strong, .nots strong { color: var(--fg); font-weight: 500; }
+.prose a { color: var(--trace); text-decoration: none; border-bottom: 1px solid rgba(122, 184, 255, 0.35); }
+.prose a:hover { border-bottom-color: var(--trace); }
+.chapter > p.aside { margin-top: 34px; max-width: 34em; padding-left: 20px; border-left: 2px solid var(--coral); font-family: var(--serif); font-style: italic; font-size: 1.12rem; line-height: 1.55; color: var(--fg); }
+.aside small { display: block; margin-top: 8px; font-family: var(--sans); font-style: normal; font-size: 0.8rem; color: var(--fg-faint); }
+
+/* Voice list */
+.voices { list-style: none; margin-top: 40px; max-width: 40em; border-top: 1px solid var(--rule); columns: 2; column-gap: 40px; }
+.voices li { break-inside: avoid; padding: 11px 0; border-bottom: 1px solid var(--rule); }
+.voices .vn { font-family: var(--serif); font-size: 1.08rem; display: block; }
+.voices .ve { font-size: 0.86rem; font-style: italic; color: var(--fg-faint); }
+
+/* Verse demo */
+.demo { margin-top: 48px; max-width: 40em; background: var(--bg-2); border: 1px solid var(--rule); border-radius: 12px; padding: 30px 32px 26px; }
+.demo-voices { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 26px; }
+.demo-voices button { font: inherit; font-size: 0.8rem; background: transparent; color: var(--fg-dim); border: 1px solid var(--rule); border-radius: 999px; padding: 4px 12px; cursor: pointer; }
+.demo-voices button:hover { color: var(--fg); }
+.demo-voices button.on { color: var(--bg); background: var(--fg); border-color: var(--fg); }
+.demo-coord { font-family: var(--mono); font-size: 0.76rem; color: var(--fg-faint); margin-bottom: 8px; }
+.demo-title { font-family: var(--serif); font-weight: 700; font-size: 1.3rem; margin-bottom: 6px; }
+.demo-lines span { display: block; font-size: 1.12rem; line-height: 1.6; }
+.demo-card { min-height: 160px; transition: opacity 0.35s; }
+.demo-card.swap { opacity: 0; }
+.demo-foot { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--rule); }
+.demo-foot p { font-size: 0.82rem; color: var(--fg-faint); margin: 0; max-width: 26em; }
+.demo-foot button { font: inherit; font-weight: 600; font-size: 0.9rem; background: var(--fg); color: var(--bg); border: 0; border-radius: 6px; padding: 9px 18px; cursor: pointer; flex: none; }
+
+/* Inner specimen */
+.hex { margin-top: 44px; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 26px; align-items: center; max-width: 40em; padding: 28px 0; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+.hex .glyph { font-size: 5.5rem; line-height: 1; color: #20b2aa; text-shadow: 0 0 24px rgba(32, 178, 170, 0.45); }
+.hex .coord { font-family: var(--mono); font-size: 0.76rem; color: var(--fg-faint); }
+.hex .bits { font-family: var(--mono); font-size: 0.76rem; color: var(--fg-faint); margin-bottom: 8px; }
+.hex .bits b { color: var(--fg-dim); font-weight: 400; letter-spacing: 0.2em; }
+.hex h3 { font-family: var(--serif); font-weight: 700; font-size: 1.3rem; margin-bottom: 4px; }
+.hex .lines span { display: block; font-size: 1.08rem; }
+
+/* Photo strip */
+.strip { margin-top: 44px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.strip img { width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border: 1px solid var(--rule); border-radius: 2px; }
+.strip-cap { margin-top: 12px; font-family: var(--mono); font-size: 0.72rem; color: var(--fg-faint); }
+
+/* Keepsake specimen: one slide of the published walk, in its paper skin */
+.keep { margin-top: 44px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0; border-radius: 4px; overflow: hidden; border: 1px solid var(--rule); }
+.keep .slide { background: var(--paper); color: var(--ink); padding: 34px 30px; font-family: system-ui, -apple-system, sans-serif; }
+.keep .slide .n { font-family: var(--serif); font-size: 3.4rem; line-height: 1; color: rgba(47, 106, 79, 0.28); margin-bottom: 6px; }
+.keep .slide h4 { font-family: var(--serif); font-weight: 400; font-size: 1.4rem; margin-bottom: 4px; }
+.keep .slide .l span { display: block; font-size: 0.98rem; line-height: 1.6; }
+.keep .slide .ph { margin-top: 16px; border: 1px solid rgba(32, 29, 24, 0.18); border-radius: 2px; }
+.keep .title-slide { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; border-right: 1px solid rgba(32, 29, 24, 0.12); }
+.keep .title-slide .seed { font-family: var(--serif); font-size: 1.8rem; margin-bottom: 4px; }
+.keep .title-slide .meta { font-size: 0.82rem; color: #6f6a5f; line-height: 1.5; }
+.keep .title-slide svg { width: 160px; height: auto; margin: 18px 0 10px; }
+.keep .title-slide .swipe { font-size: 0.66rem; letter-spacing: 0.3em; text-transform: uppercase; color: #6f6a5f; margin-top: 14px; }
+.keep-cap { margin-top: 12px; display: flex; justify-content: space-between; gap: 20px; flex-wrap: wrap; font-size: 0.86rem; color: var(--fg-faint); }
+
+.nots { list-style: none; margin-top: 32px; max-width: 36em; }
+.nots li { padding: 10px 0 10px 28px; position: relative; color: var(--fg-dim); border-bottom: 1px solid var(--rule); }
+.nots li::before { content: "×"; position: absolute; left: 4px; color: var(--coral); }
+.nots li strong { color: var(--fg); font-weight: 500; }
+
+/* Getting it */
+.get { margin-top: 36px; display: flex; gap: 26px; align-items: center; }
+.qr-tile { flex: none; width: 128px; height: 128px; background: var(--fg); border-radius: 8px; padding: 5px; }
+.qr { width: 100%; height: 100%; display: block; }
+.qr path { fill: var(--bg); }
+.get .big { color: var(--fg); font-size: 1.06rem; }
+.get .big b { font-family: var(--serif); font-style: italic; font-weight: 400; font-size: 1.22em; color: var(--trace); }
+
+.chapter > p.sig { margin-top: 30px; font-family: var(--serif); font-style: italic; font-size: 1.2rem; color: var(--fg); }
+.helps { margin-top: 26px; display: flex; flex-wrap: wrap; gap: 10px; }
+.helps a { border: 1px solid var(--rule) !important; border-radius: 999px; padding: 6px 14px; font-size: 0.88rem; color: var(--fg); }
+.helps a:hover { border-color: var(--trace) !important; color: var(--trace); }
+
+/* Footer (as landing) */
+footer { border-top: 1px solid var(--rule); padding: 70px 0 60px; }
+.small-links { display: flex; gap: 30px; flex-wrap: wrap; font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase; }
+.small-links a { color: var(--fg-faint); text-decoration: none; }
+.small-links a:hover { color: var(--fg); }
+.small-links .tag { margin-left: auto; font-family: var(--serif); font-style: italic; text-transform: none; letter-spacing: 0; font-size: 0.95rem; color: var(--fg-faint); }
+
+
+@media (max-width: 900px) {
+  .wrap { padding: 0 32px; }
+  .bar { padding: 18px 24px 30px; }
+  .open { padding-top: 110px; }
+  .open .wrap { grid-template-columns: 1fr; }
+  .open svg { order: -1; max-width: 200px; margin: 0; }
+  .body { grid-template-columns: 1fr; }
+  .rail { display: none; }
+  .voices { columns: 1; }
+  .strip { grid-template-columns: repeat(2, 1fr); }
+  .keep { grid-template-columns: 1fr; }
+  .keep .title-slide { border-right: 0; border-bottom: 1px solid rgba(32, 29, 24, 0.12); }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .tr-line { stroke-dashoffset: 0; animation: none; }
+  .tr-dot { opacity: var(--o, 1); animation: none; }
+  .demo-card { transition: none; }
+}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <a class="word" href="./"><img src="./icons/icon-00bfff.svg" alt=""><span>Aimless<span class="dot">.</span></span></a>
+  <nav><a href="./">Home</a><a class="on" href="./about.html">About</a><a href="#get">Start</a></nav>
+</header>
+
+<section class="open" id="top">
+  <div class="wrap">
+    <div>
+      <p class="eyebrow">About</p>
+      <h1>A walking app with <em>no map.</em></h1>
+      <p class="lead">Press Go and Aimless draws a chain of random waypoints somewhere near you, then refuses to show you where they are. You get an arrow and a distance. You follow it. That's the whole interface.</p>
+      <p class="lead">It sounds like too little. In practice it's plenty: a walk you didn't plan, down streets you'd have skipped, with a few lines of verse and one photograph waiting at every stop. You come home with the shape of where you went.</p>
+    </div>
+    <svg id="trace" viewBox="0 0 300 300" width="300" height="300" aria-label="The shape of a walk">
+      <path d="M22.5,40.4 L118.8,48.1 L90.8,91.1 L112.8,148.7 L223.9,126.4 L201.9,210.0 L257.9,260.5 L137.3,225.9" fill="none" stroke="#54727c" stroke-width="1" stroke-dasharray="3,3"/>
+      <path class="tr-line" pathLength="1" d="M22.5,40.4 L30.8,48.5 L76.5,36.0 L110.0,44.1 L120.4,59.8 L115.6,80.2 L109.3,88.8 L97.1,87.2 L97.5,91.6 L95.9,86.4 L95.4,90.3 L112.6,96.1 L127.8,121.4 L136.0,119.8 L146.7,127.9 L115.2,150.6 L149.0,128.0 L164.7,139.1 L190.4,112.5 L199.3,122.4 L222.8,118.9 L214.2,157.3 L183.5,175.1 L179.9,195.6 L186.9,202.8 L200.2,202.6 L181.5,213.6 L210.9,236.3 L242.7,235.0 L251.5,242.6 L254.7,234.5 L269.7,236.2 L276.2,250.7 L270.8,264.0 L277.5,246.6 L268.1,235.8 L208.0,236.2 L183.8,219.0 L145.5,239.6 L131.2,241.8 L128.6,236.7 L135.9,238.1 L90.8,258.6" fill="none" stroke="#7ab8ff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+      <circle class="tr-dot" style="--o:1;animation-delay:4.25s" cx="22.5" cy="40.4" r="5" fill="#7ab8ff"/><circle class="tr-dot" style="--o:0.7;animation-delay:4.37s" cx="118.8" cy="48.1" r="4" fill="#e6f7f9"/><circle class="tr-dot" style="--o:0.7;animation-delay:4.49s" cx="90.8" cy="91.1" r="4" fill="#e6f7f9"/><circle class="tr-dot" style="--o:0.7;animation-delay:4.61s" cx="112.8" cy="148.7" r="4" fill="#e6f7f9"/><circle class="tr-dot" style="--o:0.7;animation-delay:4.73s" cx="223.9" cy="126.4" r="4" fill="#e6f7f9"/><circle class="tr-dot" style="--o:0.7;animation-delay:4.85s" cx="201.9" cy="210.0" r="4" fill="#e6f7f9"/><circle class="tr-dot" style="--o:0.7;animation-delay:4.97s" cx="257.9" cy="260.5" r="4" fill="#e6f7f9"/><circle class="tr-dot" style="--o:0.7;animation-delay:5.09s" cx="137.3" cy="225.9" r="4" fill="#e6f7f9"/>
+    </svg>
+  </div>
+</section>
+
+<div class="wrap">
+  <div class="body">
+    <nav class="rail" aria-label="Sections">
+      <ol>
+        <li><a href="#arrow">The arrow</a></li>
+        <li><a href="#voices">The voices</a></li>
+        <li><a href="#inner">The Inner</a></li>
+        <li><a href="#photo">The photograph</a></li>
+        <li><a href="#keepsake">The keepsake</a></li>
+        <li><a href="#isnt">What it isn't</a></li>
+        <li><a href="#get">Getting it</a></li>
+        <li><a href="#who">Who makes it</a></li>
+      </ol>
+    </nav>
+
+    <div class="prose">
+
+      <section class="chapter" id="arrow">
+        <p class="num">01</p>
+        <h2>The arrow</h2>
+        <p>A map turns you into a navigator. You watch the blue dot, you take the short way, you arrive. Aimless takes the map away, and the only thing left to look at is where you are.</p>
+        <p>Choose three, five or seven waypoints, how long you have, and a voice. Face the way you'd like to drift and press Go. The first waypoint lands roughly ahead of you. After that, the arrow decides.</p>
+        <p>Within about thirty metres a waypoint counts as reached. Phone GPS wanders, so the circle is generous. If a waypoint sits in a river or behind a fence, tap <strong>Close as I can get</strong> and the walk accepts where you stood.</p>
+        <p class="aside">The Situationists called it the dérive: drifting through a city and letting its currents steer. This is a dérive with a compass, and somebody else holding the dice.</p>
+      </section>
+
+      <section class="chapter" id="voices">
+        <p class="num">02</p>
+        <h2>The voices</h2>
+        <p>At each waypoint, the voice you brought speaks: a title and three short lines, roughly a haiku.</p>
+        <p>None of the verses are written out whole. Each voice is four sets of 64 lines (titles, first lines, second lines, third lines) and the waypoint's coordinates pick one from each. That's <strong>16.7 million possible verses per voice</strong>. Stand on the same spot and you'll get the same one.</p>
+        <p>Every line was written to stand on its own and to rub against whatever lands beside it. Most combinations make a strange kind of sense. Now and then one seems to have been waiting for you. That's partly chance and partly you: the walk supplies the lines, you supply the meaning.</p>
+        <p class="aside">Raymond Queneau published ten sonnets in 1961 with every line on its own strip of paper: a hundred thousand billion poems in one small book. Aimless cuts its voices into strips and lets the pavement shuffle them.</p>
+
+        <ul class="voices">
+          <li><span class="vn">The Crow</span><span class="ve">the appraising eye</span></li>
+          <li><span class="vn">The Threshold</span><span class="ve">the place that is neither</span></li>
+          <li><span class="vn">The Lattice</span><span class="ve">the grid that does not fit</span></li>
+          <li><span class="vn">The Stray</span><span class="ve">the voice of what wanders</span></li>
+          <li><span class="vn">The Small</span><span class="ve">the world under your feet</span></li>
+          <li><span class="vn">The Slow</span><span class="ve">the thing with more time than you</span></li>
+          <li><span class="vn">The Echo</span><span class="ve">the one that repeats you</span></li>
+          <li><span class="vn">The Inner</span><span class="ve">the oracle (see below)</span></li>
+          <li><span class="vn">My Voice</span><span class="ve">your own words, or none</span></li>
+        </ul>
+
+        <div class="demo" aria-live="polite">
+          <div class="demo-voices" id="demo-voices"></div>
+          <div class="demo-card" id="demo-card">
+            <p class="demo-coord" id="demo-coord"></p>
+            <p class="demo-title" id="demo-title"></p>
+            <p class="demo-lines" id="demo-lines"></p>
+          </div>
+          <div class="demo-foot">
+            <p>A random spot in New York, read by the voice you pick. On a walk, the spot is wherever the arrow took you.</p>
+            <button id="demo-draw">Somewhere else</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="chapter" id="inner">
+        <p class="num">03</p>
+        <h2>The Inner</h2>
+        <p>One voice works differently. The Inner reads the I Ching.</p>
+        <p>It takes the last six decimal digits of a waypoint's latitude and longitude, pairs them crosswise, and turns each pair into a solid or a broken line. Six lines make a hexagram, one of the sixty-four. Each hexagram's judgement has been pressed into a haiku. The titles were passed through Greek and Japanese and came back changed.</p>
+        <p>Use it as an oracle if you like: carry a question for the length of the walk. Step a few metres and the hexagram changes, so it's the place that answers, not the app.</p>
+        <div class="hex">
+          <div class="glyph" aria-hidden="true">䷈</div>
+          <div>
+            <p class="coord">51.51060719513929, −0.1318628895242</p>
+            <h3>The Small Hoard</h3>
+            <p class="lines"><span>Small force holds back much,</span><span>clouds thicken, no rain falls yet</span><span>the west stays parched, still.</span></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="chapter" id="photo">
+        <p class="num">04</p>
+        <h2>Seven frames. No culling.</h2>
+        <p>You can only take a photo once you've arrived. Retake it if you like, but the frame you replace is gone, and once you press OK the waypoint is done. No camera roll full of near-duplicates: three, five or seven pictures, each chosen on the spot.</p>
+        <p>It changes how you look. You arrive, read the verse, and start hunting for the picture that answers it.</p>
+        <p>Then the filters. Thirty-one come built in, from black and white, infrared and old film to effects with no name anywhere else. They run on the same image engine as <a href="https://wobbletone.com">Wobbletone</a>, Aimless's companion app, where you can build your own from scratch and bring them over. Or tap <strong>Surprise</strong>: it rolls a random stack of effects nobody has seen before. Most rolls are ordinary. Keep the golden ones.</p>
+        <div class="strip">
+          <img loading="lazy" src="./images/landing/stop-1.webp" alt="A rat in black and white, close up">
+          <img loading="lazy" src="./images/landing/stop-2.webp" alt="Leaves in acid yellow and cyan">
+          <img loading="lazy" src="./images/landing/stop-6.webp" alt="A tower reflected in water, pastel lilac">
+          <img loading="lazy" src="./images/landing/stop-5.webp" alt="A shadow on grass, glitched into coloured blocks">
+        </div>
+        <p class="strip-cap">Four waypoints from one walk, four filters.</p>
+      </section>
+
+      <section class="chapter" id="keepsake">
+        <p class="num">05</p>
+        <h2>The keepsake</h2>
+        <p>When you finish, the walk becomes a single web page: the line you actually walked, your photographs, the words. No scripts, nothing to install to open it. Email it, drop it in a group chat, put it on a website. It should still open in twenty years.</p>
+        <p>Pick a layout and filters before you export. You can also send a square card of your route over your favourite photo, publish the walk to your own Neocities site with a proper link preview, or download the route for a mapping app.</p>
+        <div class="keep">
+          <div class="slide title-slide">
+            <p class="seed">chain-tile-112</p>
+            <p class="meta">Voice of The Echo<br>October 15, 2026, 1.8 km</p>
+            <svg viewBox="0 0 300 300" aria-hidden="true"><path d="M22.5,40.4 L118.8,48.1 L90.8,91.1 L112.8,148.7 L223.9,126.4 L201.9,210.0 L257.9,260.5 L137.3,225.9" fill="none" stroke="#a8a094" stroke-width="1.4" stroke-dasharray="4,4"/><path d="M22.5,40.4 L30.8,48.5 L76.5,36.0 L110.0,44.1 L120.4,59.8 L115.6,80.2 L109.3,88.8 L97.1,87.2 L97.5,91.6 L95.9,86.4 L95.4,90.3 L112.6,96.1 L127.8,121.4 L136.0,119.8 L146.7,127.9 L115.2,150.6 L149.0,128.0 L164.7,139.1 L190.4,112.5 L199.3,122.4 L222.8,118.9 L214.2,157.3 L183.5,175.1 L179.9,195.6 L186.9,202.8 L200.2,202.6 L181.5,213.6 L210.9,236.3 L242.7,235.0 L251.5,242.6 L254.7,234.5 L269.7,236.2 L276.2,250.7 L270.8,264.0 L277.5,246.6 L268.1,235.8 L208.0,236.2 L183.8,219.0 L145.5,239.6 L131.2,241.8 L128.6,236.7 L135.9,238.1 L90.8,258.6" fill="none" stroke="#2f6a4f" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/></svg>
+            <p class="meta"><b>6</b> of 7 stops reached.</p>
+            <p class="swipe">swipe →</p>
+          </div>
+          <div class="slide">
+            <div class="n">4</div>
+            <h4>Footprints</h4>
+            <p class="l"><span>Your tale outlives you</span><span>strike and be struck back again</span><span>asked you the same thing</span></p>
+            <img class="ph" loading="lazy" src="./images/landing/stop-4.webp" alt="Backlit autumn leaves">
+          </div>
+        </div>
+        <div class="keep-cap"><span>Two slides from the published page, in one of its layouts.</span><a href="https://aimlessearth.neocities.org/aimless/walk-20261015-a1yjoc-7.html">Open the whole walk ↗</a></div>
+      </section>
+
+      <section class="chapter" id="isnt">
+        <p class="num">06</p>
+        <h2>What it isn't</h2>
+        <ul class="nots">
+          <li><strong>A map.</strong> There isn't one, and there won't be.</li>
+          <li><strong>A social network.</strong> No accounts, no feed, no likes, no streaks.</li>
+          <li><strong>A tracker.</strong> Nothing is uploaded. Your walks live on your phone until you choose to send one somewhere. Once loaded, it works offline.</li>
+          <li><strong>A guide.</strong> Waypoints are random points. They know nothing about fences, railways, water or private land. Keep your eyes up, use your judgement, and when in doubt, Close as I can get.</li>
+        </ul>
+        <p style="margin-top: 30px;">And if you'd rather ignore the arrow entirely, do. Start a walk, wander wherever you like, and tap Close as I can get whenever a spot earns a photograph. Some people call it punk mode. The app doesn't mind.</p>
+      </section>
+
+      <section class="chapter" id="get">
+        <p class="num">07</p>
+        <h2>Getting it</h2>
+        <p>Aimless is a website that installs like an app. It's free. On your phone, open aimless.earth in Safari on iPhone or Chrome on Android, then add it to your home screen: it gets its own icon, runs full screen, and keeps your walks safer.</p>
+        <div class="get">
+          <div class="qr-tile"><svg class="qr" viewBox="-2 -2 29 29" shape-rendering="crispEdges" role="img" aria-label="QR code: aimless.earth"><path d="M0 0h7v1h-7zM8 0h2v1h-2zM13 0h2v1h-2zM18 0h7v1h-7zM0 1h1v1h-1zM6 1h1v1h-1zM9 1h2v1h-2zM16 1h1v1h-1zM18 1h1v1h-1zM24 1h1v1h-1zM0 2h1v1h-1zM2 2h3v1h-3zM6 2h1v1h-1zM8 2h1v1h-1zM10 2h1v1h-1zM13 2h1v1h-1zM15 2h1v1h-1zM18 2h1v1h-1zM20 2h3v1h-3zM24 2h1v1h-1zM0 3h1v1h-1zM2 3h3v1h-3zM6 3h1v1h-1zM10 3h5v1h-5zM18 3h1v1h-1zM20 3h3v1h-3zM24 3h1v1h-1zM0 4h1v1h-1zM2 4h3v1h-3zM6 4h1v1h-1zM9 4h2v1h-2zM12 4h2v1h-2zM18 4h1v1h-1zM20 4h3v1h-3zM24 4h1v1h-1zM0 5h1v1h-1zM6 5h1v1h-1zM8 5h1v1h-1zM11 5h1v1h-1zM13 5h1v1h-1zM18 5h1v1h-1zM24 5h1v1h-1zM0 6h7v1h-7zM8 6h1v1h-1zM10 6h1v1h-1zM12 6h1v1h-1zM14 6h1v1h-1zM16 6h1v1h-1zM18 6h7v1h-7zM12 7h1v1h-1zM15 7h2v1h-2zM0 8h1v1h-1zM2 8h1v1h-1zM6 8h2v1h-2zM9 8h1v1h-1zM11 8h2v1h-2zM16 8h1v1h-1zM19 8h1v1h-1zM22 8h1v1h-1zM24 8h1v1h-1zM0 9h1v1h-1zM3 9h3v1h-3zM9 9h2v1h-2zM12 9h1v1h-1zM14 9h2v1h-2zM18 9h2v1h-2zM21 9h1v1h-1zM23 9h2v1h-2zM0 10h4v1h-4zM5 10h2v1h-2zM8 10h1v1h-1zM10 10h1v1h-1zM13 10h1v1h-1zM15 10h1v1h-1zM17 10h1v1h-1zM20 10h3v1h-3zM24 10h1v1h-1zM0 11h2v1h-2zM3 11h1v1h-1zM9 11h4v1h-4zM15 11h1v1h-1zM17 11h1v1h-1zM21 11h1v1h-1zM0 12h2v1h-2zM3 12h1v1h-1zM6 12h1v1h-1zM8 12h2v1h-2zM11 12h2v1h-2zM15 12h1v1h-1zM18 12h2v1h-2zM24 12h1v1h-1zM2 13h1v1h-1zM4 13h2v1h-2zM9 13h1v1h-1zM12 13h2v1h-2zM15 13h2v1h-2zM18 13h2v1h-2zM23 13h2v1h-2zM0 14h2v1h-2zM4 14h1v1h-1zM6 14h3v1h-3zM12 14h4v1h-4zM21 14h2v1h-2zM24 14h1v1h-1zM2 15h3v1h-3zM7 15h2v1h-2zM10 15h3v1h-3zM15 15h1v1h-1zM17 15h1v1h-1zM19 15h3v1h-3zM0 16h4v1h-4zM6 16h1v1h-1zM13 16h8v1h-8zM23 16h1v1h-1zM8 17h1v1h-1zM10 17h1v1h-1zM13 17h1v1h-1zM15 17h2v1h-2zM20 17h1v1h-1zM24 17h1v1h-1zM0 18h7v1h-7zM8 18h2v1h-2zM11 18h1v1h-1zM16 18h1v1h-1zM18 18h1v1h-1zM20 18h1v1h-1zM24 18h1v1h-1zM0 19h1v1h-1zM6 19h1v1h-1zM10 19h1v1h-1zM13 19h1v1h-1zM15 19h2v1h-2zM20 19h1v1h-1zM23 19h1v1h-1zM0 20h1v1h-1zM2 20h3v1h-3zM6 20h1v1h-1zM10 20h4v1h-4zM15 20h6v1h-6zM24 20h1v1h-1zM0 21h1v1h-1zM2 21h3v1h-3zM6 21h1v1h-1zM9 21h2v1h-2zM12 21h1v1h-1zM15 21h1v1h-1zM17 21h1v1h-1zM20 21h1v1h-1zM22 21h2v1h-2zM0 22h1v1h-1zM2 22h3v1h-3zM6 22h1v1h-1zM8 22h1v1h-1zM12 22h3v1h-3zM16 22h2v1h-2zM19 22h3v1h-3zM23 22h2v1h-2zM0 23h1v1h-1zM6 23h1v1h-1zM9 23h1v1h-1zM11 23h2v1h-2zM14 23h1v1h-1zM16 23h5v1h-5zM0 24h7v1h-7zM8 24h2v1h-2zM13 24h2v1h-2zM16 24h3v1h-3zM21 24h1v1h-1zM24 24h1v1h-1z"/></svg></div>
+          <p class="big">Point your phone's camera here,<br>or open <b>aimless.earth</b>.</p>
+        </div>
+      </section>
+
+      <section class="chapter" id="who">
+        <p class="num">08</p>
+        <h2>Who makes it</h2>
+        <p>Aimless is made by one person, Rob, in New York. It's free and open source, and there's no server behind it: no company collecting anything, just a website that runs on your phone. <a href="https://wobbletone.com">Wobbletone</a>, its image-effects sibling, is free too.</p>
+        <p>If it gave you a good walk, the best thanks is to tell someone, or publish one of your walks so other people can see where Aimless took you.</p>
+        <p class="sig">Go nowhere. Somewhere.</p>
+        <div class="helps">
+          <a href="#">Letters, occasionally</a>
+          <a href="https://aimlessearth.neocities.org/aimless/">Walk archive</a>
+          <a href="#">Buy me a coffee</a>
+          <a href="https://github.com/robby3000/aimless">Source on GitHub</a>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="wrap">
+    <nav class="small-links">
+      <a href="./">Home</a>
+      <a href="./#app">Open the app anyway</a>
+      <a href="https://github.com/robby3000/aimless">Source</a>
+      <a href="#">Share</a>
+      <span class="tag">Go nowhere. Somewhere.</span>
+    </nav>
+  </div>
+</footer>
+
+
+
+<script>
+(function () {
+  document.addEventListener('click', function (e) {
+    var svg = e.target.closest && e.target.closest('#trace');
+    if (svg) svg.replaceWith(svg.cloneNode(true));
+  });
+
+  // The rail is the page's route: sections behind you are "seen", the one
+  // you're reading is "now" (coral).
+  var items = Array.prototype.slice.call(document.querySelectorAll('.rail li'));
+  var chapters = Array.prototype.slice.call(document.querySelectorAll('.chapter'));
+  function mark(id) {
+    var idx = chapters.findIndex(function (c) { return c.id === id; });
+    items.forEach(function (li, i) {
+      li.classList.toggle('seen', i < idx);
+      li.classList.toggle('now', i === idx);
+    });
+  }
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) { if (e.isIntersecting) mark(e.target.id); });
+  }, { rootMargin: '-40% 0px -55% 0px' });
+  chapters.forEach(function (c) { io.observe(c); });
+
+  // Verse demo. Pools are the real voice data; the draw here is a
+  // stand-in (string hash -> mulberry32), so a given coordinate gives the
+  // same verse every time, but not necessarily the one the app would.
+  var VOICES = [{"slug":"crow","name":"The Crow","titles":["The Eye","Dropped","Shine","The Audit","First Read","The Repair","Dignity","Small Change","Augury","The Picnic","Patina","Pigeons","Moved","The Lock","Marked Down","The Fountain","First Light","Outlasted","The Judgement","Watching","The Label","Spillage","The Fake","The New Coat","The Hoard","Cathedrals","The Receipt","The Wire","The Odd One","The Face","The Wager","Open Invitation","Precedence","Estate","The Trophy","The Tug","Delivered","The Free Box","Gutter Gold","The Perch","Best Before","The Pound","Twice","The Museum","The Margin","Remainders","The Glance","Windfall","The Mob","The Exchange","The Ledger","Market Day","Secondhand","The Tool","The Tally","The Ask","Sold","The Rail","Appraised","The Leavings","The Offer","Counting","Interest","The Last Bid"],"l1":["The crow tilts its head","Dropped is not the same","The foil in the grass","Count what was taken","Read the gutter first","A mend in the fence","The cone on its side","The coin in the grate","One crow is sorrow","It is not stealing","The bench's dark shine","The pigeons all queue","The chair by the kerb","The scratch at the lock","Marked down to nothing","Coins in the fountain","The best picking hour","The phone box stands dead","Judge nothing by shine","The crow does not want","A price tag still on","The dropped chips cooling","The plastic flower","Fresh paint over rust","The magpie's bright hoard","The spire is a perch","The receipt spirals","Nine crows on the wire","A sock on the line","The crow knows your face","Worth is a wager","The bin lid stands open","Two crows, one french fry","The dead woman's porch","The trophy is brass","The worm holds the ground","The parcel left out","Free box on the step","After the rainstorm","The flagpole is tall","The whole loaf is thrown","The pound in the mud","Everything costs twice","The museum squints","The crack in the kerb","The last slice of bread","You looked at it twice","The windfall apples","The mob forms slowly","Give the crow your stare","The café door swings","The market packs up","The thrift shop's contents","The tool in the grass","One crow counts the crowd","The crow wants nothing","Everything sold here","Four crows on the rail","You are being priced","What the gull won't touch","Half a sandwich, dropped","Count what the street drops","The shiny thing waits","When the street goes dark"],"l2":["prices you with one black eye","as lost: one waits to be found","earns the crow's whole attention","count what was left behind too","the sky is just the ceiling","they hoped you would not see it","still holds its small authority","fell there reaching for something","two are joy, says the old rhyme","if the lid was left open","is a decade of elbows","where the crumbs fell yesterday","was dragged here from somewhere else","means someone wanted inside","and still nobody takes it","wishes exchanged for copper","is before the street wakes up","a booth that outlived its call","the dime and the bottle cap","most of what it watches for","the bush outside the garden","are a gull's inheritance","fooled the bee for one whole day","the colour is not the fix","fills a hollow in the wall","the dumpster is the kitchen","the street keeps its own ledger","a quiet shareholders' call","one shoe alone on the roof","it files you under some threat","between the thing and the eye","an invitation in code","the bigger shadow lands first","still grows her geraniums","the gold was only plating","the crow holds the other end","three days in the open rain","worth exactly what it says","the gutter shows its small change","the lamppost by the chippy, though","because the wrapper said so","buys nothing and buys the eye","once to have and once to hold","through glass at things once common","holds a coin, a nail, a seed","under the park bench by noon","it is already counted","go gold in the grass each year","then all at once, shouting down","it gives you back your own look","and crumbs tally out with shoes","what doesn't sell feeds the dusk","are the town's true memory","gave up halfway through the job","the crowd does not count the crow","that cannot be carried off","will be sold again someday","own the whole horizon now","by the crow on the lamppost","the crow will consider twice","the crow's bid is accepted","it drops more than it picks up","under today's other trash","the day's takings are gathered"],"l3":["you are not the point","the other was shed","worth is where light lands","theft has a ledger","the street is the text","the quick fix is loud","the handle's still good","value finds its floor","crows count themselves too","ask the ants. They know","one bead at a time","sit where the bread falls","few things die in place","wanting leaves a mark","priced below worthless","the water profits","the bins tell the truth","the lid still fits the jar","gleam the same at noon","it counts you back","someone paid for wild","fall is also gift","pretense earns a look","look for the red bleed","beauty needs a vault","a perch is a perch","paper spends nowhere","minutes are kept short","pairs split on the way","or under some lunch","bet on what shines least","some read it, some pass","rank is a real thing","care outlives the hands","shine owes a refund","the dirt arbitrates","\"fragile\" was a wish","free is still a price","who keeps the accounts?","sees the chips land first","dates are opinions","finding is the spend","the second bill lasts","rubbish ages well","profit lives in cracks","will be somebody's","the eye is a scale","arrive before the rot","the hawk from the sky","a look buys the crust","the ledger updates","unsold is not waste","priced by forgetting","so did somebody","who audits the crow?","desire fits the beak","what stays bought for long?","there were no rivals","it files you away","discernment costs meals","no further bids heard","the street is a sieve","the pile grows a ring","the crow checks its books"]},{"slug":"threshold","name":"The Threshold","titles":["The Doorstone","Janus","Neither","The Held Door","The Wait","Shelter","Ajar","The Vestibule","The Kerb","The Stile","The Underpass","Landing","Ghost Door","The Mat","Edge of Light","Tide Line","The Turnstile","The Hush","Yellow Line","Between Floors","The Porch Light","The Mudroom","The Overhang","The Bus Shelter","Doorway Talks","The Seam","The Eaves","The Buzzer","The Arch","The In-Between","Stillness","The Boundary Stone","The Two Chairs","The Pause","The Gate","The Cloakroom","Waiting Room","The Gap","The Sill","Curtains","The Queue","The Arcade","The Threshold","Revolving Door","The Bridge","Bus Stop","The Frame","The Half-Turn","The Shade Line","Loitering","The Checkpoint","The Verge","The Moment Before","The Double Door","The Blind Spot","The Sign","Twilight","The Covered Way","The Crossing","The Porch Swing","The Anteroom","The Platform","The Halfway","Arrival"],"l1":["The stone is worn low","Two faces, one god","Neither house nor street","A held door is two","The bench by the clock","The awning drips still","The door left ajar","Between two doors, warm","The kerb separates","A step in the fence","The underpass hums","The stair's halfway shelf","The bricked-up doorway","The mat says welcome","Where the lamp's light ends","The tideline keeps no","The turnstile counts you","The hotel's plush hush","The painted yellow","The lift pauses here","The porch light stays lit","The room for the boots","The shop's overhang","The bus shelter's glass","Half in, half out talks","Where two carpets meet","Under the eaves' drip","The buzzer panel","The arch keeps its pose","The space between sheds","Stand so still the room","The boundary stone","Two chairs face the door","Between the siren","The gate knows its work","The cloakroom holds your","The waiting room's art","The hedge has a gap","The sill is the line","The curtain's one-inch","The queue is a room","The arcade covers","The threshold holds both","Go round to get in","The bridge is the place","A pole and a sign","The frame holds the door","Half-turned, the key makes","The shade's moving edge","The loiterer stands","The checkpoint is just","The grass verge belongs","The knock not yet knocked","The second door waits","The least-watched corner","The sign says WAIT HERE","Dusk is a doorway","The covered walkway","The crossing's black-white","The porch swing won't choose","The small room before","The platform edge hums","Between the two rooms","Every arrival"],"l2":["where a thousand comings crossed","watches both ways from the door","the porch keeps a third country","seconds given to a stranger","was built for waiting, not rest","sheltering you from nothing","has been deciding all day","the vestibule holds the coat","two countries by a kerbstone","the wall's own small doorway through","a note it learned from the road","is a room that asks nothing","still invites the eye to pass","to mud, to strangers, to dust","is also somewhere — stand there","promise — it only records","a gate that takes attendance","swallows the street noise halfway","line organizes the wait","between the floors you wanted","for whoever might still come","neither clean nor dirty zone","keeps a dry five feet of street","frames the weather like a show","are the ones that matter most","the tape draws a small border","line is the driest going","lists the names behind the door","holding open forever","fits exactly one person","forgets you — then it tells you","older than the fields it splits","in the lobby, set to talk","and the birdsong, there was one","the wall knows only standing","outside self while you are in","is chosen to be ignored","where people have voted through","between the warm and the world","gap shows the street like a stage","built entirely of patience","a street pretending indoors","inside and outside at once","the door accepts by degrees","both banks share without sharing","the smallest station there is","the door holds the pause before","a third state — not locked, not free","crosses your shoulders slowly","in a spot with no errand","a question made of concrete","to no one's field, no one's lawn","the call not yet made — that breath","while the first door closes tight","watches more than the watched one","it has no authority","the day goes through to the night","roof without a building's walls","a bridge made only of paint","swinging between out and in","the important one holds coats","with arrivals not yours yet","of leaving and arriving","was a threshold all along"],"l3":["the middle sags first","leave some doors like that","enter slowly here","the smallest visa","sit inside the wait","thank it anyway","so have you. Pass through","of two worlds at once","look down at the line","climb where the wall yields","tunnels hold the sound","rest on the landing","walls remember doors","unlatch, then look back","edges take the scuff","where the sea reached once","pass when it spins you","loud dies in carpet","stand behind the line","ride the gap between","leave one light like that","undress your weather","rain checks at the kerb","watch from the dry side","thresholds loosen tongues","footfalls change their sound","walk the roof's shadow","press nothing. Just read","a door with no leaf","who else would fit?","what it really holds","settled long ago","nobody sits long","full second of hush","the gate knows going","you'll be back for it","look anyway. Wait","feet make policy","sit on it, half out","be the audience","wait till it opens","walk the compromise","it chooses neither","the latch turns both ways","stand at the centre","waiting fills the roof","someone enters next","the halfway country","choose which side to warm","the gap earns its keep","it asks who goes there","edges own themselves","where the hinge decides","rooms open in turn","stand in the blind spot","and none is needed","stand in it sometimes","shelter minus walls","passage by contract","it votes neither way","of ceremony","whose arrival is next?","you live all your life","keep on passing through"]},{"slug":"lattice","name":"The Lattice","titles":["The Grid","The Right Angle","The Exception","Benchmark","Odd and Even","The Joint","The Lockers","The Datum","The Theodolite","Alignment","Rounding","Brickwork","The Plumb Line","Box Junction","The Covers","The Railings","The Meter","The Bays","The Escalator","The Grille","The Slats","The Storeys","Aerial Grid","The Form","Tolerance","Facade","The Survey","The Trellis","The Timetable","The Sleepers","The Floor Plan","Cat's Eyes","The Library","The Corner","The Tag","The Counter","The Cladding","The Vineyard","The Interval","The Postcode","The Drain Grate","Spacing","Hoardings","As Built","Tiled Walls","Paving Slabs","The Trig Point","Cycle Stands","The Pallets","The Shelves","The Junction Box","The Deeds","You Are Here","The Trays","Lamp Post Codes","The Clipboard","The Ruler","The Terrace","The Gauge","The Mosaic","The Inventory Tag","The Roll Call","The Mason's Line","Filed As Found"],"l1":["The grid does not fit","The corner is off","One tile in the row","The mark in the wall","The numbers ascend","Where surfaces meet","The lockers, in rows","Measure from the stone","The surveyor's scope","The lamp posts file past","The map shows the town","Each course overlaps","The plumb line hangs still","The hatched yellow box","The manhole covers","The railings divide","The meter's own count","The painted white bays","The steps keep their height","The grille in the wall","The bench slats are ten","The floor numbers climb","The wires overhead","The form says \"tick the box\"","The wall is not plumb","The window rows match","The survey is done","The trellis squares climb","The kiosk displays","The sleepers lie spaced","The floor plan shows rooms","The road studs shine back","The library files","A corner joins streets","The scaffold bears tags","The ticket counter","The cladding panels","The vineyard's long rows","The buses arrive","The postcode names you","The drain grate counts rain","The fence posts stand spaced","Site hoardings repeat","As built, not as drawn","The platform's tiled walls","Paving slabs repeat","The trig point stands bald","The cycle stands wait","The pallets stack square","The shelf brackets hold","The junction box hums","The deeds are on file","\"YOU ARE HERE,\" it says","Two trays labelled IN","The lamp posts wear codes","The clipboard's survey","The streets run straight here","The shopfronts align","The gauge on the wall","The mosaic holds","The chair in the hall","The names are read out","The mason's taut line","The survey ends here"],"l2":["the street declines to comply","within tolerance, almost","is wrong — the pattern needs it","the surveyor's old crow's foot","odd one side, even other","along an unmarked seam, joined","of little identical doors","the fixed point under the town","converts the street to numbers","in order of erection","flat, obedient, correct","the last — the wall is a sum","it does not lean — it measures","is painted hesitation","sign their makers in iron","the pavement into black bars","is read by no one at all","queue the cars into their slots","even while they are moving","lets the building out in strips","the eleventh is missing","inside the lift's small display","rule the sky into parcels","the street has no box for it","it leans within tolerance","behind them the lives don't care","finds the street to be itself","the wall in measured green shade","a grid of hours in boxes","under the rails' long straight line","the walls disagree slightly","spaced like a sentence of lights","the whole world into one room","each gets half of the turning","certifying its own rise","numbers the wait in order","face the street in even squares","comb the hillside into lines","spaced by timetable, not need","a small algebra of place","in equal ribs of water","one stride apart, all the way","one poster a hundred times","the wall wanders from its line","map the line in coloured bands","their joints drawn in rigid rows","on the hill — the country's grid","in galvanized formation","under the warehouse ceiling","level after level, straight","numbered pairs behind the plate","the ground has always been here","the small red dot fixes you","and OUT — between them the work","stamped small — you can report fault","counts passersby into slots","somebody's ruler won once","a terrace of small fortunes","holds the plant's temperature","a thousand little cubes still","wears a small engraved number","the row of lockers answers","rules the wall before it stands","the street stays mostly itself"],"l3":["the map stays unchanged","report it. Move on","one seam goes unmarked","still holding the height","index runs both ways","the city joins itself","each owns a small square","all heights answer it","the street does not mind","the street is a form","the town disagrees","laid by increments","lean is for buildings","pause is painted here","the street is authored","walk the metronome","it logs regardless","parked and itemised","transit holds its shape","warmth in little bars","gaps get counted too","height is filed in floors","swallows sit unfiled","tick the street instead","the lean passes spec","curtains disagree","signed off, more or less","vines ignore the grid","time in pigeonholes","the track rests on ticks","measure on the ground","the dark reads them slow","start anywhere. Read","each bolt takes its turn","the paperwork stands","take one, become one","the sun reads the grid","dust gets a shelf mark","the gap is the route","one cell holds your name","falling in columns","the tape runs out at nine","the fence is a loop","the drawing concedes","read the wall, go home","the crack ignores it","nails the skyline down","empty, still in rows","goods sleep in the grid","storage wants its lines","the street's wires take names","paper predates stone","prove it if you can","piles up, unassigned","by its little name","you were just counted","bends need a permit","no gaps in the row","the red pen drew first","which cube gets to move?","when were you last tagged?","present, each small square","the string is the law","file it as found"]},{"slug":"stray","name":"The Stray","titles":["The Chosen Step","Circling","The Fed Hand","The Poor Wall","Scent","Worn Smooth","The Gap","Territory","Crumbs","Sleeping in Sun","The Safe Spot","The Glove","Unwanted","The Collar","Hunger","Winter Doorway","Trust","The Torn Ear","Two Bowls","Belonging","The Hand That Struck","From Below","Warm Stone","Following","One Ear Out","Unclaimed","Her Recipe","No Wage","The Old Pack","3:17 AM","Eyes","The Missing","The Saucer","The Long Way","Chimney Bricks","The Back Step","Who Left","Second Door","Smoke Coloured","Nose Down","Truce","The Thief","Homecoming","The Flea","Halfway","Before Thunder","The Buried Bone","Feral","At the Gate","The Wall's Top","Leaving","The Voice","Desire Path","Carried","Sun Patch","The Fox","Rescued","The Night Bins","The Hare","Four Houses","Under the Stalls","Ribs","Older Claims","The Last Stray"],"l1":["Something crossed at dusk","The dog turns three times","Bitten, the hand stays","No wall is too poor","The nose remembers","The bench is worn smooth","Where the fence gives way","The fox marks the post","Crumbs from the table","The stray sleeps in sun","Back against the wall","A glove on the rail","Chased from every porch","No name on his neck","Hunger makes you brave","The shop's warm doorway","She eats from your palm","The ear torn in spring","Two bowls by the door","No one owns the cat","The hand that once struck","From under the hedge","The stone keeps the day","Something is following","Half wild and half tame","The lost keep walking","The ghost keeps the step","The cat did nothing","A moth courts the glass","Your shadow lags behind","Eyes shine from the dark","The cat licks her wound","The saucer stays out","The cat chose your lap","Warmth hides in the bricks","The growl comes before","Scratch at the shut door","Burrows keep their ghosts","Some part of you left","Head down, the dog reads","The eaves hold the small","The fox takes one hen","He left for three days","Even the settled leave","The trail doubles back","Before the thunder","He buries the bone","Fed but never held","At the gate each dusk","From the wall's top edge","The stray leaves one day","The words mean nothing","A path through the grass","Her gait lives in you","The sun moves the cat","Not pet and not wild","Rescued, she still hides","All night the dog barks","The hare does not run","Four houses feed her","Mud on the white sheet","You can count his ribs","The stair creaks alone","When the last dog sleeps"],"l2":["perhaps it was only wind","before it lies down to sleep","and sets the dish down again","to stand between you and wind","that your grandmother walked first","where a thousand strangers sat","small things come and go all night","the rain washes it by noon","are a whole feast underneath","as if nothing were owed it","eyes on the only way in","someone lifted it from mud","the dog learns the town by heart","yet he answers to kindness","and then it makes you foolish","is no one's and everyone's","only after seven days","hears no worse than the whole one","the proud cat eats from neither","she owns the whole street by dusk","is open now, full of bread","the whole world is only feet","long after the sun is gone","not for where you are headed","she sleeps with seven ears out","by a road it never took","each time you throw it away","and naps without an excuse","the pack's old path through the field","at its own tail in the grass","then vanish when you look back","patiently, again, again","of milk left out every night","of all the laps in the room","the birds knew before you did","the bite, and it spares them both","when it opens, walk away","has always a second door","for the ball, but for your step","the whole morning in the grass","the sparrow and the cat wait","and the house forgets his name","walks in as though stepping out","scratches in front of the queen","through the door and considers","something followed you home","and forgets the place by spring","the kittens grow to fear hands","the dog waits for one dead man","the cat watches both quarrels","no note, no reason, no fuss","the dog hears only the voice","made by paws, not by planners","the searchers walked past all day","with the sun across the floor","the fox lives in what we leave","where the ancestors still cross","at a fear no one can see","until the hawk has chosen","each believes she is their cat","from the paw that loves you most","and still he shares the found bone","though you shout and stamp and plead","where all the lost things gather"],"l3":["no one asks her why","turn your doubt to bed","learn its hiding spots","be that wall for one","trust the older sense","you are not the first","leave one board unnailed","did it choose you?","someone feasts below","and nothing is. Rest","now the heart can slow","who left it there?","each no is a map","which name do you need?","eat first, then decide","share what isn't yours","ask the dusk instead","wounds are not verdicts","pride grows thin by March","belong to nothing","the flinch stays a while","look how they hurry","keep what warmed you, too","for the sound of you","keep one ear outside","the body knows more","wag before you know","rest is not a wage","your people are here","the rustle is a wren","let them watch. Walk on","healing is boring","be someone's stranger","you did nothing. Stay","their map is of heat","say no while it's soft","or was it the wind?","make one exit more","the bowl asks nothing","news is underfoot","truce lasts the whole storm","who is the thief here?","no need to explain","the hackles say it first","let the draught come in","believe your shiver","the garden profits","hold them while they're small","love forgets to stop","and joins neither one","was it ever yours?","where does it lead?","scent marks the way back","the nose sees farther","follow your warm thing","your leavings feed it","safety takes its time","sit beside it. Wait","stillness is a speed","she lets them believe","wash the sheet, not him","the thin share the bone","some claims are older","who keeps the town kind?"]},{"slug":"small","name":"The Small","titles":["The Ant's Road","Moss","The Oak's Plan","Meadow","Dust","One Thread","The Snail","The Last Grain","Lichen","The Beetle","The Hinge","Splinter","Pollen","The Drop","Dropped Stitch","Stone in the Boot","City","Salt","Tall","The Needle's Eye","One Word","Acorn Cap","The Crumb","The Stone Roof","The Worm","The Moth","The Next Stone","Who Reads","The Leaf's Mouths","Ladybird","The Speck","The Grain","Violet","The Ant's Load","The Last Leaf","Through Tar","Grey Hair","Five Minutes","Glow-worm","Keyhole","The Lens","Damp","The Button","Sand","Weather","The Knot","The Wren","Snowflake","Thimble","Freckle","The Minute Hand","Moth Wing","Root Hair","The Chipped Cup","Small Hours","The Jar","The Mote","Sycamore Key","Inchworm","Skirting Board","Bud","The Door Held","The Guild","No Small Thing"],"l1":["The ant's road runs straight","Moss grows one cell thick","The oak's whole plan fits","In the pavement crack","Dust in the sunbeam","The spider's one thread","The snail carries home","One grain tips the scale","The lichen is two","Beetle on its back","The hinge is so small","A splinter, unseen","Pollen on the bee","A drop on a leaf","One dropped stitch unmakes","A stone in your boot","On one hair of yours","A pinch of salt turns","The dandelion","Thread the needle's eye","One word said too soon","The acorn's small cap","The sparrow's whole day","Turn over the stone","The worm eats the earth","Smaller than your nail","Too tired for the hill?","Your cells die and grow","Through the leaf's small mouths","The ladybird lands","A speck in your eye","Follow the wood's grain","No one planted it","The ant lifts ten times","One leaf on the branch","The seedling splits tar","Pull one grey hair out","Five minutes a day","The glow-worm's small lamp","Through the keyhole you","Look under the lens","A small lie, like damp","One missing button","Every beach was rock","To the flea, the dog","The smallest knot holds","The wren is thumb-sized","Snowflake on your sleeve","A thimble of tea","The freckle she hates","You cannot see it","Touch the moth's wing once","The oak drinks through hairs","The cup's chipped rim is","At three a.m., fears","Save one coin a week","The mote in the light","The sycamore key","The inchworm measures","A mouse-sized dwelling","The bud is the whole","Hold the door. It's small.","What the mould makes soft","Look closely enough"],"l2":["through the shadow of your shoe","and covers the whole north wall","inside a thing you step on","a whole meadow has arrived","was mountains, was stars, was skin","holds the dew of the whole field","so it is never homeless","that ten thousand grains could not","lives agreeing to be one","kicks at the sky and loses","and the door so heavy, yet","has ruled the whole hand for days","is the orchard's only hope","holds the garden upside down","the sleeve by the winter's end","is louder than the mountain","live more creatures than your town","the whole pot from dull to good","is a tree to the aphid","by aiming small, then smaller","has undone forty good years","kept the rain off the oak's youth","turned on the crumb you let drop","a nation flees from the light","and leaves it richer behind","a moth that knows the whole moon","then just the next paving stone","a million in a heartbeat","the tree breathes out your next breath","on the one who stayed quite still","and the whole world is weeping","the plane sings or the plank splits","the violet by the step","its weight and does not complain","has held on through every storm","not by strength but by patience","and two come back to mourn it","is a language in ten years","is not for lighting the field","see the room, but not the room","clean hand is a crowded field","goes unnoticed in the wall","lets the whole coat go colder","broken smaller, and smaller","is a country with weather","the boat against the whole tide","and louder than the blackbird","perfect, and gone as you look","given at the gate at dawn","is the one he looks for first","the minute hand keeps moving","and its flying dust comes off","finer than a baby's own","where grandmother's lips would go","are giants. At noon, they're mice","the jar remembers for you","is only there when the sun","spins away from its own tree","the rose but never smells it","the skirting board holds kingdoms","flower, folded, waiting, sure","The woman behind you had","worm finishes in the dark","and the small thing opens wide"],"l3":["who is in whose way?","begin smaller still","mind what you tread on","a crack holds a garden","you are dust that stands","one strand is enough","what do you carry?","be the last grain, then","marriage, on a stone","offer it a twig","find the hinge, not force","pull the small thing out","who carries your hope?","the crumb outweighs the loaf","winter checks the work","the mountain can wait","you are a city","a little, not much","tall is where you stand","the needle finds the thread","or made them. Choose it","guard the young thing well","you will never know","put their roof back on","take, and leave it rich","you forget the sky","and then the next one","one stitch holds the hem","thank it, quietly","luck comes to the still","check your eye first, then","two ways to find out","some grace just turns up","what is yours to lift?","falls on a calm day","water signs the stone","let the grey hair be","what are your five for?","only to be found","go in, then decide","every crumb has a crowd","until the wall goes","sew the small thing now","now children dig it","what vast thing hosts you?","know one knot by heart","sing your size, and more","you saw it. Enough","is still remembered","small flaws are the face","look away. Look back","some things, just look at","great things feed through fine","drink from that side, too","fears shrink with the sun","small, steady, and dull","finds it. So are you","go far to take root","stop measuring. Smell","life beneath your cares","you are not late yet","her worst day today","decay is a guild","kneel and the field rises"]},{"slug":"slow","name":"The Slow","titles":["The Hill","The Crack","North Face","Lichen","Rust","The Root","The Yew","Built to Last","The Mended Wall","The Heron","Grief","The Doorstep","The Stopped Clock","Hurrying","Spring","The Ring","Leaf Mould","The Fault","Stone Tooth","The Stain","Her Hands","The Grudge","The Tortoise","The Letter","More Time","Slow Anger","Green Fruit","North","The Cellar","The Queue","Old Friends","Nine Months","Stone Steps","The Answer","The Drift","Dough","Her Face","Starlight","Mistakes","The White Room","The Gate","The Jar","The Tomb Seed","The Bone","Reputation","The Pendulum","The Last Rose","The First Stone","The Moon","Acquired Taste","The Hallway","Ice","Night Work","The Farm","The Fallen Oak","Your Mother's Hands","The Late Reply","Mountains","The Stew","The Candle","The Nest","Look Up","Sea Floor","Both True"],"l1":["The hill is moving","The crack in the wall","The south face is pale","Lichen eats the stone","Rust is iron's wish","A root lifts the slab","The yew by the church","\"Built to last,\" it says","The mended wall stands","The heron stands still","Grief moves like ice does","Rain on the doorstep","The stopped clock is right","Hurrying, you missed","Winter does not ask","Cut the old oak down","Last year's fallen leaves","The fault line forgets","Drip by drip, the cave","The damp stain travels","Her hands are slow now","You carried the grudge","The tortoise has lived","Write to who you'll be","Water is not strong","Anger that is slow","Green fruit in July","Moss on the north side","The cellar is dark","The queue barely moves","New friends come quickly","Nine months, and no one","The chapel's stone steps","The answer you begged","The drift in the shade","The dough needs no help","Her face holds each year","The star you see now","Ten thousand mistakes","Hours in the white room","The gate rusts open","Let the jar stand still","A seed from a tomb","The bone knits in dark","Built over a life","The pendulum swings","Last rose of the year","The masons who laid","The moon drifts away","Olives, whisky, grief","Forgiveness is not","The ice moves a yard","At night, the body","Plant in cold March mud","The old oak comes down","Your mother's gesture","The reply came late","Mountains, sharp when young","Stew on the back ring","The candle burns down","Crow's nest: twig by twig","You waited so long","This rock was sea floor","What you rush, you lose"],"l2":["toward the sea, an inch an age","widens a hair every year","the north face green with patience","so slowly the stone agrees","to go back to being earth","one breath of growth every spring","was old when the church was new","above the door that has gone","past the hands that mended it","for as long as you have watched","carving a valley for years","for three hundred years has made","twice a day without trying","the one thing you hurried for","if spring is ready. Spring comes","and read the drought of your birth","are this year's dark, crumbling bread","for a hundred quiet years","grows a stone tooth toward the floor","down the wall like a slow map","and the bread has never been","for twenty years. He forgot","through three wars and every spring","in twenty years, and hold it","but it has more time than stone","is anger that has been heard","is bitter because it's young","tells the way home to the lost","and nothing happens for years","and the old man hums a song","old friends were made the slow way","can hurry the heart forming","are dipped where the knees knelt most","came, ten years too late, and right","outlasts the spring by a week","only warmth and to be left","the way the cliff holds the sea","went out before you were born","then the hand knows what to do","then one sentence changes all","no one has closed it in years","the mud sinks, the clear rises","grew after two thousand years","for six weeks, and no one sees","and spent in one afternoon","the same arc for eighty years","opens in November frost","the first stone never saw it","from us an inch every year","the young mouth spits them all out","a door but a long hallway","a year, and carries mountains","does the work the day forbids","eat in September's gold light","for a century it feeds","came to your hands at forty","and said more because it did","are rounded hills when they're old","all afternoon, no stirring","so slowly you don't see it","it builds what the wind can't take","you forgot what it was for","before the first flower bloomed","what you wait for, waits for you"],"l3":["it is in no rush","so do grudges. Mend","which side do you show?","change me gently, so","all things want their home","the slab never saw","who is guest of whom?","only the words stay","leave something mended","the fish forget her","then there is a field","a cup for the birds","stay, and time comes round","ten rings in one inch","ready or not, bloom","in one narrow ring","the seam outlasts the cloth","then remembers once","meeting takes ages","of where water wants","better. Slow knows how","the first week. Set down","eat, sleep, keep walking","she will write back. Wait","be the one with time","how high did you count?","so, once, were you too","the slow things know north","that is what makes wine","he has the right speed","one walk at a time","some work is not yours","prayer leaves a mark, too","too late is on time","hidden things last long","what else needs leaving?","do not smooth it out","its light still arrives","begin the mistakes","waiting was life too","welcome by neglect","all by standing still","no hope is too old","then it holds your weight","what did you build slow?","the roots hold the bank","no clock in the field","lay your first stone, though","hold close what you love","the old mouth says, yes","how long is the hall?","the drip wears the step","night does the mending","the gap is the farm","all it once shaded","it was on its way","late mail still arrives","so it goes with us","the house smells of home","count your evenings, then","hurry makes loose nests","now it's here. Look up","sit on it. Be brief","pick the one that lasts"]},{"slug":"echo","name":"The Echo","titles":["The Call","Footprints","Twice","Smaller","The Smile","Shop Window","The Old Song","The Last Turn","Second Time","Your Laugh","Unsaid","The Far Bank","Walked Past","The Bell","Struck Back","The Way You Came","Your Name","Borrowed Words","The Dream","That Day","Hands","Same Ending","Hollow","Thanks","Yes","The Photograph","The Bat","The Heavy End","First Colour","The Story","The Drum","The Wood","Travelling","The Letter Kept","Fading","The Promise","The Fourth Step","The Jam Jar","Again","Bread on the Water","Played Back","Five Whys","The Old House","The Prayer","Three Fingers","The Way Back","Swallows","Sorry","The Canyon","The Pond","The Lent Book","Who You Were","The Tune","How You Stand","The Face","Only Yes","Reunion","The New Word","The Dropped Glove","Nothing Back","The Knock","Been Here","The Fly","Worth Hearing"],"l1":["Shout into the hills","Look back at the snow","Twice makes a habit","You come back smaller","A stranger smiles back","Dark glass, your tired face","An old song comes on","Take the turn again","The second time lands","Your laugh is not yours","Unsaid words return","One stone rings the pond","You walked past it twice","The bell rings the hour","Strike and be struck back","Face the way you came","Say your name aloud","Your phrase outlives you","The dream comes again","That day comes each year","The child copies you","Same fight, other face","The hollow answers","Thank the one who taught","Count the steps you've come","The photo shows all","The bat sends its cry","The helper moved on","The first colour seen","Your tale outlives you","Listen to the chest","The path through the wood","You were short with her","She kept the letter","Each echo is less","The promise comes due","The stair speaks nightly","Her pencil marks fade","You did it again","Bread on the water","Hear your voice played back","Ask it why five times","The house got smaller","Say it one last time","Point at someone's fault","The way back is short","The swallows come back","Say sorry once, well","Ask the canyon twice","Still pond, still face, still","Return the lent book","You miss who you were","The tune won't leave you","Notice how you stand","You avoid your face","You hear only yes","Twenty years return","Hear a new word once","Go back the same way","Say nothing, and hear","You gave what you had","You have been here once","The fly hits the glass","All you do returns"],"l2":["your own voice comes back to you","one line of steps, and it's yours","is a path. Three times, a road","you started, and it's smaller","came back on a stranger's face","someone tired walks past. It's you","and you are fifteen again","decided all of this one","you see what the first time hid","it came down through the long dead","repeat inside you all night","and the far bank feels it last","the thing you came out to find","the same note for centuries","strike and be struck back again","it looks nothing like the way","in an empty place, and hear","came from someone long ago","until you open the door","the body grieves before you","not what you say, but your hands","third love with the same ending","can echo. The full log thuds","you to thank. It started there","each was a small yes to this","before you knew what's coming","and knows the world by return","long ago. Now he's moving","this morning is still in you","comes home three weeks later, wrong","the same drum since before birth","brings you out where you went in","she was short with the next one","was the one you almost burned","until only hills remain","at nineteen still waits for you","creaks at the same fourth step up","on the jam jar outlived her","the thing you swore you would not","comes back after many days","and flinch at the stranger there","the first answer falls away","holds another childhood now","the prayer means nothing, then means","three fingers point back at you","though the road there was so long","the same beam in the same barn","not ten times, badly, like rain","who am I, and the canyon","throw a stone and you are gone","had a stranger's pencil notes","she missed who she was, as well","till you sing it to the end","your father stood like this, too","is the one you dream about","the room grows smaller each day","she laughs at the same wrong place","and it is everywhere since","and you'll find the glove you dropped","the room answer with nothing","and forgot, and years later","said the whole body, though you","a hundred times. Open door","is heard again, somewhere, soon"],"l3":["so, choose what you shout","who else could make it?","watch what you do twice","no, you have grown. Look","later, not from them","be kind to that one","none of you is lost","so does the next turn","go round once again","laugh for all of them","say them, and they stop","you are the far bank","slow down. Walk back once","and each time it's new","someone has to stop","it looked while you walked","who is answering","whose voice is in yours?","it knocks till you do","remember. It does","watch what your hands do","who was there each time?","fullness cannot ring","and goes on through you","so, you have said yes","neither do you now","what comes back is sight","lift the heavy end","what did you see first?","and wearing your name","you've never thanked it","but not the same you","it's still travelling","send the honest one","let the last one go","the debt collects dust","the house knows your weight","eleven summers","how many more times?","soggy, but it comes","others hear that one","the fifth is the truth","it lands a beat late","the same word, worn new","the hand argues back","turn and it answers","after half the world","once rings. Ten just drip","asked you the same thing","hear yourself come back","add yours. Lend it on","nobody was there","finish what you start","his posture, your spine","look once. It will rest","invite one no in","some things don't change. Good","it was always there","and things you didn't","that too is a voice","it knocks at your door","never have. Listen","right beside the pane","make it worth hearing"]}];
+  function hash(s) { var h = 1779033703 ^ s.length; for (var i = 0; i < s.length; i++) { h = Math.imul(h ^ s.charCodeAt(i), 3432918353); h = h << 13 | h >>> 19; } return h >>> 0; }
+  function rng(seed) { var a = seed; return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+  var slug = 'echo', coord;
+  var chips = document.getElementById('demo-voices');
+  VOICES.forEach(function (v) {
+    var b = document.createElement('button');
+    b.textContent = v.name; b.dataset.slug = v.slug;
+    if (v.slug === slug) b.className = 'on';
+    b.addEventListener('click', function () {
+      slug = v.slug;
+      chips.querySelectorAll('button').forEach(function (x) { x.classList.toggle('on', x === b); });
+      render();
+    });
+    chips.appendChild(b);
+  });
+  function newSpot() {
+    var lat = 40.70 + Math.random() * 0.10, lng = -74.01 + Math.random() * 0.08;
+    coord = lat.toFixed(6) + ', ' + lng.toFixed(6);
+  }
+  function render() {
+    var v = VOICES.find(function (x) { return x.slug === slug; });
+    var r = rng(hash(coord + '|' + slug));
+    var pick = function (pool) { return pool[Math.floor(r() * pool.length)]; };
+    var card = document.getElementById('demo-card');
+    card.classList.add('swap');
+    setTimeout(function () {
+      document.getElementById('demo-coord').textContent = coord;
+      document.getElementById('demo-title').textContent = pick(v.titles);
+      document.getElementById('demo-lines').innerHTML = '';
+      [pick(v.l1), pick(v.l2), pick(v.l3)].forEach(function (line) {
+        var s = document.createElement('span'); s.textContent = line;
+        document.getElementById('demo-lines').appendChild(s);
+      });
+      card.classList.remove('swap');
+    }, 180);
+  }
+  document.getElementById('demo-draw').addEventListener('click', function () { newSpot(); render(); });
+  newSpot(); render();
+})();
+</script>
+</body>
+</html>

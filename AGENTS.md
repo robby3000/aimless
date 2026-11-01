@@ -53,16 +53,25 @@ offline. If you add a file under `public/`, add it in both places.
 
 ```
 public/
-  index.html          # boot + shell markup + go/walk/archive/done screens (UI JS)
+  index.html          # boot + shell markup + go/walk/archive/done screens (UI JS);
+                      # also carries the desktop/tablet landing page in .desktop-page
+  about.html          # desktop About page (linked from landing only; in-app links
+                      # would open inside the PWA window with no back)
   style.css           # all app styles (extracted from index.html; link, not @import)
   sim.html            # GPS simulator (roadmap A11)
   manifest.json       # no "id" (defaults to start_url) and no "version" (not a manifest member)
   sw.js               # precaches the shell for offline use; cache name is generated, see below
   icons/              # generated PNGs (192, 512, 512-maskable)
+                      #   plus icon-00bfff{,-2,-3}.png — master blue sigil PNGs for
+                      #   use OUTSIDE the app (emails, newsletter, web pages);
+                      #   deliberately NOT precached (app uses the .svg)
   fur-bg.webp         # #screen-go fur texture, 3x portrait export (1152x2082);
                       # media query hides it past the image bounds (no bare edges)
   images/
     og.jpg            # link-share card for aimless.earth (1200x630 JPEG)
+    landing/stop-{1..7}.webp  # chain-tile-112 waypoint photos for the landing
+                      # page and about.html — lazy-loaded inside .desktop-page
+                      # markup only, so phones never fetch them; NOT precached
   lib/
     geo.js  rng.js  walk.js  deck.js  store.js  dexie.mjs  proximity.js  export.js  skins.js
     markup.js           # pure markup builders (traceSVG); string in, string out, node-testable
