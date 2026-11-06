@@ -44,11 +44,25 @@ test('binaryFromCoord reproduces the documented worked example', () => {
   assert.equal(binaryFromCoord(DOC_LAT, DOC_LNG), '110111');
 });
 
-test('hexagramFromCoord resolves the worked example to hexagram 9', () => {
+test('inner.json binaries read bottom line first, like binaryFromCoord', () => {
+  // Pinned against the trigrams: lines 1-3 are the lower trigram. Peace (11)
+  // is Earth over Heaven, so its three solid lines come first; Difficulty at
+  // the Beginning (3) is Water over Thunder, so line 1 is solid.
+  const bin = (n) => INNER.find((h) => h.number === n).binary;
+  assert.equal(bin(11), '111000');
+  assert.equal(bin(12), '000111');
+  assert.equal(bin(3), '100010');
+  assert.equal(bin(4), '010001');
+  assert.equal(bin(9), '111011');
+  assert.equal(bin(63), '101010');
+  assert.equal(bin(64), '010101');
+});
+
+test('hexagramFromCoord resolves the worked example to hexagram 10', () => {
   const h = hexagramFromCoord(DOC_LAT, DOC_LNG, INDEX);
-  assert.equal(h.number, 9);
-  assert.equal(h.title, 'The Small Hoard');
-  assert.equal(h.hex_font, '䷈');
+  assert.equal(h.number, 10);
+  assert.equal(h.title, 'The Stepping');
+  assert.equal(h.hex_font, '䷉');
 });
 
 test('the mapping is deterministic', () => {
@@ -103,7 +117,7 @@ test('innerCard returns the card contract plus the hexagram payload', () => {
   const card = innerCard({ lat: DOC_LAT, lng: DOC_LNG }, INDEX);
   assert.equal(card.voice, 'inner');
   assert.equal(card.text, INDEX.get('110111').haiku);
-  assert.deepEqual(card.hexagram, { number: 9, title: 'The Small Hoard', glyph: '䷈' });
+  assert.deepEqual(card.hexagram, { number: 10, title: 'The Stepping', glyph: '䷉' });
 });
 
 test('hexagramFromCoord throws when the index has no entry', () => {
