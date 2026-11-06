@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-692fb808">
+  <meta name="aimless-build" content="aimless-v0.2.0-e5612c4f">
   <meta name="description" content="A walking app with no map. An arrow leads you to hidden waypoints; at each one, a verse and a photograph.">
   <!-- Share card for aimless.earth links. og:image must be absolute:
        crawlers do not resolve relative paths, and the all-relative
@@ -495,7 +495,7 @@
       <h2>After</h2>
       <p>You get a self-contained HTML artifact of your walk that you can download or share: the shape you walked, your photos, and the words your coordinates generated. The My Voice option has no cards of its own; you can attach your own text at export. Open a walk from the Archive to style it: pick a skin, filter the photos. Long-press a photo to select it, again to deselect.</p>
       <h2>Sharing</h2>
-      <p>A walk can leave your phone three ways: the Card, a square image of the route over your featured photo; the HTML file, one self-contained document with no scripts, so it opens cleanly on iOS and inside WhatsApp, Signal, Telegram, Discord or email; and a live page on your Neocities site, usually the best option for Facebook and anywhere that renders a link preview.</p>
+      <p>A walk can leave your phone three ways: the Card, a square image of the route over your featured photo; the HTML file, one self-contained document with no scripts, so it opens cleanly on iOS and inside WhatsApp, Signal, Telegram, Discord or email; and a live page on your own website, usually the best option for Facebook and anywhere that renders a link preview. The Card and the link preview carry a small www.aimless.earth in the corner; untick the box in the export sheet to leave it off.</p>
       <h2>Offline and privacy</h2>
       <p>Everything runs on your device and works offline once loaded. Nothing is uploaded. A walk leaves the phone only as a file you choose to export, so export the ones you want to keep. Installing to the home screen gives the storage the best protection and gives a full-screen experience.</p>
       <h2>FAQ</h2>
@@ -565,11 +565,15 @@
         <p>The same + opens the Filters sheet, where every filter shows a live preview on one of the walk's photos. Any filter can be hidden so the rail stays short. Your own filters, saved or imported, can also be exported as .json files to share, or deleted.</p>
       </details>
       <details>
-        <summary>Can I put a walk on my Neocities site?</summary>
-        <p>Yes. Open a walk from the Archive, tap export, then Neocities page. Aimless asks for your site name once, then builds the files for you: the page, a preview image, and an index page that lists your published walks. Upload them to a folder called <code>aimless</code> on your site, and the page is live with a proper preview when you share the link.</p>
-        <p>Anyone with the link can see the page, so publish the walks you want seen. Your Neocities password and API key are never asked for.</p>
+        <summary>Can I put a walk on my own website?</summary>
+        <p>Yes, on any site you can upload files to. Open a walk from the Archive, tap export, then Your website. Aimless asks for your site's address once, then builds the files for you: the page, a preview image, and an index page that lists your published walks. Upload them to a folder called <code>aimless</code> on your site, and the page is live with a proper preview when you share the link.</p>
+        <p>If you don't have a site yet, <a href="https://neocities.org" target="_blank" rel="noopener">Neocities</a> is free and needs no technical knowledge: type just your Neocities name. GitHub Pages works too (type <code>yourname.github.io</code>, plus the repository name if it's a project site), and so does any ordinary web host.</p>
+        <p>Anyone with the link can see the page, so publish the walks you want seen. Aimless never asks for a password or API key.</p>
         <p>The preview only knows where your page lives because of the folder: keep the page and its image together in <code>aimless</code>, or the link preview loses its image.</p>
-        <p>The <code>index.html</code> is a ready-made front page for your walks. Upload it into the <code>aimless</code> folder beside the walk pages, then link to <code>yoursite.neocities.org/aimless/</code> from your homepage. Keep it there: its links are relative, so moving it to your site root breaks them. A walk joins the list when you tick the index checkbox at build time, or later on the published step; Update index makes a fresh <code>index.html</code> to upload after you change your mind.</p>
+      </details>
+      <details>
+        <summary>What is the index page, and can I design my own?</summary>
+        <p>The <code>index.html</code> is a ready-made front page for your walks. Upload it into the <code>aimless</code> folder beside the walk pages, then link to <code>yoursite/aimless/</code> from your homepage. Keep it there: its links are relative, so moving it to your site root breaks them. A walk joins the list when you tick the index checkbox at build time, or later on the published step; Update index makes a fresh <code>index.html</code> to upload after you change your mind.</p>
         <p>Want a page of your own design instead? Copy file list puts your published walks on the clipboard as plain text: paths, titles, dates, descriptions. Feed it to an LLM with a creative prompt, or build the page by hand. Aimless only knows about walks published from this device.</p>
       </details>
       <details>
@@ -622,24 +626,27 @@
   <div id="export-sheet-overlay" class="sheet-overlay" hidden></div>
   <div id="export-sheet" class="sheet" role="dialog" aria-label="Export" hidden>
     <div class="sheet-handle"></div>
-    <div class="sheet-heading">Export</div>
+    <div class="sheet-heading">Share</div>
     <button class="sheet-row" data-export="share-html">
       <span class="row-ico">&#8682;</span>
       <span class="row-text"><span class="row-title">Share walk</span><span class="row-sub">Send the HTML via the share menu</span></span>
-    </button>
-    <button class="sheet-row" data-export="download-html">
-      <span class="row-ico">&lt;/&gt;</span>
-      <span class="row-text"><span class="row-title">HTML</span><span class="row-sub">Download the HTML</span></span>
     </button>
     <button class="sheet-row" data-export="card">
       <span class="row-ico">&#9993;</span>
       <span class="row-text"><span class="row-title">Card</span><span class="row-sub">Send a card via the share menu</span></span>
     </button>
-    <button class="sheet-row" data-export="neocities"><span class="row-ico">&#9741;</span><span class="row-text"><span class="row-title">Neocities page</span><span class="row-sub" id="neocities-sub">Build a page for your Neocities site</span></span></button>
+    <label class="sheet-check"><input type="checkbox" id="export-mark" checked> Add www.aimless.earth to cards and link previews</label>
+    <div class="sheet-heading">Save</div>
+    <button class="sheet-row" data-export="download-html">
+      <span class="row-ico">&lt;/&gt;</span>
+      <span class="row-text"><span class="row-title">HTML file</span><span class="row-sub">Download the HTML</span></span>
+    </button>
     <button class="sheet-row" data-export="route">
       <span class="row-ico">&#9874;</span>
-      <span class="row-text"><span class="row-title">Export Route</span><span class="row-sub">To open your walk routes in mapping apps</span></span>
+      <span class="row-text"><span class="row-title">Route</span><span class="row-sub">To open your walk routes in mapping apps</span></span>
     </button>
+    <div class="sheet-heading">Publish</div>
+    <button class="sheet-row" data-export="website"><span class="row-ico">&#9741;</span><span class="row-text"><span class="row-title">Your website</span><span class="row-sub">Neocities, GitHub Pages or any web host</span></span></button>
     <button class="sheet-row" data-export="add-text" id="row-add-text" hidden>
       <span class="row-ico">&#9998;</span>
       <span class="row-text"><span class="row-title" id="add-text-title">Add text</span><span class="row-sub">Select a text file — blocks map to photos in order</span></span>
@@ -686,24 +693,23 @@
     </div>
   </div>
 
-  <!-- Publish dialog (Neocities hand-off) -->
+  <!-- Publish dialog (website hand-off) -->
   <div id="publish-overlay" hidden>
     <div id="publish-box" role="dialog" aria-modal="true" aria-labelledby="publish-heading-site">
       <div class="publish-step" id="publish-step-site" hidden>
-        <div class="publish-heading" id="publish-heading-site">Your Neocities site</div>
+        <div class="publish-heading" id="publish-heading-site">Your website</div>
         <div class="publish-site-row">
-          <input id="neocities-sitename" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" inputmode="url" placeholder="yourname">
-          <span class="publish-suffix">.neocities.org</span>
+          <input id="site-address" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" inputmode="url" placeholder="yourname.neocities.org">
         </div>
-        <p class="publish-note">Aimless only needs the site name. Your Neocities password and API key stay out of it. <a href="https://neocities.org" target="_blank" rel="noopener">neocities.org</a></p>
-        <div class="publish-error" id="neocities-error" hidden>Letters, numbers and hyphens only</div>
+        <p class="publish-note">Your Neocities name, or the address of any site you can upload files to, such as <code>yourname.github.io</code>. Aimless never asks for a password. New to this? <a href="https://neocities.org" target="_blank" rel="noopener">Neocities</a> is free and the easiest start.</p>
+        <div class="publish-error" id="site-error" hidden>Type a Neocities name or a web address</div>
         <div class="confirm-actions">
           <button id="btn-publish-site-cancel">Cancel</button>
           <button id="btn-publish-site-save" class="btn-primary">Save</button>
         </div>
       </div>
       <div class="publish-step" id="publish-step-consent" hidden>
-        <div class="publish-heading" id="publish-heading-consent">Publish to Neocities</div>
+        <div class="publish-heading" id="publish-heading-consent">Publish to your website</div>
         <div class="publish-url" id="publish-url"></div>
         <button class="link-btn" id="publish-change-site">change site</button>
         <ul class="publish-contents" id="publish-contents"></ul>
@@ -721,18 +727,14 @@
         <div class="publish-heading" id="publish-heading-handoff">Files ready</div>
         <ul class="publish-files" id="publish-files"></ul>
         <button class="btn-primary" id="publish-download">Download all</button>
-        <ol class="publish-steps">
-          <li>Open neocities.org/dashboard</li>
-          <li>Open the folder <code>aimless</code>, or create it</li>
-          <li>Upload the new or changed files</li>
-        </ol>
-        <button id="publish-open-dashboard">Open Neocities dashboard</button>
+        <ol class="publish-steps" id="publish-steps"></ol>
+        <button id="publish-open-host" hidden></button>
         <div class="confirm-actions">
           <button id="btn-publish-done" class="btn-primary">Done</button>
         </div>
       </div>
       <div class="publish-step" id="publish-step-published" hidden>
-        <div class="publish-heading" id="publish-heading-published">Neocities page</div>
+        <div class="publish-heading" id="publish-heading-published">Your web page</div>
         <div class="publish-url" id="publish-url-published"></div>
         <div class="publish-url publish-url-index" id="publish-index-url" hidden></div>
         <p class="publish-note">Built <span id="publish-built-when"></span>.</p>
@@ -999,7 +1001,7 @@
     const elStops = document.getElementById('setting-stops');
     const elBudget = document.getElementById('setting-budget');
     const elVoice = document.getElementById('setting-voice');
-    const DEFAULT_PREFS = { stops: 5, budgetMin: 45, voice: 'crow', skin: 'default', filter: 'original', hiddenFilters: [], seenPhotoSelectHint: false, neocitiesSitename: '', neocitiesIndex: '' };
+    const DEFAULT_PREFS = { stops: 5, budgetMin: 45, voice: 'crow', skin: 'default', filter: 'original', hiddenFilters: [], seenPhotoSelectHint: false, siteBase: '', neocitiesIndex: '', cardMark: true };
 
     // Scroll-snap wheel: keeps `input` (a hidden input carrying the setting's
     // value) in sync with the centred item, and saves prefs on user scrolls.

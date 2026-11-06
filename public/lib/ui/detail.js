@@ -24,7 +24,7 @@ import { FILTERS, getFilter, allFilters, visibleFilters, setImportedFilters, imp
          effectiveFilterId, effectiveSpec } from '../filters.js';
 import { renderToCanvas } from '../engine/canvas.js';
 import { renderPhotoToCanvas } from '../filter-renderer.js';
-import { nextBuildSlug, normalizeSitename, neocitiesTargets, defaultDescription, ogHeadHtml, publishedEntries, indexHtml, manifestText } from '../publish.js';
+import { nextBuildSlug, normalizeSiteBase, siteBaseFromPrefs, siteLabel, siteTargets, uploadSteps, defaultDescription, ogHeadHtml, publishedEntries, indexHtml, manifestText } from '../publish.js';
 import { traceSVG } from '../markup.js';
 import { askConfirm, askText } from './modals.js';
 
@@ -69,8 +69,9 @@ document.head.appendChild(skinStyle);
 let currentSkin = 'default';
 let currentFilter = 'original';
 let seenPhotoSelectHint = false;
-let neocitiesSitename = '';
+let siteBase = '';   // the walker's website, as a base URL ending in '/'
 let neocitiesIndex = '';   // last emitted aimless/index.html - "(unchanged)" tag compares against it
+let cardMark = true;   // www.aimless.earth on the share card and OG image (opt-out)
 
 function applySkin() {
   skinStyle.textContent = scopeCSS(getSkin(currentSkin).css, '#detail-content');
@@ -391,8 +392,8 @@ elFilterFile.addEventListener('change', async () => {
   applyFilterImport(await file.text());
 });
 
-// --- Publish dialog (Neocities hand-off) ---
-// One modal, three steps: site name, consent + description, hand-off.
+// --- Publish dialog (website hand-off) ---
+// One modal, three steps: site address, consent + description, hand-off.
 const publishOverlay = document.getElementById('publish-overlay');
 const publishBox = document.getElementById('publish-box');
 const publishSteps = {
@@ -401,8 +402,8 @@ const publishSteps = {
   handoff: document.getElementById('publish-step-handoff'),
   published: document.getElementById('publish-step-published'),
 };
-const sitenameInput = document.getElementById('neocities-sitename');
-const sitenameError = document.getElementById('neocities-error');
+const siteInput = document.getElementById('site-address');
+const siteError = document.getElementById('site-error');
 const publishDesc = document.getElementById('publish-desc');
 const publishCount = document.getElementById('publish-count');
 let publishBuilt = null;   // { htmlName, imageName, htmlBlob, jpgBlob }
@@ -411,8 +412,8 @@ function showPublishStep(step) {
   for (const [name, el] of Object.entries(publishSteps)) el.hidden = name !== step;
   publishBox.setAttribute('aria-labelledby', `publish-heading-${step}`);
   if (step === 'site') {
-    sitenameError.hidden = true;
-    sitenameInput.focus();
+    siteError.hidden = true;
+    siteInput.focus();
   }
   if (step === 'consent') renderPublishConsent();
   if (step === 'published') renderPublishedStep();
@@ -434,16 +435,16 @@ document.addEventListener('keydown', (e) => {
 
 // Site step: validate, persist, go straight on to consent.
 function savePublishSite() {
-  const name = normalizeSitename(sitenameInput.value);
-  if (!name) { sitenameError.hidden = false; return; }
-  sitenameError.hidden = true;
-  neocitiesSitename = name;
+  const base = normalizeSiteBase(siteInput.value);
+  if (!base) { siteError.hidden = false; return; }
+  siteError.hidden = true;
+  siteBase = base;
   savePrefs();
   showPublishStep('consent');
 }
 document.getElementById('btn-publish-site-save').addEventListener('click', savePublishSite);
 document.getElementById('btn-publish-site-cancel').addEventListener('click', closePublish);
-sitenameInput.addEventListener('keydown', (e) => {
+siteInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') savePublishSite();
 });
 
@@ -451,7 +452,7 @@ sitenameInput.addEventListener('keydown', (e) => {
 function renderPublishConsent() {
   const walk = currentDetailWalk;
   if (!walk) return;
-  const targets = neocitiesTargets(neocitiesSitename, nextBuildSlug(walk));
+  const targets = siteTargets(siteBase, nextBuildSlug(walk));
   document.getElementById('publish-url').textContent = targets.pageUrl;
   const contents = document.getElementById('publish-contents');
   contents.replaceChildren(...['Your photos', 'The route drawing', 'The words'].map((t) => {
@@ -468,7 +469,7 @@ publishDesc.addEventListener('input', () => {
   publishCount.textContent = `${publishDesc.value.length}/200`;
 });
 document.getElementById('publish-change-site').addEventListener('click', () => {
-  sitenameInput.value = neocitiesSitename;
+  siteInput.value = siteBase;
   showPublishStep('site');
 });
 document.getElementById('btn-publish-consent-cancel').addEventListener('click', closePublish);
@@ -486,7 +487,7 @@ async function buildIndexHtml() {
   const db = await dbPromise;
   const walks = db ? await all(db, 'walks') : [currentDetailWalk].filter(Boolean);
   const str = indexHtml(publishedEntries(walks), {
-    subtitle: `walks on ${neocitiesSitename}.neocities.org`,
+    subtitle: `walks on ${siteLabel(siteBase)}`,
   });
   const unchanged = str === neocitiesIndex;
   neocitiesIndex = str;
@@ -500,7 +501,7 @@ document.getElementById('btn-publish-build').addEventListener('click', async () 
   if (!walk) return;
   const builds = (walk.neocities?.builds ?? 0) + 1;
   const slug = nextBuildSlug(walk);
-  const targets = neocitiesTargets(neocitiesSitename, slug);
+  const targets = siteTargets(siteBase, slug);
   let description = publishDesc.value.replace(/\s+/g, ' ').trim().slice(0, 200);
   if (!description) description = defaultDescription(walk);
 
@@ -528,7 +529,7 @@ document.getElementById('btn-publish-build').addEventListener('click', async () 
     const html = await buildCurrentDetailHTML({ title, headHtml, indexHref: targets.indexUrl });
 
     walk.neocities = {
-      sitename: neocitiesSitename,
+      base: siteBase,
       builds,
       slug,
       pageUrl: targets.pageUrl,
@@ -570,7 +571,7 @@ document.getElementById('btn-publish-build').addEventListener('click', async () 
       li.append(nameEl, sizeEl);
       return li;
     }));
-    document.getElementById('neocities-sub').textContent = targets.pageUrl.replace(/^https:\/\//, '');
+    renderUploadSteps();
     showPublishStep('handoff');
   } finally {
     toastRelease();
@@ -578,8 +579,21 @@ document.getElementById('btn-publish-build').addEventListener('click', async () 
 });
 
 // Hand-off step: download all built files (staggered - immediate
-// multi-clicks get swallowed by some browsers), then upload via the
-// dashboard.
+// multi-clicks get swallowed by some browsers), then upload. The steps
+// and the optional host button follow the site address.
+let uploadLink = null;
+function renderUploadSteps() {
+  const { steps, link } = uploadSteps(siteBase);
+  document.getElementById('publish-steps').replaceChildren(...steps.map((t) => {
+    const li = document.createElement('li');
+    li.textContent = t;
+    return li;
+  }));
+  const btn = document.getElementById('publish-open-host');
+  btn.hidden = !link;
+  if (link) btn.textContent = link.label;
+  uploadLink = link;
+}
 document.getElementById('publish-download').addEventListener('click', () => {
   if (!publishBuilt) return;
   const parts = [
@@ -589,8 +603,8 @@ document.getElementById('publish-download').addEventListener('click', () => {
   ];
   parts.forEach(([name, blob, type], i) => setTimeout(() => downloadFile(name, blob, type), i * 300));
 });
-document.getElementById('publish-open-dashboard').addEventListener('click', () => {
-  window.open('https://neocities.org/dashboard', '_blank', 'noopener');
+document.getElementById('publish-open-host').addEventListener('click', () => {
+  if (uploadLink) window.open(uploadLink.url, '_blank', 'noopener');
 });
 document.getElementById('btn-publish-done').addEventListener('click', closePublish);
 
@@ -600,8 +614,8 @@ function renderPublishedStep() {
   if (!pub) return;
   document.getElementById('publish-url-published').textContent = pub.pageUrl;
   const indexEl = document.getElementById('publish-index-url');
-  indexEl.hidden = !pub.sitename;
-  if (pub.sitename) indexEl.textContent = `index: https://${pub.sitename}.neocities.org/aimless/`;
+  indexEl.hidden = false;
+  indexEl.textContent = `index: ${pub.pageUrl.replace(/[^/]*$/, '')}`;
   document.getElementById('publish-built-when').textContent = pub.builtAt ? formatWalkDate(pub.builtAt) : 'earlier';
   document.getElementById('publish-listed').checked = pub.indexed === true;
 }
@@ -1486,9 +1500,11 @@ function loadImage(src) {
 
 // The shared card body: background, cover-fit photo, projected route.
 // w x h is 1080x1080 for the share PNG, 1200x630 for the OG JPEG.
+// Resolves true when a photo was drawn (drawMark picks its ink from that).
 async function drawCard(ctx, w, h, walk, photo, card) {   // photo: { dataUrl?, blob? } | null
   ctx.fillStyle = card.bg;
   ctx.fillRect(0, 0, w, h);
+  let onPhoto = false;
 
   if (photo) {
     // Cover-fit the photo to fill the canvas. A legacy IndexedDB blob
@@ -1500,6 +1516,7 @@ async function drawCard(ctx, w, h, walk, photo, card) {   // photo: { dataUrl?, 
     if (img) {
       const rendered = await renderPhotoToCanvas(img, { spec: effectiveSpec(photo, 'original') }, w, h);
       ctx.drawImage(rendered, 0, 0);
+      onPhoto = true;
     }
     if (!photo.dataUrl) URL.revokeObjectURL(src);
   }
@@ -1508,7 +1525,7 @@ async function drawCard(ctx, w, h, walk, photo, card) {   // photo: { dataUrl?, 
   const plan = [walk.origin, ...(walk.stops || [])].filter(Boolean);
   const trace = walk.trace || [];
   const all = [...trace, ...plan];
-  if (!all.length) return;
+  if (!all.length) return onPhoto;
   const b = bounds(all);
   const rangeLat = (b.maxLat - b.minLat) || 0.001;
   const rangeLng = (b.maxLng - b.minLng) || 0.001;
@@ -1555,6 +1572,29 @@ async function drawCard(ctx, w, h, walk, photo, card) {   // photo: { dataUrl?, 
     ctx.fillStyle = i === 0 ? card.accent : card.fg;
     ctx.fill();
   });
+  return onPhoto;
+}
+
+// The attribution mark, bottom right in the skin's card typeface: white
+// with a soft shadow over a photo, the skin's ink on a bare card.
+// Opt-out via the export sheet checkbox (cardMark pref).
+const MARK_TEXT = 'www.aimless.earth';
+function drawMark(ctx, w, h, card, onPhoto) {
+  const size = Math.round(Math.max(w, h) * 0.022);
+  const pad = Math.round(size * 1.1);
+  const family = card.font.replace(/^.*?\d+px\s*/, '') || 'sans-serif';
+  ctx.save();
+  ctx.font = `400 ${size}px ${family}`;
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'alphabetic';
+  ctx.globalAlpha = 0.85;
+  if (onPhoto) {
+    ctx.shadowColor = 'rgba(0,0,0,0.6)';
+    ctx.shadowBlur = size * 0.4;
+  }
+  ctx.fillStyle = onPhoto ? '#FFFFFF' : card.fg;
+  ctx.fillText(MARK_TEXT, w - pad, h - pad);
+  ctx.restore();
 }
 
 async function buildShareCard(walk, photo) {   // photo: { dataUrl?, blob? } | null
@@ -1563,7 +1603,8 @@ async function buildShareCard(walk, photo) {   // photo: { dataUrl?, blob? } | n
   canvas.width = CARD_SIZE;
   canvas.height = CARD_SIZE;
   const ctx = canvas.getContext('2d');
-  await drawCard(ctx, CARD_SIZE, CARD_SIZE, walk, photo, card);
+  const onPhoto = await drawCard(ctx, CARD_SIZE, CARD_SIZE, walk, photo, card);
+  if (cardMark) drawMark(ctx, CARD_SIZE, CARD_SIZE, card, onPhoto);
   return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
 }
 
@@ -1575,7 +1616,8 @@ async function buildOgCard(walk, photo) {   // photo: { dataUrl?, blob? } | null
   canvas.width = 1200;
   canvas.height = 630;
   const ctx = canvas.getContext('2d');
-  await drawCard(ctx, 1200, 630, walk, photo, card);
+  const onPhoto = await drawCard(ctx, 1200, 630, walk, photo, card);
+  if (cardMark) drawMark(ctx, 1200, 630, card, onPhoto);
   return new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85));
 }
 
@@ -1620,10 +1662,7 @@ document.getElementById('btn-detail-export').addEventListener('click', () => {
   document.getElementById('row-add-text').hidden = !eligible;
   document.getElementById('row-remove-text').hidden = !(eligible && hasText);
   document.getElementById('add-text-title').textContent = hasText ? 'Replace text' : 'Add text';
-  const published = currentDetailWalk.neocities?.pageUrl;
-  document.getElementById('neocities-sub').textContent = published
-    ? published.replace(/^https:\/\//, '')
-    : 'Build a page for your Neocities site';
+  document.getElementById('export-mark').checked = cardMark;
   exportSheetCtl.open();
 });
 
@@ -1647,6 +1686,11 @@ document.addEventListener('keydown', (e) => {
   if (exportSheetCtl.isOpen()) exportSheetCtl.close();
   if (filtersSheetCtl.isOpen()) filtersSheetCtl.close();
   if (!photoHintOverlay.hidden) dismissPhotoHint();
+});
+
+document.getElementById('export-mark').addEventListener('change', (e) => {
+  cardMark = e.target.checked;
+  savePrefs();
 });
 
 // Sheet row dispatch. Each action body is the verbatim logic from the old
@@ -1698,7 +1742,7 @@ exportSheet.addEventListener('click', async (e) => {
       try {
         await navigator.share({
           files: [cardFile],
-          text: 'Go nowhere. Somewhere.\n\nhttps://aimless.earth',
+          text: 'Go nowhere. Somewhere.\n\nhttps://aimless.earth #aimlesswalk',
           title: 'my aimless walk',
         });
       } catch (err) {
@@ -1710,9 +1754,9 @@ exportSheet.addEventListener('click', async (e) => {
     } else {
       downloadFile(filename, cardBlob, 'image/png');
     }
-  } else if (action === 'neocities') {
-    sitenameInput.value = neocitiesSitename;
-    openPublish(neocitiesSitename ? (currentDetailWalk.neocities?.pageUrl ? 'published' : 'consent') : 'site');
+  } else if (action === 'website') {
+    siteInput.value = siteBase;
+    openPublish(siteBase ? (currentDetailWalk.neocities?.pageUrl ? 'published' : 'consent') : 'site');
   } else if (action === 'add-text') {
     myVoiceFile.click();
   } else if (action === 'remove-text') {
@@ -1757,8 +1801,9 @@ export function detailPrefValues() {
     filter: currentFilter,
     hiddenFilters: hiddenFilters(),
     seenPhotoSelectHint,
-    neocitiesSitename,
+    siteBase,
     neocitiesIndex,
+    cardMark,
   };
 }
 
@@ -1769,8 +1814,9 @@ export async function loadDetailPrefs(prefs) {
   currentSkin = prefs.skin ?? 'default';
   currentFilter = prefs.filter ?? 'original';
   seenPhotoSelectHint = prefs.seenPhotoSelectHint ?? false;
-  neocitiesSitename = prefs.neocitiesSitename ?? '';
+  siteBase = siteBaseFromPrefs(prefs);
   neocitiesIndex = prefs.neocitiesIndex ?? '';
+  cardMark = prefs.cardMark ?? true;
   setHiddenFilters(prefs.hiddenFilters);
   if (isFilterHidden(currentFilter)) currentFilter = visibleFilters()[0]?.id || 'original';
   renderManageList();

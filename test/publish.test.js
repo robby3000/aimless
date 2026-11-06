@@ -1,12 +1,17 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  NEOCITIES_FOLDER,
+  PUBLISH_FOLDER,
   OG_TAGLINE,
   walkSlug,
   nextBuildSlug,
   normalizeSitename,
-  neocitiesTargets,
+  normalizeSiteBase,
+  siteLabel,
+  siteKind,
+  siteBaseFromPrefs,
+  siteTargets,
+  uploadSteps,
   walkDescription,
   defaultDescription,
   ogHeadHtml,
@@ -33,8 +38,8 @@ const WALK = {
   ],
 };
 
-test('NEOCITIES_FOLDER is the fixed upload folder', () => {
-  assert.equal(NEOCITIES_FOLDER, 'aimless');
+test('PUBLISH_FOLDER is the fixed upload folder', () => {
+  assert.equal(PUBLISH_FOLDER, 'aimless');
 });
 
 test('walkSlug is stable for the same walk and matches the format', () => {
@@ -109,8 +114,8 @@ test('normalizeSitename accepts 32 chars', () => {
   assert.equal(normalizeSitename('x'.repeat(32)), 'x'.repeat(32));
 });
 
-test('neocitiesTargets builds urls, paths and names', () => {
-  assert.deepEqual(neocitiesTargets('rob', 'walk-20261004-abc'), {
+test('siteTargets builds urls, paths and names for a Neocities base', () => {
+  assert.deepEqual(siteTargets('https://rob.neocities.org/', 'walk-20261004-abc'), {
     pageUrl: 'https://rob.neocities.org/aimless/walk-20261004-abc.html',
     imageUrl: 'https://rob.neocities.org/aimless/walk-20261004-abc.jpg',
     indexUrl: 'https://rob.neocities.org/aimless/',
@@ -119,6 +124,76 @@ test('neocitiesTargets builds urls, paths and names', () => {
     htmlName: 'walk-20261004-abc.html',
     imageName: 'walk-20261004-abc.jpg',
   });
+});
+
+test('siteTargets keeps a subpath base (GitHub Pages project site)', () => {
+  const t = siteTargets('https://rob.github.io/walks/', 'walk-x');
+  assert.equal(t.pageUrl, 'https://rob.github.io/walks/aimless/walk-x.html');
+  assert.equal(t.imageUrl, 'https://rob.github.io/walks/aimless/walk-x.jpg');
+  assert.equal(t.indexUrl, 'https://rob.github.io/walks/aimless/');
+  assert.equal(t.htmlPath, 'aimless/walk-x.html');
+});
+
+test('normalizeSiteBase treats a bare name as Neocities shorthand', () => {
+  assert.equal(normalizeSiteBase('rob'), 'https://rob.neocities.org/');
+  assert.equal(normalizeSiteBase('  My-Site '), 'https://my-site.neocities.org/');
+  assert.equal(normalizeSiteBase('bad_name'), null);
+});
+
+test('normalizeSiteBase accepts addresses with or without a scheme', () => {
+  assert.equal(normalizeSiteBase('rob.neocities.org'), 'https://rob.neocities.org/');
+  assert.equal(normalizeSiteBase('https://Rob.Neocities.ORG'), 'https://rob.neocities.org/');
+  assert.equal(normalizeSiteBase('rob.github.io/walks'), 'https://rob.github.io/walks/');
+  assert.equal(normalizeSiteBase('https://example.com/a/b//'), 'https://example.com/a/b/');
+  assert.equal(normalizeSiteBase('example.com:8443'), 'https://example.com:8443/');
+});
+
+test('normalizeSiteBase keeps a typed http scheme', () => {
+  assert.equal(normalizeSiteBase('http://example.com/'), 'http://example.com/');
+});
+
+test('normalizeSiteBase drops a pasted index.html, aimless folder, query and hash', () => {
+  assert.equal(normalizeSiteBase('https://rob.neocities.org/aimless/'), 'https://rob.neocities.org/');
+  assert.equal(normalizeSiteBase('rob.github.io/walks/aimless/index.html'), 'https://rob.github.io/walks/');
+  assert.equal(normalizeSiteBase('https://example.com/index.html?x=1#y'), 'https://example.com/');
+});
+
+test('normalizeSiteBase rejects what cannot be a public site address', () => {
+  for (const bad of ['', '  ', null, undefined, 'ftp://example.com', 'localhost:8080', 'https://localhost/',
+    'https://user:pw@example.com/', 'exa mple.com', 'https://x..y/', 'javascript:alert(1)']) {
+    assert.equal(normalizeSiteBase(bad), null, JSON.stringify(bad));
+  }
+});
+
+test('siteLabel strips the scheme and trailing slash', () => {
+  assert.equal(siteLabel('https://rob.neocities.org/'), 'rob.neocities.org');
+  assert.equal(siteLabel('http://rob.github.io/walks/'), 'rob.github.io/walks');
+});
+
+test('siteKind recognises Neocities and GitHub Pages hosts', () => {
+  assert.equal(siteKind('https://rob.neocities.org/'), 'neocities');
+  assert.equal(siteKind('https://rob.github.io/walks/'), 'github');
+  assert.equal(siteKind('https://example.com/'), 'other');
+  assert.equal(siteKind('https://neocities.org.example.com/'), 'other');
+});
+
+test('siteBaseFromPrefs migrates the old Neocities sitename pref', () => {
+  assert.equal(siteBaseFromPrefs({ neocitiesSitename: 'rob' }), 'https://rob.neocities.org/');
+  assert.equal(siteBaseFromPrefs({ siteBase: 'https://example.com/', neocitiesSitename: 'rob' }), 'https://example.com/');
+  assert.equal(siteBaseFromPrefs({ neocitiesSitename: '' }), '');
+  assert.equal(siteBaseFromPrefs({}), '');
+  assert.equal(siteBaseFromPrefs(undefined), '');
+});
+
+test('uploadSteps tailors the hand-off to the host', () => {
+  const neo = uploadSteps('https://rob.neocities.org/');
+  assert.equal(neo.link.url, 'https://neocities.org/dashboard');
+  assert.ok(neo.steps.some((s) => s.includes('aimless')));
+  const gh = uploadSteps('https://rob.github.io/walks/');
+  assert.equal(gh.link.url, 'https://github.com/rob?tab=repositories');
+  const other = uploadSteps('https://example.com/blog/');
+  assert.equal(other.link, null);
+  assert.ok(other.steps[0].includes('example.com/blog'));
 });
 
 test('walkDescription includes date, distance, reached count and voice', () => {
@@ -240,7 +315,7 @@ test('ogHeadHtml emits og:url alone when only url is supplied', () => {
   assert.ok(!html.includes('name="twitter:image"'));
 });
 
-const PUB = { sitename: 'rob', slug: walkSlug(WALK), builds: 1, builtAt: STARTED + 999999, indexed: true };
+const PUB = { base: 'https://rob.neocities.org/', slug: walkSlug(WALK), builds: 1, builtAt: STARTED + 999999, indexed: true };
 
 test('publishedEntries keeps only indexed walks, newest first', () => {
   const older = { ...WALK, id: 'walk-1796941200001', neocities: { ...PUB, slug: 'walk-a', builtAt: 100 } };
@@ -292,7 +367,7 @@ test('indexHtml renders an empty state with no entries', () => {
 
 test('manifestText lists relative page and image paths per listed walk', () => {
   const text = manifestText([{ ...WALK, neocities: PUB }]);
-  assert.ok(text.startsWith('All paths relative to site root.'));
+  assert.ok(text.startsWith('All paths relative to the site address.'));
   assert.ok(text.includes(`aimless/${PUB.slug}.html | ${WALK.seed} | October 4, 2026`));
   assert.ok(text.includes('| voice: The Crow'));
   assert.ok(text.includes(`aimless/${PUB.slug}.jpg (preview image)`));

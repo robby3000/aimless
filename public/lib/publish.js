@@ -1,6 +1,7 @@
-// Publish helpers for handing a walk keepsake to a Neocities site:
-// slug, sitename validation, target URLs, description, OG head tags,
-// the site index page and the file-list manifest.
+// Publish helpers for handing a walk keepsake to the walker's own website
+// (Neocities, GitHub Pages or any static host): slug, site address
+// validation, target URLs, upload steps, description, OG head tags, the
+// site index page and the file-list manifest.
 // Pure: takes data, returns strings. No DOM, no storage.
 
 import { esc, formatWalkDate, voiceName, logoDataUri, iconsHeadHtml } from './export.js';
@@ -8,8 +9,8 @@ import { BASE_CSS } from './skins.js';
 import { formatKm } from './geo.js';
 import { unreachableRate } from './proximity.js';
 
-/** Folder every published walk page lives under on the Neocities site. */
-export const NEOCITIES_FOLDER = 'aimless';
+/** Folder every published walk page lives under, at the site address. */
+export const PUBLISH_FOLDER = 'aimless';
 
 /** Tagline appended to every generated description and OG description. */
 export const OG_TAGLINE = 'Created with Aimless.earth. Go Nowhere, Somewhere.';
@@ -57,18 +58,99 @@ export function normalizeSitename(raw) {
   return SITENAME_RE.test(s) ? s : null;
 }
 
-/** URLs, upload paths and bare filenames for a sitename + slug. */
-export function neocitiesTargets(sitename, slug) {
+const HOST_RE = /^[a-z0-9-]+(\.[a-z0-9-]+)+$/;
+
+/**
+ * Accept a site address as typed or pasted and return its base URL
+ * (scheme, lowercased host, path ending in '/') or null. A bare name with
+ * no dot, colon or slash is Neocities shorthand. A pasted trailing
+ * `index.html` or `aimless/` folder is dropped, since the folder is added
+ * per build. A typed http:// is kept; anything else defaults to https.
+ */
+export function normalizeSiteBase(raw) {
+  const s = String(raw ?? '').trim();
+  if (!s) return null;
+  if (!/[.:/]/.test(s)) {
+    const name = normalizeSitename(s);
+    return name ? `https://${name}.neocities.org/` : null;
+  }
+  let url;
+  try {
+    url = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(s) ? s : `https://${s}`);
+  } catch {
+    return null;
+  }
+  if (!/^https?:$/.test(url.protocol) || url.username || url.password || !HOST_RE.test(url.hostname)) return null;
+  let path = url.pathname.replace(/\/index\.html?$/i, '/').replace(/\/+$/, '');
+  if (path.split('/').pop().toLowerCase() === PUBLISH_FOLDER) path = path.slice(0, -PUBLISH_FOLDER.length - 1);
+  return `${url.protocol}//${url.host}${path}/`;
+}
+
+/** The base URL as shown to people: no scheme, no trailing slash. */
+export function siteLabel(base) {
+  return String(base).replace(/^https?:\/\//, '').replace(/\/$/, '');
+}
+
+/** 'neocities' | 'github' | 'other', from the base URL's host. */
+export function siteKind(base) {
+  const host = new URL(base).hostname;
+  if (host.endsWith('.neocities.org')) return 'neocities';
+  if (host.endsWith('.github.io')) return 'github';
+  return 'other';
+}
+
+/**
+ * The saved site address. Prefs from before any-host publishing stored a
+ * bare Neocities name (`neocitiesSitename`); it becomes its base URL.
+ */
+export function siteBaseFromPrefs(prefs) {
+  if (prefs?.siteBase) return prefs.siteBase;
+  const name = normalizeSitename(prefs?.neocitiesSitename);
+  return name ? `https://${name}.neocities.org/` : '';
+}
+
+/** URLs, upload paths and bare filenames for a site base URL + slug. */
+export function siteTargets(base, slug) {
   const htmlName = `${slug}.html`;
   const imageName = `${slug}.jpg`;
+  const folder = `${base}${PUBLISH_FOLDER}/`;
   return {
-    pageUrl: `https://${sitename}.neocities.org/${NEOCITIES_FOLDER}/${htmlName}`,
-    imageUrl: `https://${sitename}.neocities.org/${NEOCITIES_FOLDER}/${imageName}`,
-    indexUrl: `https://${sitename}.neocities.org/${NEOCITIES_FOLDER}/`,
-    htmlPath: `${NEOCITIES_FOLDER}/${htmlName}`,
-    imagePath: `${NEOCITIES_FOLDER}/${imageName}`,
+    pageUrl: `${folder}${htmlName}`,
+    imageUrl: `${folder}${imageName}`,
+    indexUrl: folder,
+    htmlPath: `${PUBLISH_FOLDER}/${htmlName}`,
+    imagePath: `${PUBLISH_FOLDER}/${imageName}`,
     htmlName,
     imageName,
+  };
+}
+
+/**
+ * The hand-off instructions for a site: numbered steps plus an optional
+ * button ({ label, url }) that opens the host's upload page.
+ */
+export function uploadSteps(base) {
+  const kind = siteKind(base);
+  if (kind === 'neocities') {
+    return {
+      steps: ['Open neocities.org/dashboard', `Open the folder ${PUBLISH_FOLDER}, or create it`, 'Upload the new or changed files'],
+      link: { label: 'Open Neocities dashboard', url: 'https://neocities.org/dashboard' },
+    };
+  }
+  if (kind === 'github') {
+    const user = new URL(base).hostname.split('.')[0];
+    return {
+      steps: [
+        'Open the repository that publishes this site',
+        `Open the folder ${PUBLISH_FOLDER}, or create it`,
+        'Add file, Upload files, then commit. The page is live a minute or two later',
+      ],
+      link: { label: 'Open GitHub', url: `https://github.com/${user}?tab=repositories` },
+    };
+  }
+  return {
+    steps: [`Upload the files to a folder called ${PUBLISH_FOLDER} at ${siteLabel(base)}`, 'Keep the file names exactly as they are'],
+    link: null,
   };
 }
 
@@ -201,10 +283,10 @@ ${BASE_CSS}
  * title, date, description, and the preview image's path.
  */
 export function manifestText(walks) {
-  const lines = ['All paths relative to site root.'];
+  const lines = ['All paths relative to the site address.'];
   for (const e of publishedEntries(walks)) {
-    lines.push(`${NEOCITIES_FOLDER}/${e.slug}.html | ${e.title} | ${formatWalkDate(e.started)} | ${e.description.replace(/\s+/g, ' ')}${e.voice ? ` | voice: ${e.voice}` : ''}`);
-    lines.push(`${NEOCITIES_FOLDER}/${e.slug}.jpg (preview image)`);
+    lines.push(`${PUBLISH_FOLDER}/${e.slug}.html | ${e.title} | ${formatWalkDate(e.started)} | ${e.description.replace(/\s+/g, ' ')}${e.voice ? ` | voice: ${e.voice}` : ''}`);
+    lines.push(`${PUBLISH_FOLDER}/${e.slug}.jpg (preview image)`);
   }
   return lines.join('\n');
 }

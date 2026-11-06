@@ -85,7 +85,8 @@ public/
     walk-nav.js         # navigation guard: prevents bottom-nav taps from canceling a walk
     surprise.js         # Surprise rail action: seeded-random effect stack onto one photo
     oracle.js           # oracle voices: coordinate -> 4 pool indices (titles/l1/l2/l3)
-    publish.js          # Neocities hand-off: slug, sitename, OG head, target URLs
+    publish.js          # website hand-off (Neocities, GitHub Pages, any host): slug,
+                        # site address -> base URL, upload steps, OG head, target URLs
     ui/
       modals.js         # promise dialogs: askConfirm, askText (self-wiring, no deps)
       detail.js         # Walk Detail: artifact view, skin/filter rails, filter management,
@@ -195,7 +196,7 @@ Photo filters are Filter Specs (`{id, name, spec}` in `filters.js`), rendered to
 there is no CSS/SVG filter pipeline. Runtime-imported specs persist in the `filters` store (Dexie
 schema v2) and resolve through `getFilter` after the built-ins. Exported keepsakes must stay free
 of scripts and filter machinery — `export.test.js` asserts it. Published
-Neocities pages are the same artifact plus OpenGraph head tags (`opts.title` /
+pages for the walker's website are the same artifact plus OpenGraph head tags (`opts.title` /
 `opts.headHtml`); still script-free, still covered by the same test.
 
 **Per-photo filter resolution** is `effectiveSpec(photo, fallback)`: `photo.filterSpec`
@@ -238,8 +239,11 @@ paths (button, backdrop, Escape) must honor the checkbox.
   a scan of called names misses them.
 
 **Artifact footer contract** (`export.js`, test-pinned): `Created with Aimless` plus, for walks
-with a published Neocities page, a `Walk index` link derived from `walk.neocities.pageUrl`.
-Published builds pass `opts.indexHref` from `neocitiesTargets().indexUrl` (`…/aimless/`).
+with a published web page, a `Walk index` link derived from `walk.neocities.pageUrl`.
+Published builds pass `opts.indexHref` from `siteTargets().indexUrl` (`…/aimless/`). The publish
+data stays on `walk.neocities` (now with `base`, the site's base URL) even for non-Neocities
+hosts; renaming stored data would cost a migration for nothing visible. The old
+`neocitiesSitename` pref is read through `siteBaseFromPrefs`.
 Nothing else goes in the footer: Neocities rejects `.kml` uploads, and embedded route links
 leaked GPS into every shared copy — footer KML was removed for both reasons. Route export
 survives only as the explicit **Export Route** action (a real `.kml` download).
