@@ -78,6 +78,14 @@ test('scopeCSS scopes rules inside @media and keeps the prelude', () => {
   assert.ok(out.includes('#d::after {'));
 });
 
+test('scopeCSS scopes rules inside @container and keeps the prelude', () => {
+  // A skin can respond to its own width (body in the export,
+  // #detail-content in-app); unscoped inner rules would leak app-wide.
+  const out = scopeCSS('@container (min-width: 760px) { .stop { display: grid; } }', '#d');
+  assert.ok(out.includes('@container (min-width: 760px) {'));
+  assert.ok(out.includes('#d .stop {'));
+});
+
 test('scopeCSS passes @keyframes through untouched', () => {
   // Keyframe selectors (from/to/percentages) must never be prefixed.
   const css = '@keyframes drift { 0%, 100% { transform: translateX(-2%); } 50% { transform: translateX(2%); } }';

@@ -1188,7 +1188,7 @@ export function getSkin(id) {
  * `body` and `:root` map onto the scope itself (the latter so custom
  * properties stay defined), as do body's pseudo-elements (`body::before`
  * scopes to `#scope::before`, which keeps viewport-fixed overlays working
- * in-app). @media/@supports blocks keep their prelude and have their inner
+ * in-app). @media/@supports/@container blocks keep their prelude and have their inner
  * rules scoped; other @-rules (e.g. @keyframes) pass through untouched.
  * The parser is a brace matcher - keep braces out of comments.
  */
@@ -1215,7 +1215,7 @@ function scopeBlock(css, scope) {
     }
     if (depth > 0 || !prelude) return out + css.slice(i);
     const inner = css.slice(open + 1, j - 1);
-    if (/^@(media|supports)\b/.test(prelude)) {
+    if (/^@(media|supports|container)\b/.test(prelude)) {
       out += `${prelude} { ${scopeBlock(inner, scope)} }`;
     } else if (prelude.startsWith('@')) {
       out += `${prelude} { ${inner} }`;
