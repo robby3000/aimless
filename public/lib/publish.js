@@ -1,7 +1,7 @@
 // Publish helpers for handing a walk keepsake to the walker's own website
 // (Neocities, GitHub Pages or any static host): slug, site address
 // validation, target URLs, upload steps, description, OG head tags, the
-// site index page and the file-list manifest.
+// site index page, its RSS feed and the file-list manifest.
 // Pure: takes data, returns strings. No DOM, no storage.
 
 import { esc, formatWalkDate, voiceName, logoDataUri, iconsHeadHtml } from './export.js';
@@ -181,9 +181,10 @@ export function defaultDescription(walk) {
  * url and imageUrl are optional: without `url` there is no og:url, and
  * without `imageUrl` the whole og:image:* cluster and twitter:image are
  * omitted - standard exports get the reduced block until the walk is
- * published and real URLs exist to point at.
+ * published and real URLs exist to point at. feedUrl adds the RSS
+ * discovery link; pass the site feed's absolute URL on published pages.
  */
-export function ogHeadHtml({ title, description, url, imageUrl, width, height, alt }) {
+export function ogHeadHtml({ title, description, url, imageUrl, width, height, alt, feedUrl }) {
   const lines = [
     `<meta name="description" content="${esc(description)}">`,
     `<meta property="og:type" content="website">`,
@@ -206,6 +207,7 @@ export function ogHeadHtml({ title, description, url, imageUrl, width, height, a
     `<meta name="twitter:description" content="${esc(description)}">`,
   );
   if (imageUrl) lines.push(`<meta name="twitter:image" content="${esc(imageUrl)}">`);
+  if (feedUrl) lines.push(`<link rel="alternate" type="application/rss+xml" href="${esc(feedUrl)}" title="${esc(title)} RSS">`);
   return lines.join('\n');
 }
 
@@ -256,6 +258,7 @@ export function indexHtml(entries, opts = {}) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${esc(opts.title || 'Aimless walks')}</title>
+<link rel="alternate" type="application/rss+xml" href="feed.xml" title="${esc(opts.title || 'Aimless walks')} RSS">
 ${iconsHeadHtml()}
 <style>
 ${BASE_CSS}
@@ -274,6 +277,44 @@ ${BASE_CSS}
   <footer>Created with <a href="https://aimless.earth">Aimless</a>. Go Nowhere, Somewhere.</footer>
 </body>
 </html>`;
+}
+
+/**
+ * aimless/feed.xml: an RSS 2.0 feed of the same listed walks the index
+ * shows. Sits beside index.html in the site's aimless folder; every URL
+ * inside is absolute, built from the site base, so feed readers and any
+ * bot that announces new walks elsewhere can follow them from anywhere.
+ * Items follow index curation (indexed walks, newest build first); an
+ * empty feed is still a valid channel - a first-timer can upload it
+ * before their first build and subscribers see the walk when it lands.
+ */
+export function feedXml(entries, opts = {}) {
+  const folder = `${opts.base}${PUBLISH_FOLDER}/`;
+  const title = opts.title || `Aimless walks on ${siteLabel(opts.base)}`;
+  const items = entries.map((e) => {
+    const pageUrl = `${folder}${e.slug}.html`;
+    return [
+      '  <item>',
+      `    <title>${esc(e.title)}</title>`,
+      `    <link>${esc(pageUrl)}</link>`,
+      `    <guid isPermaLink="true">${esc(pageUrl)}</guid>`,
+      `    <pubDate>${new Date(e.builtAt).toUTCString()}</pubDate>`,
+      `    <description>${esc(e.description)}</description>`,
+      '  </item>',
+    ].join('\n');
+  });
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+<channel>
+  <title>${esc(title)}</title>
+  <link>${esc(folder)}</link>
+  <atom:link href="${esc(folder)}feed.xml" rel="self" type="application/rss+xml"/>
+  <description>${esc(opts.description || 'Walks made with Aimless - a walking app with no map.')}</description>
+  <lastBuildDate>${new Date(opts.now ?? Date.now()).toUTCString()}</lastBuildDate>
+${items.join('\n')}
+</channel>
+</rss>
+`;
 }
 
 /**

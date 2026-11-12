@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-07d7c982">
+  <meta name="aimless-build" content="aimless-v0.2.0-e2cf9c00">
   <meta name="description" content="A walking app with no map. An arrow leads you to hidden waypoints; at each one, a verse and a photograph.">
   <!-- Share card for aimless.earth links. og:image must be absolute:
        crawlers do not resolve relative paths, and the all-relative
@@ -567,15 +567,20 @@
       </details>
       <details>
         <summary>Can I put a walk on my own website?</summary>
-        <p>Yes, on any site you can upload files to. Open a walk from the Archive, tap export, then Your website. Aimless asks for your site's address once, then builds the files for you: the page, a preview image, and an index page that lists your published walks. Upload them to a folder called <code>aimless</code> on your site, and the page is live with a proper preview when you share the link.</p>
+        <p>Yes, on any site you can upload files to. Open a walk from the Archive, tap export, then Your website. Aimless asks for your site's address once, then builds the files for you: the page, a preview image, an index page that lists your published walks, and its RSS feed. Upload them to a folder called <code>aimless</code> on your site, and the page is live with a proper preview when you share the link.</p>
         <p>If you don't have a site yet, <a href="https://neocities.org" target="_blank" rel="noopener">Neocities</a> is free and needs no technical knowledge: type just your Neocities name. GitHub Pages works too (type <code>yourname.github.io</code>, plus the repository name if it's a project site), and so does any ordinary web host.</p>
         <p>Anyone with the link can see the page, so publish the walks you want seen. Aimless never asks for a password or API key.</p>
         <p>The preview only knows where your page lives because of the folder: keep the page and its image together in <code>aimless</code>, or the link preview loses its image.</p>
       </details>
       <details>
         <summary>What is the index page, and can I design my own?</summary>
-        <p>The <code>index.html</code> is a ready-made front page for your walks. Upload it into the <code>aimless</code> folder beside the walk pages, then link to <code>yoursite/aimless/</code> from your homepage. Keep it there: its links are relative, so moving it to your site root breaks them. A walk joins the list when you tick the index checkbox at build time, or later on the published step; Update index makes a fresh <code>index.html</code> to upload after you change your mind.</p>
+        <p>The <code>index.html</code> is a ready-made front page for your walks. Upload it into the <code>aimless</code> folder beside the walk pages, then link to <code>yoursite/aimless/</code> from your homepage. Keep it there: its links are relative, so moving it to your site root breaks them. A walk joins the list when you tick the index checkbox at build time, or later on the published step; Update index makes a fresh <code>index.html</code> to upload after you change your mind. The same file set includes <code>feed.xml</code>, an RSS feed of the listed walks that feed readers and posting bots can subscribe to.</p>
         <p>Want a page of your own design instead? Copy file list puts your published walks on the clipboard as plain text: paths, titles, dates, descriptions. Feed it to an LLM with a creative prompt, or build the page by hand. Aimless only knows about walks published from this device.</p>
+      </details>
+      <details>
+        <summary>What is the feed.xml file?</summary>
+        <p>An RSS feed of your listed walks, rebuilt whenever the index is. Upload it into the <code>aimless</code> folder with the rest and it lives at <code>yoursite/aimless/feed.xml</code>: feed readers can subscribe to it, and it is the file a posting bot would watch if you ever automate "new walk" announcements elsewhere.</p>
+        <p>It lists only the walks you already chose to show on the index, nothing more. Untick a walk and it leaves the feed on the next rebuild. If you never use it, the file costs a kilobyte and can simply be ignored.</p>
       </details>
       <details>
         <summary>Why is there no map?</summary>

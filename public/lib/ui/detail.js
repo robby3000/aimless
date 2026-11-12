@@ -24,7 +24,7 @@ import { FILTERS, getFilter, allFilters, visibleFilters, setImportedFilters, imp
          effectiveFilterId, effectiveSpec } from '../filters.js';
 import { renderToCanvas } from '../engine/canvas.js';
 import { renderPhotoToCanvas } from '../filter-renderer.js';
-import { nextBuildSlug, normalizeSiteBase, siteBaseFromPrefs, siteLabel, siteTargets, uploadSteps, defaultDescription, ogHeadHtml, publishedEntries, indexHtml, manifestText } from '../publish.js';
+import { nextBuildSlug, normalizeSiteBase, siteBaseFromPrefs, siteLabel, siteTargets, uploadSteps, defaultDescription, ogHeadHtml, publishedEntries, indexHtml, feedXml, manifestText } from '../publish.js';
 import { traceSVG } from '../markup.js';
 import { askConfirm, askText } from './modals.js';
 
@@ -71,6 +71,7 @@ let currentFilter = 'original';
 let seenPhotoSelectHint = false;
 let siteBase = '';   // the walker's website, as a base URL ending in '/'
 let neocitiesIndex = '';   // last emitted aimless/index.html - "(unchanged)" tag compares against it
+let neocitiesFeed = '';    // last emitted aimless/feed.xml - same compare
 let cardMark = true;   // www.aimless.earth on the share card and OG image (opt-out)
 
 function applySkin() {
@@ -480,19 +481,27 @@ function formatFileSize(bytes) {
     : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-// Regenerate the site index from every walk marked for it. Returns the
-// emitted string, its blob, and whether it matches the last emission
-// (stored in prefs - drives the hand-off's "unchanged" tag).
-async function buildIndexHtml() {
+// Regenerate the site index and its RSS feed from every walk marked for
+// the index. Returns the emitted strings, their blobs, and whether both
+// match the last emission (stored in prefs - drives the hand-off's
+// "unchanged" tag).
+async function buildIndexFiles() {
   const db = await dbPromise;
   const walks = db ? await all(db, 'walks') : [currentDetailWalk].filter(Boolean);
-  const str = indexHtml(publishedEntries(walks), {
+  const entries = publishedEntries(walks);
+  const str = indexHtml(entries, {
     subtitle: `walks on ${siteLabel(siteBase)}`,
   });
-  const unchanged = str === neocitiesIndex;
+  const feed = feedXml(entries, { base: siteBase });
+  const unchanged = str === neocitiesIndex && feed === neocitiesFeed;
   neocitiesIndex = str;
+  neocitiesFeed = feed;
   savePrefs();
-  return { str, blob: new Blob([str], { type: 'text/html' }), unchanged };
+  return {
+    str, blob: new Blob([str], { type: 'text/html' }),
+    feed, feedBlob: new Blob([feed], { type: 'application/rss+xml' }),
+    unchanged,
+  };
 }
 
 // Build files: OG JPEG + keepsake HTML with the OG head, then hand off.
@@ -523,10 +532,11 @@ document.getElementById('btn-publish-build').addEventListener('click', async () 
       width: 1200,
       height: 630,
       alt: `The route of an Aimless walk on ${formatWalkDate(walk.started)}`,
+      feedUrl: `${targets.indexUrl}feed.xml`,
     });
     // The published page's footer links back to the walk index alongside
     // it: an extra path for visitors who land on one page.
-    const html = await buildCurrentDetailHTML({ title, headHtml, indexHref: targets.indexUrl });
+    const html = await buildCurrentDetailHTML({ title, headHtml, indexHref: targets.indexUrl, feedHref: `${targets.indexUrl}feed.xml` });
 
     walk.neocities = {
       base: siteBase,
@@ -545,21 +555,24 @@ document.getElementById('btn-publish-build').addEventListener('click', async () 
     // the latest -N filenames - so it regenerates on every build. The
     // "unchanged" tag is mostly dormant (rebuilds renumber the slug),
     // but correct if the numbering ever stops.
-    const index = await buildIndexHtml();
+    const index = await buildIndexFiles();
 
     publishBuilt = {
       htmlName: targets.htmlName,
       imageName: targets.imageName,
       indexName: 'index.html',
+      feedName: 'feed.xml',
       htmlBlob: new Blob([html], { type: 'text/html' }),
       jpgBlob,
       indexBlob: index.blob,
+      feedBlob: index.feedBlob,
     };
     const files = document.getElementById('publish-files');
     files.replaceChildren(...[
       [targets.htmlName, publishBuilt.htmlBlob.size, ''],
       [targets.imageName, jpgBlob.size, ''],
       [publishBuilt.indexName, publishBuilt.indexBlob.size, index.unchanged ? 'unchanged' : ''],
+      [publishBuilt.feedName, publishBuilt.feedBlob.size, index.unchanged ? 'unchanged' : ''],
     ].map(([name, size, note]) => {
       const li = document.createElement('li');
       const nameEl = document.createElement('span');
@@ -600,6 +613,7 @@ document.getElementById('publish-download').addEventListener('click', () => {
     [publishBuilt.htmlName, publishBuilt.htmlBlob, 'text/html'],
     [publishBuilt.imageName, publishBuilt.jpgBlob, 'image/jpeg'],
     [publishBuilt.indexName, publishBuilt.indexBlob, 'text/html'],
+    [publishBuilt.feedName, publishBuilt.feedBlob, 'application/rss+xml'],
   ];
   parts.forEach(([name, blob, type], i) => setTimeout(() => downloadFile(name, blob, type), i * 300));
 });
@@ -628,14 +642,16 @@ document.getElementById('publish-listed').addEventListener('change', async (e) =
   walk.neocities.indexed = e.target.checked;
   const db = await dbPromise;
   if (db) await put(db, 'walks', walk);
-  const index = await buildIndexHtml();
+  const index = await buildIndexFiles();
   downloadFile('index.html', index.blob, 'text/html');
-  showToast('index.html updated - upload it to your aimless folder');
+  setTimeout(() => downloadFile('feed.xml', index.feedBlob, 'application/rss+xml'), 300);
+  showToast('index.html and feed.xml updated - upload them to your aimless folder');
 });
 document.getElementById('publish-update-index').addEventListener('click', async () => {
-  const index = await buildIndexHtml();
+  const index = await buildIndexFiles();
   downloadFile('index.html', index.blob, 'text/html');
-  showToast(index.unchanged ? 'index.html unchanged - nothing new to upload' : 'index.html downloaded');
+  setTimeout(() => downloadFile('feed.xml', index.feedBlob, 'application/rss+xml'), 300);
+  showToast(index.unchanged ? 'index and feed unchanged - nothing new to upload' : 'index.html and feed.xml downloaded');
 });
 // "Copy file list": a plain-text manifest of every published walk's
 // relative paths + titles, for pasting into an LLM to hand-build a
@@ -1803,6 +1819,7 @@ export function detailPrefValues() {
     seenPhotoSelectHint,
     siteBase,
     neocitiesIndex,
+    neocitiesFeed,
     cardMark,
   };
 }
@@ -1816,6 +1833,7 @@ export async function loadDetailPrefs(prefs) {
   seenPhotoSelectHint = prefs.seenPhotoSelectHint ?? false;
   siteBase = siteBaseFromPrefs(prefs);
   neocitiesIndex = prefs.neocitiesIndex ?? '';
+  neocitiesFeed = prefs.neocitiesFeed ?? '';
   cardMark = prefs.cardMark ?? true;
   setHiddenFilters(prefs.hiddenFilters);
   if (isFilterHidden(currentFilter)) currentFilter = visibleFilters()[0]?.id || 'original';

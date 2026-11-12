@@ -17,6 +17,7 @@ import {
   ogHeadHtml,
   publishedEntries,
   indexHtml,
+  feedXml,
   manifestText,
 } from '../public/lib/publish.js';
 
@@ -363,6 +364,57 @@ test('indexHtml renders an empty state with no entries', () => {
   const html = indexHtml([]);
   assert.ok(html.includes('No walks yet.'));
   assert.ok(!html.includes('class="idx-walk"'));
+});
+
+test('indexHtml head advertises feed.xml for feed readers', () => {
+  const html = indexHtml([]);
+  assert.ok(html.includes('<link rel="alternate" type="application/rss+xml" href="feed.xml"'));
+});
+
+test('feedXml emits a valid RSS 2.0 channel with absolute links', () => {
+  const entries = publishedEntries([{ ...WALK, neocities: PUB }]);
+  const xml = feedXml(entries, { base: 'https://rob.neocities.org/', now: STARTED });
+  assert.ok(xml.startsWith('<?xml version="1.0" encoding="UTF-8"?>'));
+  assert.ok(xml.includes('<rss version="2.0"'));
+  assert.ok(xml.includes('<title>Aimless walks on rob.neocities.org</title>'));
+  assert.ok(xml.includes('<link>https://rob.neocities.org/aimless/</link>'));
+  assert.ok(xml.includes('<atom:link href="https://rob.neocities.org/aimless/feed.xml" rel="self"'));
+  const itemUrl = `https://rob.neocities.org/aimless/${PUB.slug}.html`;
+  assert.ok(xml.includes(`<link>${itemUrl}</link>`));
+  assert.ok(xml.includes(`<guid isPermaLink="true">${itemUrl}</guid>`));
+  assert.ok(xml.includes(`<title>${WALK.seed}</title>`));
+  assert.ok(xml.includes('<pubDate>'));
+  assert.ok(xml.includes('GMT</pubDate>'));
+  // no relative links anywhere
+  assert.ok(!xml.includes(`<link>${PUB.slug}`));
+});
+
+test('feedXml builds absolute URLs under a subpath base too', () => {
+  const xml = feedXml([{ slug: 'walk-a', title: 't', started: STARTED, builtAt: STARTED, description: 'd' }],
+    { base: 'https://user.github.io/repo/', now: STARTED });
+  assert.ok(xml.includes('<link>https://user.github.io/repo/aimless/</link>'));
+  assert.ok(xml.includes('<link>https://user.github.io/repo/aimless/walk-a.html</link>'));
+});
+
+test('feedXml escapes XML in titles and descriptions', () => {
+  const xml = feedXml([{ slug: 's', title: 'a<b&"c"', started: STARTED, builtAt: 1, description: 'x < y & z' }], { base: 'https://x.example/', now: STARTED });
+  assert.ok(!xml.includes('a<b&'));
+  assert.ok(xml.includes('a&lt;b&amp;&quot;c&quot;'));
+  assert.ok(xml.includes('x &lt; y &amp; z'));
+});
+
+test('feedXml with no entries is still a well-formed empty channel', () => {
+  const xml = feedXml([], { base: 'https://x.example/', now: STARTED });
+  assert.ok(xml.includes('<channel>'));
+  assert.ok(!xml.includes('<item>'));
+  assert.ok(xml.includes('</rss>'));
+});
+
+test('ogHeadHtml adds the RSS discovery link only when feedUrl is given', () => {
+  const withFeed = ogHeadHtml({ title: 'T', description: 'D', feedUrl: 'https://x.example/aimless/feed.xml' });
+  assert.ok(withFeed.includes('<link rel="alternate" type="application/rss+xml" href="https://x.example/aimless/feed.xml"'));
+  const withoutFeed = ogHeadHtml({ title: 'T', description: 'D' });
+  assert.ok(!withoutFeed.includes('rel="alternate"'));
 });
 
 test('manifestText lists relative page and image paths per listed walk', () => {

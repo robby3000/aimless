@@ -96,6 +96,13 @@ test('the footer omits the walk index link without indexHref', async () => {
   assert.ok(!html.includes('Walk index'));
 });
 
+test('the footer links the RSS feed when feedHref is given, omits it otherwise', async () => {
+  const withFeed = await buildHTMLExport(WALK, [], '<svg></svg>', '', 'sky', { feedHref: 'https://rob.neocities.org/aimless/feed.xml' });
+  assert.ok(withFeed.includes('<a href="https://rob.neocities.org/aimless/feed.xml">RSS</a>'));
+  const withoutFeed = await buildHTMLExport(WALK, [], '<svg></svg>', '', 'sky', { indexHref: 'https://rob.neocities.org/aimless/' });
+  assert.ok(!withoutFeed.includes('feed.xml'));
+});
+
 test('the footer no longer says "self-contained"', async () => {
   const html = await buildHTMLExport(WALK, [], '<svg></svg>');
   assert.ok(!html.includes('self-contained'));

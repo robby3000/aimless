@@ -133,7 +133,8 @@ function myVoiceBlockHtml(block) {
  *   active skin's `icon` field, chosen for contrast against its background.
  * @param {object} [opts]  Options: `indexHref` links the walk's Neocities
  *   index from the footer (published walks only — standalone artifacts
- *   have no index to point at); `title` replaces the default `<title>`
+ *   have no index to point at); `feedHref` adds the site's RSS feed link
+ *   beside it; `title` replaces the default `<title>`
  *   text (escaped); `headHtml` is emitted verbatim on its own line after
  *   the viewport meta, for caller-built OG tags (see publish.js
  *   `ogHeadHtml`).
@@ -235,6 +236,7 @@ export async function buildHTMLExport(walk, photos, svgTrace, skinCss = '', icon
   // one page can reach the rest. Only emitted when the artifact knows the
   // index URL — standalone keepsakes carry no site link.
   const indexLinkHtml = opts.indexHref ? ` <a href="${esc(opts.indexHref)}">Walk index</a>` : '';
+  const feedLinkHtml = opts.feedHref ? ` <a href="${esc(opts.feedHref)}">RSS</a>` : '';
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -260,7 +262,7 @@ ${embeddedCss}
   <div class="trace">${svgTrace}</div>
   ${stopCards}
   ${myVoiceTail}
-  <footer>Created with <a href="https://aimless.earth">Aimless</a>.${indexLinkHtml}</footer>
+  <footer>Created with <a href="https://aimless.earth">Aimless</a>.${indexLinkHtml}${feedLinkHtml}</footer>
 </body>
 </html>`;
 }
