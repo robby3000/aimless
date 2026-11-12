@@ -131,9 +131,9 @@ function myVoiceBlockHtml(block) {
  *   embedded after the base styles. CSS only - no scripts, ever.
  * @param {string} [icon]  Logo variant ('light' | 'dark' | 'sky') - the
  *   active skin's `icon` field, chosen for contrast against its background.
- * @param {object} [opts]  Options: `indexHref` links the walk's Neocities
- *   index from the footer (published walks only — standalone artifacts
- *   have no index to point at); `feedHref` adds the site's RSS feed link
+ * @param {object} [opts]  Options: `indexHref` links the walk's index
+ *   from the footer (when the owner's site has an aimless folder to
+ *   point at); `feedHref` adds the site's RSS feed link
  *   beside it; `title` replaces the default `<title>`
  *   text (escaped); `headHtml` is emitted verbatim on its own line after
  *   the viewport meta, for caller-built OG tags (see publish.js

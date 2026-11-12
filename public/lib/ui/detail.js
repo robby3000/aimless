@@ -1475,11 +1475,17 @@ async function buildCurrentDetailHTML(extraOpts = {}) {
       alt: `The route of an Aimless walk on ${formatWalkDate(currentDetailWalk.started)}`,
     } : {}),
   });
-  // A walk with a published page also links its walk index from the
-  // footer - the index sits in the page's own `aimless/` folder.
-  const indexHref = currentDetailWalk.neocities?.pageUrl?.replace(/[^/]*$/, '');
+  // Footer links to the walk index and its RSS feed. A published walk
+  // links its own page's folder; an unpublished export links them too
+  // once the owner has a site address and any published build - the
+  // aimless folder exists, so the artifact can point at it.
+  const anyBuild = db ? (await all(db, 'walks')).some((w) => w.neocities?.slug) : false;
+  const indexHref = currentDetailWalk.neocities?.pageUrl?.replace(/[^/]*$/, '')
+    || (siteBase && anyBuild ? `${siteBase}aimless/` : '');
+  const feedHref = indexHref ? `${indexHref}feed.xml` : '';
   return buildHTMLExport(currentDetailWalk, rendered, svg, skin.css, skin.icon, {
     indexHref,
+    feedHref,
     headHtml,
     ...extraOpts,
   });
