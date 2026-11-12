@@ -892,6 +892,8 @@ body > nav button.active {
 .publish-url-index { font-size: 0.75rem; color: var(--fg-dim); }
 .publish-check { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--fg-dim); margin-bottom: 10px; }
 .publish-check input { accent-color: var(--accent); }
+.info-kofi { display: inline-block; }
+.info-kofi img { display: block; width: 150px; height: auto; }
 .info-version { font-size: 0.7rem; color: var(--fg-dim); text-align: center; margin-top: 32px; opacity: 0.65; cursor: pointer; }
 .link-btn { background: none; border: none; padding: 0; color: var(--fg-dim); font-size: 0.8rem; text-decoration: underline; cursor: pointer; margin-bottom: 12px; }
 .publish-contents { margin: 0 0 14px 18px; padding: 0; font-size: 0.85rem; color: var(--fg-dim); }
@@ -1420,6 +1422,7 @@ html:not(.app) .desktop-page { display: block; }
 .lp-channels { list-style: none; margin: 0; padding: 0; columns: 2; column-gap: 40px; }
 .lp-channels li { break-inside: avoid; padding: 7px 0; border-bottom: 1px solid rgba(178, 224, 230, 0.14); font-size: 0.95rem; display: flex; justify-content: space-between; gap: 12px; }
 .lp-channels a { color: var(--fg); text-decoration: none; }
+.lp-ico { height: 1.05em; width: auto; vertical-align: -0.16em; margin-right: 0.45em; }
 .lp-channels a:hover { color: #7ab8ff; }
 .lp-channels .lp-soon { font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace; font-size: 0.68rem; color: #5f8a95; align-self: center; }
 .lp-small-links { margin-top: 70px; display: flex; gap: 30px; flex-wrap: wrap; font-size: 0.72rem; letter-spacing: 0.18em; text-transform: uppercase; max-width: 1160px; margin-left: auto; margin-right: auto; }

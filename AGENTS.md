@@ -69,6 +69,9 @@ public/
                       # media query hides it past the image bounds (no bare edges)
   images/
     og.jpg            # link-share card for aimless.earth (1200x630 JPEG)
+    kofi-support.png  # Ko-fi button on the Info screen (precached)
+    ko-fi-logo.webp   # Ko-fi logo in the landing footer channel list;
+                      # .desktop-page only, NOT precached
     landing/stop-{1..7}.webp  # chain-tile-112 waypoint photos for the landing
                       # page and about.html — lazy-loaded inside .desktop-page
                       # markup only, so phones never fetch them; NOT precached
