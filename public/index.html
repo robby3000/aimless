@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-01e8ee45">
+  <meta name="aimless-build" content="aimless-v0.2.0-c373f107">
   <meta name="description" content="A walking app with no map. An arrow leads you to hidden waypoints; at each one, a verse and a photograph.">
   <!-- Share card for aimless.earth links. og:image must be absolute:
        crawlers do not resolve relative paths, and the all-relative
@@ -15,15 +15,15 @@
   <meta property="og:url" content="https://aimless.earth/">
   <meta property="og:title" content="Aimless">
   <meta property="og:description" content="A walking app with no map. An arrow leads you to hidden waypoints; at each one, a verse and a photograph.">
-  <meta property="og:image" content="https://aimless.earth/images/og.jpg">
-  <meta property="og:image:secure_url" content="https://aimless.earth/images/og.jpg">
+  <meta property="og:image" content="https://aimless.earth/images/og2.jpg">
+  <meta property="og:image:secure_url" content="https://aimless.earth/images/og2.jpg">
   <meta property="og:image:type" content="image/jpeg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Aimless">
   <meta name="twitter:description" content="A walking app with no map. An arrow leads you to hidden waypoints; at each one, a verse and a photograph.">
-  <meta name="twitter:image" content="https://aimless.earth/images/og.jpg">
+  <meta name="twitter:image" content="https://aimless.earth/images/og2.jpg">
   <link rel="manifest" href="./manifest.json">
   <link rel="icon" href="./icons/favicon-16.png" type="image/png" sizes="16x16">
   <link rel="icon" href="./icons/favicon-32.png" type="image/png" sizes="32x32">
@@ -82,7 +82,7 @@
         if (!svg) return;
         var live = svg.querySelector('.lp-live');
         var pulse = svg.querySelector('.lp-pulse');
-        var STOPS = [[22.5,40.4],[118.8,48.1],[90.8,91.1],[112.8,148.7],[223.9,126.4],[201.9,210.0],[257.9,260.5],[137.3,225.9]];
+        var STOPS = [[33.2,134.7],[140.7,102.6],[165.3,167.9],[115.0,142.1],[227.8,126.9],[180.5,176.6],[92.7,149.7],[32.4,162.7]];
         var L = live.getTotalLength();
         live.style.strokeDasharray = L;
         live.style.strokeDashoffset = L;
@@ -148,6 +148,7 @@
       <div class="lp-hero-grid">
         <div>
           <p class="lp-lines"><span>Go nowhere.</span><span class="lp-turn">Somewhere.</span></p>
+          <p class="lp-kicker">Offline walking engine &middot; GPS &middot; randomness &middot; voices &middot; photography</p>
           <p class="lp-pitch">Press Go and Aimless generates a few random waypoints ahead of you. There&#8217;s no map, just an arrow and a distance. On reaching each waypoint you are given the verse that the coordinates determined, and you can take one photograph.</p>
           <p class="lp-hook">Your walk becomes a journey of discovery.</p>
           <div class="lp-cta">
@@ -159,19 +160,19 @@
           </div>
         </div>
         <div class="lp-trace-wrap">
-          <svg id="lp-hero-trace" viewBox="0 0 300 300" width="300" height="300" aria-label="The shape of a walk: seven waypoints joined by the route actually walked">
-            <path d="M22.5,40.4 L118.8,48.1 L90.8,91.1 L112.8,148.7 L223.9,126.4 L201.9,210.0 L257.9,260.5 L137.3,225.9" fill="none" stroke="#54727c" stroke-width="1" stroke-dasharray="3,3"/>
-            <path class="tr-line" pathLength="1" d="M22.5,40.4 L30.8,48.5 L76.5,36.0 L110.0,44.1 L120.4,59.8 L115.6,80.2 L109.3,88.8 L97.1,87.2 L97.5,91.6 L95.9,86.4 L95.4,90.3 L112.6,96.1 L127.8,121.4 L136.0,119.8 L146.7,127.9 L115.2,150.6 L149.0,128.0 L164.7,139.1 L190.4,112.5 L199.3,122.4 L222.8,118.9 L214.2,157.3 L183.5,175.1 L179.9,195.6 L186.9,202.8 L200.2,202.6 L181.5,213.6 L210.9,236.3 L242.7,235.0 L251.5,242.6 L254.7,234.5 L269.7,236.2 L276.2,250.7 L270.8,264.0 L277.5,246.6 L268.1,235.8 L208.0,236.2 L183.8,219.0 L145.5,239.6 L131.2,241.8 L128.6,236.7 L135.9,238.1 L90.8,258.6" fill="none" stroke="#7ab8ff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-            <circle class="tr-dot" style="--o:1;animation-delay:4.25s" cx="22.5" cy="40.4" r="5" fill="#7ab8ff"/>
-        <g class="lp-wp"><circle class="hit" cx="118.8" cy="48.1" r="11"/><circle class="tr-dot" style="--o:0.7;animation-delay:4.37s" cx="118.8" cy="48.1" r="4" fill="#e6f7f9"/><text x="128" y="44">1 · The Prayer</text></g>
-        <g class="lp-wp"><circle class="hit" cx="90.8" cy="91.1" r="11"/><circle class="tr-dot" style="--o:0.7;animation-delay:4.49s" cx="90.8" cy="91.1" r="4" fill="#e6f7f9"/><text x="30" y="95">2 · Three Fingers</text></g>
-        <g class="lp-wp"><circle class="hit" cx="112.8" cy="148.7" r="11"/><circle class="tr-dot" style="--o:0.7;animation-delay:4.61s" cx="112.8" cy="148.7" r="4" fill="#e6f7f9"/><text x="70" y="166">3 · Smaller</text></g>
-        <g class="lp-wp"><circle class="hit" cx="223.9" cy="126.4" r="11"/><circle class="tr-dot" style="--o:0.7;animation-delay:4.73s" cx="223.9" cy="126.4" r="4" fill="#e6f7f9"/><text x="232" y="122">4 · Footprints</text></g>
-        <g class="lp-wp"><circle class="hit" cx="201.9" cy="210.0" r="11"/><circle class="tr-dot" style="--o:0.7;animation-delay:4.85s" cx="201.9" cy="210.0" r="4" fill="#e6f7f9"/><text x="212" y="206">5 · The New Word</text></g>
-        <g class="lp-wp"><circle class="hit" cx="257.9" cy="260.5" r="11"/><circle class="tr-dot" style="--o:0.7;animation-delay:4.97s" cx="257.9" cy="260.5" r="4" fill="#e6f7f9"/><text x="222" y="282">6 · Your Laugh</text></g>
-        <g class="lp-wp"><circle class="hit" cx="137.3" cy="225.9" r="11"/><circle class="tr-dot" style="--o:0.7;animation-delay:5.09s" cx="137.3" cy="225.9" r="4" fill="#e6f7f9"/><text x="80" y="214">7 · The Far Bank</text></g>
+          <svg id="lp-hero-trace" viewBox="10 60 290 170" width="300" height="176" aria-label="The shape of a walk: seven waypoints joined by the route actually walked">
+            <path d="M33.2,134.7 L140.7,102.6 L165.3,167.9 L115.0,142.1 L227.8,126.9 L180.5,176.6 L92.7,149.7 L32.4,162.7" fill="none" stroke="#54727c" stroke-width="1" stroke-dasharray="3,3"/>
+            <path class="tr-line" pathLength="1" d="M33.2,134.7 L41.6,140.1 L85.9,128.9 L105.7,129.5 L128.0,106.2 L118.5,113.0 L123.6,121.6 L132.7,126.0 L151.1,116.2 L163.8,128.7 L162.1,148.4 L178.7,162.2 L169.6,161.1 L160.9,175.6 L154.8,167.6 L157.8,151.6 L131.1,152.3 L116.5,143.1 L133.1,145.0 L147.6,125.2 L143.7,119.1 L153.7,113.0 L170.9,110.9 L218.2,122.6 L212.4,117.9 L215.5,123.8 L270.3,142.6 L277.5,156.6 L264.0,167.9 L250.6,170.1 L204.9,151.7 L188.8,171.8 L221.6,161.2 L185.8,174.3 L173.0,197.4 L102.8,176.3 L97.3,153.7 L58.9,175.8 L47.3,176.1 L60.0,172.8 L63.5,165.4 L45.1,156.7 L37.2,168.7 L22.5,164.8 L27.0,167.3 L38.8,149.8 L49.2,147.9" fill="none" stroke="#7ab8ff" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+            <circle class="tr-dot" style="--o:1;animation-delay:4.25s" cx="33.2" cy="134.7" r="5" fill="#7ab8ff"/>
+        <g class="lp-wp"><circle class="hit" cx="140.7" cy="102.6" r="11"/><circle class="tr-dot" style="--o:0.7;animation-delay:4.37s" cx="140.7" cy="102.6" r="4" fill="#e6f7f9"/><text x="150" y="99">1 · The Bell</text></g>
+        <g class="lp-wp"><circle class="hit" cx="165.3" cy="167.9" r="11"/><circle class="tr-dot" style="--o:0.7;animation-delay:4.49s" cx="165.3" cy="167.9" r="4" fill="#e6f7f9"/><text x="175" y="164">2 · The Old Song</text></g>
+        <g class="lp-wp"><circle class="hit" cx="115.0" cy="142.1" r="11"/><circle class="tr-dot" style="--o:0.7;animation-delay:4.61s" cx="115.0" cy="142.1" r="4" fill="#e6f7f9"/><text x="42" y="136">3 · The Dream</text></g>
+        <g class="lp-wp"><circle class="hit" cx="227.8" cy="126.9" r="11"/><circle class="tr-dot" style="--o:0.7;animation-delay:4.73s" cx="227.8" cy="126.9" r="4" fill="#e6f7f9"/><text x="237" y="123">4 · That Day</text></g>
+        <g class="lp-wp"><circle class="hit" cx="180.5" cy="176.6" r="11"/><circle class="tr-dot" style="--o:0.7;animation-delay:4.85s" cx="180.5" cy="176.6" r="4" fill="#e6f7f9"/><text x="190" y="182">5 · The Way Back</text></g>
+        <g class="lp-wp"><circle class="hit" cx="92.7" cy="149.7" r="11"/><circle class="tr-dot" style="--o:0.7;animation-delay:4.97s" cx="92.7" cy="149.7" r="4" fill="#e6f7f9"/><text x="55" y="175">6 · Yes</text></g>
+        <g class="lp-wp"><circle class="hit" cx="32.4" cy="162.7" r="11"/><circle class="tr-dot" style="--o:0.7;animation-delay:5.09s" cx="32.4" cy="162.7" r="4" fill="#e6f7f9"/><text x="40" y="190">7 · Sorry</text></g>
           </svg>
-          <p class="lp-trace-hint">chain-tile-112 &middot; 1.8 km &middot; tap to walk it again</p>
+          <p class="lp-trace-hint">ash-gate-234 &middot; 1.9 km &middot; tap to trace it again</p>
         </div>
       </div>
       <a class="lp-cue" href="#lp-walk">Walk this one &#8595;</a>
@@ -179,18 +180,18 @@
 
     <section class="lp-walk" id="lp-walk">
       <div class="lp-pin">
-        <svg id="lp-walk-trace" viewBox="0 0 300 300" width="300" height="300" aria-hidden="true">
-          <path d="M22.5,40.4 L118.8,48.1 L90.8,91.1 L112.8,148.7 L223.9,126.4 L201.9,210.0 L257.9,260.5 L137.3,225.9" fill="none" stroke="#54727c" stroke-width="1" stroke-dasharray="3,3"/>
-          <path class="lp-ghost" d="M22.5,40.4 L30.8,48.5 L76.5,36.0 L110.0,44.1 L120.4,59.8 L115.6,80.2 L109.3,88.8 L97.1,87.2 L97.5,91.6 L95.9,86.4 L95.4,90.3 L112.6,96.1 L127.8,121.4 L136.0,119.8 L146.7,127.9 L115.2,150.6 L149.0,128.0 L164.7,139.1 L190.4,112.5 L199.3,122.4 L222.8,118.9 L214.2,157.3 L183.5,175.1 L179.9,195.6 L186.9,202.8 L200.2,202.6 L181.5,213.6 L210.9,236.3 L242.7,235.0 L251.5,242.6 L254.7,234.5 L269.7,236.2 L276.2,250.7 L270.8,264.0 L277.5,246.6 L268.1,235.8 L208.0,236.2 L183.8,219.0 L145.5,239.6 L131.2,241.8 L128.6,236.7 L135.9,238.1 L90.8,258.6" fill="none" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
-          <path class="lp-live" d="M22.5,40.4 L30.8,48.5 L76.5,36.0 L110.0,44.1 L120.4,59.8 L115.6,80.2 L109.3,88.8 L97.1,87.2 L97.5,91.6 L95.9,86.4 L95.4,90.3 L112.6,96.1 L127.8,121.4 L136.0,119.8 L146.7,127.9 L115.2,150.6 L149.0,128.0 L164.7,139.1 L190.4,112.5 L199.3,122.4 L222.8,118.9 L214.2,157.3 L183.5,175.1 L179.9,195.6 L186.9,202.8 L200.2,202.6 L181.5,213.6 L210.9,236.3 L242.7,235.0 L251.5,242.6 L254.7,234.5 L269.7,236.2 L276.2,250.7 L270.8,264.0 L277.5,246.6 L268.1,235.8 L208.0,236.2 L183.8,219.0 L145.5,239.6 L131.2,241.8 L128.6,236.7 L135.9,238.1 L90.8,258.6" fill="none" stroke="#7ab8ff" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
-          <circle cx="22.5" cy="40.4" r="5" fill="#7ab8ff"/>
-          <circle class="lp-pulse" cx="22.5" cy="40.4" r="6"/>
+        <svg id="lp-walk-trace" viewBox="10 60 290 170" width="300" height="176" aria-hidden="true">
+          <path d="M33.2,134.7 L140.7,102.6 L165.3,167.9 L115.0,142.1 L227.8,126.9 L180.5,176.6 L92.7,149.7 L32.4,162.7" fill="none" stroke="#54727c" stroke-width="1" stroke-dasharray="3,3"/>
+          <path class="lp-ghost" d="M33.2,134.7 L41.6,140.1 L85.9,128.9 L105.7,129.5 L128.0,106.2 L118.5,113.0 L123.6,121.6 L132.7,126.0 L151.1,116.2 L163.8,128.7 L162.1,148.4 L178.7,162.2 L169.6,161.1 L160.9,175.6 L154.8,167.6 L157.8,151.6 L131.1,152.3 L116.5,143.1 L133.1,145.0 L147.6,125.2 L143.7,119.1 L153.7,113.0 L170.9,110.9 L218.2,122.6 L212.4,117.9 L215.5,123.8 L270.3,142.6 L277.5,156.6 L264.0,167.9 L250.6,170.1 L204.9,151.7 L188.8,171.8 L221.6,161.2 L185.8,174.3 L173.0,197.4 L102.8,176.3 L97.3,153.7 L58.9,175.8 L47.3,176.1 L60.0,172.8 L63.5,165.4 L45.1,156.7 L37.2,168.7 L22.5,164.8 L27.0,167.3 L38.8,149.8 L49.2,147.9" fill="none" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+          <path class="lp-live" d="M33.2,134.7 L41.6,140.1 L85.9,128.9 L105.7,129.5 L128.0,106.2 L118.5,113.0 L123.6,121.6 L132.7,126.0 L151.1,116.2 L163.8,128.7 L162.1,148.4 L178.7,162.2 L169.6,161.1 L160.9,175.6 L154.8,167.6 L157.8,151.6 L131.1,152.3 L116.5,143.1 L133.1,145.0 L147.6,125.2 L143.7,119.1 L153.7,113.0 L170.9,110.9 L218.2,122.6 L212.4,117.9 L215.5,123.8 L270.3,142.6 L277.5,156.6 L264.0,167.9 L250.6,170.1 L204.9,151.7 L188.8,171.8 L221.6,161.2 L185.8,174.3 L173.0,197.4 L102.8,176.3 L97.3,153.7 L58.9,175.8 L47.3,176.1 L60.0,172.8 L63.5,165.4 L45.1,156.7 L37.2,168.7 L22.5,164.8 L27.0,167.3 L38.8,149.8 L49.2,147.9" fill="none" stroke="#7ab8ff" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>
+          <circle cx="33.2" cy="134.7" r="5" fill="#7ab8ff"/>
+          <circle class="lp-pulse" cx="33.2" cy="134.7" r="6"/>
         </svg>
-        <p class="lp-meta"><b>chain-tile-112</b> &middot; Central Park &middot; 1.8 km &middot; The Echo</p>
+        <p class="lp-meta"><b>ash-gate-234</b> &middot; Central Park &middot; 1.9 km &middot; The Echo</p>
       </div>
       <div class="lp-panels">
       <div class="lp-panel lp-intro" data-stop="0">
-        <p class="lp-eyebrow lp-fade">October 15, 2026 &middot; 7 waypoints &middot; 6 reached</p>
+        <p class="lp-eyebrow lp-fade">November 11, 2026 &middot; 7 waypoints &middot; 7 reached</p>
         <h2 class="lp-fade">This is a real walk.</h2>
         <p class="lp-copy lp-fade">Nobody chose these seven points. Aimless generated them using a random formula.</p>
         <p class="lp-copy lp-fade">Keep scrolling and walk it again.</p>
@@ -198,56 +199,55 @@
       <article class="lp-panel lp-stop" id="lp-stop-1" data-stop="1">
         <div class="lp-num lp-fade">1</div>
         
-        <h3 class="lp-fade">The Prayer</h3>
-        <p class="lp-haiku lp-fade"><span>The photo shows all</span><span>in an empty place, and hear</span><span>fullness cannot ring</span></p>
-        <div class="lp-frame lp-fade"><img loading="lazy" src="./images/landing/stop-1.webp" alt="A rat in black and white, close up, among leaves"></div>
+        <h3 class="lp-fade">The Bell</h3>
+        <p class="lp-haiku lp-fade"><span>Dark glass, your tired face</span><span>said the whole body, though you</span><span>it knocks at your door</span></p>
+        <div class="lp-frame lp-fade"><img loading="lazy" src="./images/landing/stop-1.webp" alt="White blossom under a scanline and colour-shift filter"></div>
       </article>
       <article class="lp-panel lp-stop" id="lp-stop-2" data-stop="2">
         <div class="lp-num lp-fade">2</div>
         
-        <h3 class="lp-fade">Three Fingers</h3>
-        <p class="lp-haiku lp-fade"><span>Hear your voice played back</span><span>your father stood like this, too</span><span>others hear that one</span></p>
-        <div class="lp-frame lp-fade"><img loading="lazy" src="./images/landing/stop-2.webp" alt="Leaves and water rendered in acid yellow and cyan"></div>
+        <h3 class="lp-fade">The Old Song</h3>
+        <p class="lp-haiku lp-fade"><span>Say nothing, and hear</span><span>the room grows smaller each day</span><span>it looked while you walked</span></p>
+        <div class="lp-frame lp-fade"><img loading="lazy" src="./images/landing/stop-2.webp" alt="A squirrel in black and white, eating among autumn leaves"></div>
       </article>
       <article class="lp-panel lp-stop" id="lp-stop-3" data-stop="3">
         <div class="lp-num lp-fade">3</div>
         
-        <h3 class="lp-fade">Smaller</h3>
-        <p class="lp-haiku lp-fade"><span>Shout into the hills</span><span>and it is everywhere since</span><span>invite one no in</span></p>
-        <div class="lp-frame lp-fade"><img loading="lazy" src="./images/landing/stop-3.webp" alt="A single pale leaf on dark ground"></div>
+        <h3 class="lp-fade">The Dream</h3>
+        <p class="lp-haiku lp-fade"><span>Still pond, still face, still</span><span>at nineteen still waits for you</span><span>watch what your hands do</span></p>
+        <div class="lp-frame lp-fade"><img loading="lazy" src="./images/landing/stop-3.webp" alt="Yellow autumn leaves against a bright blue sky"></div>
       </article>
       <article class="lp-panel lp-stop" id="lp-stop-4" data-stop="4">
         <div class="lp-num lp-fade">4</div>
         
-        <h3 class="lp-fade">Footprints</h3>
-        <p class="lp-haiku lp-fade"><span>Your tale outlives you</span><span>strike and be struck back again</span><span>asked you the same thing</span></p>
-        <div class="lp-frame lp-fade"><img loading="lazy" src="./images/landing/stop-4.webp" alt="Backlit autumn leaves, gold and green"></div>
+        <h3 class="lp-fade">That Day</h3>
+        <p class="lp-haiku lp-fade"><span>Notice how you stand</span><span>she laughs at the same wrong place</span><span>what did you see first?</span></p>
+        <div class="lp-frame lp-fade"><img loading="lazy" src="./images/landing/stop-4.webp" alt="A leaf rendered in flat pink, posterized"></div>
       </article>
       <article class="lp-panel lp-stop" id="lp-stop-5" data-stop="5">
         <div class="lp-num lp-fade">5</div>
         
-        <h3 class="lp-fade">The New Word</h3>
-        <p class="lp-haiku lp-fade"><span>You miss who you were</span><span>three fingers point back at you</span><span>it lands a beat late</span></p>
-        <div class="lp-frame lp-fade"><img loading="lazy" src="./images/landing/stop-5.webp" alt="A shadow on grass, broken into glitched coloured blocks"></div>
+        <h3 class="lp-fade">The Way Back</h3>
+        <p class="lp-haiku lp-fade"><span>The swallows come back</span><span>this morning is still in you</span><span>remember. It does</span></p>
+        <div class="lp-frame lp-fade"><img loading="lazy" src="./images/landing/stop-5.webp" alt="Backlit leaves glowing yellow against black"></div>
       </article>
       <article class="lp-panel lp-stop" id="lp-stop-6" data-stop="6">
         <div class="lp-num lp-fade">6</div>
         
-        <h3 class="lp-fade">Your Laugh</h3>
-        <p class="lp-haiku lp-fade"><span>Ask it why five times</span><span>third love with the same ending</span><span>the fifth is the truth</span></p>
-        <div class="lp-frame lp-fade"><img loading="lazy" src="./images/landing/stop-6.webp" alt="A tower reflected in still water, in pastel lilac"></div>
+        <h3 class="lp-fade">Yes</h3>
+        <p class="lp-haiku lp-fade"><span>Each echo is less</span><span>had a stranger's pencil notes</span><span>watch what you do twice</span></p>
+        <div class="lp-frame lp-fade"><img loading="lazy" src="./images/landing/stop-6.webp" alt="A black iron lamppost against autumn canopy and blue sky"></div>
       </article>
       <article class="lp-panel lp-stop" id="lp-stop-7" data-stop="7">
         <div class="lp-num lp-fade">7</div>
-        <p class="lp-status lp-fade">close as I can get</p>
-        <h3 class="lp-fade">The Far Bank</h3>
-        <p class="lp-haiku lp-fade"><span>The promise comes due</span><span>said the whole body, though you</span><span>no, you have grown. Look</span></p>
-        <div class="lp-frame lp-fade"><img loading="lazy" src="./images/landing/stop-7.webp" alt="Autumn branches over the Lake in Central Park, twin towers beyond"></div>
+        <h3 class="lp-fade">Sorry</h3>
+        <p class="lp-haiku lp-fade"><span>You come back smaller</span><span>holds another childhood now</span><span>that too is a voice</span></p>
+        <div class="lp-frame lp-fade"><img loading="lazy" src="./images/landing/stop-7.webp" alt="Rowers on the Lake in black and white, Midtown towers beyond"></div>
       </article>
       <div class="lp-panel lp-outro" data-stop="8">
         <h2 class="lp-fade">Then it comes home with you.</h2>
         <p class="lp-copy lp-fade">The shape you walked, the photographs, the words. Choose a layout and filters, and the walk becomes one small web page that opens anywhere. Send it to someone, or put it on your own site.</p>
-        <a class="lp-textlink lp-fade" href="https://aimlessearth.neocities.org/aimless/walk-20261015-a1yjoc-7.html">See this walk as it was published &#8599;</a>
+        <a class="lp-textlink lp-fade" href="https://aimlessearth.neocities.org/aimless/walk-20261111-ciigb0">See this walk as it was published &#8599;</a>
       </div>
       </div>
     </section>
@@ -334,7 +334,6 @@
       <nav class="lp-small-links">
         <a href="./about.html">About</a>
         <a href="#app">Open the app anyway</a>
-        <a href="https://github.com/robby3000/aimless">Source</a>
         <a href="./" id="lp-share">Share</a>
         <span class="lp-tag">Go nowhere. Somewhere.</span>
       </nav>

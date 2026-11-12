@@ -1267,6 +1267,12 @@ html:not(.app) .desktop-page { display: block; }
   opacity: 0; animation: lp-fade-in 0.9s ease-out 5.35s forwards;
 }
 @keyframes lp-fade-in { to { opacity: 1; } }
+.lp-kicker {
+  margin: -18px 0 22px;
+  font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase;
+  color: #5f8a95;
+}
 .lp-pitch { text-wrap: pretty; max-width: 31em; font-size: 1.06rem; line-height: 1.65; margin: 0 0 14px; }
 .lp-hook { font-family: Georgia, 'Times New Roman', serif; font-style: italic; color: var(--fg-dim); font-size: 1.12rem; margin: 0 0 40px; }
 .lp-cta { display: flex; align-items: center; gap: 22px; }
@@ -1281,7 +1287,7 @@ html:not(.app) .desktop-page { display: block; }
 .lp-cta-sub { color: var(--fg-dim); font-size: 0.86rem; line-height: 1.5; max-width: 26em; margin: 0; }
 
 .lp-trace-wrap { position: relative; }
-.lp-trace-wrap svg { display: block; width: 100%; max-width: 420px; height: auto; margin-left: auto; cursor: pointer; overflow: visible; }
+.lp-trace-wrap svg { display: block; width: 100%; max-width: 420px; height: auto; margin: 0 auto; cursor: pointer; overflow: visible; }
 /* The hero draw: same dance as the walk artifacts. */
 .desktop-page .tr-line { stroke-dasharray: 1; stroke-dashoffset: 1; animation: tr-draw 5s ease-in-out 0.25s forwards; }
 .desktop-page .tr-dot { opacity: 0; animation: tr-pop 0.35s ease-out forwards; }
@@ -1298,7 +1304,7 @@ html:not(.app) .desktop-page { display: block; }
 .lp-wp:hover text { opacity: 1; }
 .lp-wp:hover .tr-dot { fill: var(--accent); }
 .lp-trace-hint {
-  text-align: right; margin: 10px 0 0;
+  text-align: center; margin: 6px 0 0;
   font-family: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
   font-size: 0.7rem; letter-spacing: 0.08em; color: #5f8a95;
   opacity: 0; animation: lp-fade-in 1s ease-out 6.2s forwards;

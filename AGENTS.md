@@ -68,7 +68,8 @@ public/
   fur-bg.webp         # #screen-go fur texture, 3x portrait export (1152x2082);
                       # media query hides it past the image bounds (no bare edges)
   images/
-    og.jpg            # link-share card for aimless.earth (1200x630 JPEG)
+    og2.jpg           # link-share card for aimless.earth (1200x630 JPEG; og.jpg
+                      # is the retired previous card, kept on disk)
     kofi-support.png  # Ko-fi button on the Info screen (precached)
     ko-fi-logo.webp   # Ko-fi logo in the landing footer channel list;
                       # .desktop-page only, NOT precached

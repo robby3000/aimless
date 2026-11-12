@@ -29,7 +29,8 @@ Contributor notes and commands are in [`AGENTS.md`](./AGENTS.md).
   rendered by the shared `wobbletone-engine` submodule, and the whole artifact restyles through
   selectable skins.
 - Exports a self-contained HTML keepsake, a share card and a KML route for mapping apps, or
-  publishes the keepsake to Neocities.
+  publishes the keepsake to your own site (Neocities, GitHub Pages or any web host) with an
+  index page and RSS feed.
 - Works fully offline once installed; all data lives in IndexedDB on the device.
 
 ## Documentation
@@ -48,3 +49,7 @@ nothing.
 
 Small is the design, not a phase. The map, the account and the feed are absent on purpose.
 What remains is the arrow, the point, and what chance put there.
+
+## License
+
+Source-visible, not open source. No license is granted; all rights reserved.
