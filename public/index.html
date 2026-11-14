@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-50fdae33">
+  <meta name="aimless-build" content="aimless-v0.2.0-75af2c45">
   <meta name="description" content="A walking app with no map. An arrow leads you to hidden waypoints; at each one, a verse and a photograph.">
   <!-- Share card for aimless.earth links. og:image must be absolute:
        crawlers do not resolve relative paths, and the all-relative
@@ -569,13 +569,18 @@
       </details>
       <details>
         <summary>What is the index page, and can I design my own?</summary>
-        <p>The <code>index.html</code> is a ready-made front page for your walks. Upload it into the <code>aimless</code> folder beside the walk pages, then link to <code>yoursite/aimless/</code> from your homepage. Keep it there: its links are relative, so moving it to your site root breaks them. A walk joins the list when you tick the index checkbox at build time, or later on the published step; Update index makes a fresh <code>index.html</code> to upload after you change your mind. The same file set includes <code>feed.xml</code>, an RSS feed of the listed walks that feed readers and posting bots can subscribe to.</p>
-        <p>Want a page of your own design instead? Copy file list puts your published walks on the clipboard as plain text: paths, titles, dates, descriptions. Feed it to an LLM with a creative prompt, or build the page by hand. Aimless only knows about walks published from this device.</p>
+        <p>The <code>index.html</code> is a ready-made front page for your walks. Upload it into the <code>aimless</code> folder beside the walk pages, then link to <code>yoursite/aimless/</code> from your homepage. Keep it there: its links are relative, so moving it to your site root breaks them.</p>
+        <p>A walk joins the list when you tick 'Also list on your site index' at build time, or 'Listed on the site index' afterwards. 'Update index' then makes a fresh <code>index.html</code> to upload whenever you change your mind.</p>
+        <p>Want a page of your own design instead? Edit <code>index.html</code> by hand or paste it into an LLM with a creative prompt: it already lists each walk's page, preview image, title and date. Aimless only knows about walks published from this device.</p>
       </details>
       <details>
         <summary>What is the feed.xml file?</summary>
         <p>An RSS feed of your listed walks, rebuilt whenever the index is. Upload it into the <code>aimless</code> folder with the rest and it lives at <code>yoursite/aimless/feed.xml</code>: feed readers can subscribe to it, and it is the file a posting bot would watch if you ever automate "new walk" announcements elsewhere.</p>
         <p>It lists only the walks you already chose to show on the index, nothing more. Untick a walk and it leaves the feed on the next rebuild. If you never use it, the file costs a kilobyte and can simply be ignored.</p>
+      </details>
+      <details>
+        <summary>How can I remove a published walk?</summary>
+        <p>Go to the export menu for that walk (export &gt;&gt;&gt; Your website) and untick 'Listed on the site index'. This recreates the <code>index.html</code> and <code>feed.xml</code> files without that walk (they should download to your phone). Upload these files to your web server to replace the current files. Then, still in your web server file browser, delete the walk's HTML file and its share-image JPG file - you can easily identify them because they have the walk date in their filenames.</p>
       </details>
       <details>
         <summary>Why is there no map?</summary>
@@ -747,7 +752,6 @@
           <button id="publish-share-link">Share link</button>
           <button id="publish-open">Open</button>
           <button id="publish-rebuild">Rebuild files</button>
-          <button id="publish-copy-manifest">Copy file list</button>
           <button id="publish-update-index">Update index</button>
         </div>
         <div class="confirm-actions">

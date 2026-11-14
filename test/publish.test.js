@@ -18,7 +18,6 @@ import {
   publishedEntries,
   indexHtml,
   feedXml,
-  manifestText,
 } from '../public/lib/publish.js';
 
 // Local-time constructors keep these fixtures timezone-independent.
@@ -417,32 +416,4 @@ test('ogHeadHtml adds the RSS discovery link only when feedUrl is given', () => 
   assert.ok(!withoutFeed.includes('rel="alternate"'));
 });
 
-test('manifestText lists relative page and image paths per listed walk', () => {
-  const text = manifestText([{ ...WALK, neocities: PUB }]);
-  assert.ok(text.startsWith('All paths relative to the site address.'));
-  assert.ok(text.includes(`aimless/${PUB.slug}.html | ${WALK.seed} | October 4, 2026`));
-  assert.ok(text.includes('| voice: The Crow'));
-  assert.ok(text.includes(`aimless/${PUB.slug}.jpg (preview image)`));
-});
 
-test('manifestText names My Voice explicitly and omits voice for none', () => {
-  const text = manifestText([
-    { ...WALK, voice: 'myvoice', neocities: PUB },
-    { ...WALK, voice: 'none', id: 'walk-1', neocities: { ...PUB, slug: 'walk-none' } },
-  ]);
-  assert.ok(text.includes(`aimless/${PUB.slug}.html | ${WALK.seed} | October 4, 2026 | A walk on October 4, 2026`));
-  assert.ok(text.includes('| voice: My Voice'));
-  const noneLine = text.split('\n').find((l) => l.includes('walk-none.html'));
-  assert.ok(noneLine && !noneLine.includes('voice:'), noneLine);
-});
-
-test('manifestText skips unlisted and unpublished walks, one line per field', () => {
-  const text = manifestText([
-    { ...WALK },
-    { ...WALK, id: 'walk-0', neocities: { ...PUB, slug: 'walk-unlisted', indexed: false } },
-    { ...WALK, id: 'walk-1', neocities: { ...PUB, description: 'multi\nline  desc' } },
-  ]);
-  const lines = text.split('\n');
-  assert.equal(lines.length, 3); // header + html line + jpg line
-  assert.ok(lines.every((l) => !/\n/.test(l)));
-});

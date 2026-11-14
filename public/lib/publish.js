@@ -1,7 +1,7 @@
 // Publish helpers for handing a walk keepsake to the walker's own website
 // (Neocities, GitHub Pages or any static host): slug, site address
 // validation, target URLs, upload steps, description, OG head tags, the
-// site index page, its RSS feed and the file-list manifest.
+// site index page and its RSS feed.
 // Pure: takes data, returns strings. No DOM, no storage.
 
 import { esc, formatWalkDate, voiceName, logoDataUri, iconsHeadHtml } from './export.js';
@@ -315,19 +315,4 @@ ${items.join('\n')}
 </channel>
 </rss>
 `;
-}
-
-/**
- * Plain-text file list of every published walk, for pasting into an LLM
- * (or any other tool) to generate a custom index page. One header line so
- * the consumer knows the paths are relative, then per walk: page path,
- * title, date, description, and the preview image's path.
- */
-export function manifestText(walks) {
-  const lines = ['All paths relative to the site address.'];
-  for (const e of publishedEntries(walks)) {
-    lines.push(`${PUBLISH_FOLDER}/${e.slug}.html | ${e.title} | ${formatWalkDate(e.started)} | ${e.description.replace(/\s+/g, ' ')}${e.voice ? ` | voice: ${e.voice}` : ''}`);
-    lines.push(`${PUBLISH_FOLDER}/${e.slug}.jpg (preview image)`);
-  }
-  return lines.join('\n');
 }

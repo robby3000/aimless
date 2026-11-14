@@ -24,7 +24,7 @@ import { FILTERS, getFilter, allFilters, visibleFilters, setImportedFilters, imp
          effectiveFilterId, effectiveSpec } from '../filters.js';
 import { renderToCanvas } from '../engine/canvas.js';
 import { renderPhotoToCanvas } from '../filter-renderer.js';
-import { nextBuildSlug, normalizeSiteBase, siteBaseFromPrefs, siteLabel, siteTargets, uploadSteps, defaultDescription, ogHeadHtml, publishedEntries, indexHtml, feedXml, manifestText } from '../publish.js';
+import { nextBuildSlug, normalizeSiteBase, siteBaseFromPrefs, siteLabel, siteTargets, uploadSteps, defaultDescription, ogHeadHtml, publishedEntries, indexHtml, feedXml } from '../publish.js';
 import { traceSVG } from '../markup.js';
 import { askConfirm, askText } from './modals.js';
 
@@ -652,19 +652,6 @@ document.getElementById('publish-update-index').addEventListener('click', async 
   downloadFile('index.html', index.blob, 'text/html');
   setTimeout(() => downloadFile('feed.xml', index.feedBlob, 'application/rss+xml'), 300);
   showToast(index.unchanged ? 'index and feed unchanged - nothing new to upload' : 'index.html and feed.xml downloaded');
-});
-// "Copy file list": a plain-text manifest of every published walk's
-// relative paths + titles, for pasting into an LLM to hand-build a
-// custom index page.
-document.getElementById('publish-copy-manifest').addEventListener('click', async () => {
-  const db = await dbPromise;
-  const walks = db ? await all(db, 'walks') : [currentDetailWalk].filter(Boolean);
-  try {
-    await navigator.clipboard.writeText(manifestText(walks));
-    showToast('File list copied');
-  } catch {
-    showToast('Copy failed - select the list manually');
-  }
 });
 document.getElementById('publish-share-link').addEventListener('click', async () => {
   const url = currentDetailWalk?.neocities?.pageUrl;
