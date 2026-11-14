@@ -1230,7 +1230,7 @@ html:not(.app) .desktop-page { display: block; }
 .lp-bar {
   position: fixed; top: 0; left: 0; right: 0; z-index: 20;
   display: flex; align-items: center; justify-content: space-between;
-  padding: 22px 36px 34px; pointer-events: none;
+  padding: 16px 28px 22px; pointer-events: none;
   background: linear-gradient(var(--bg) 55%, rgba(6, 42, 53, 0));
 }
 .lp-bar > * { pointer-events: auto; }
@@ -1248,7 +1248,7 @@ html:not(.app) .desktop-page { display: block; }
    itself on the right. The turn lands as the trace finishes. */
 .lp-hero {
   min-height: 100svh; display: flex; align-items: center;
-  position: relative; padding: 110px 56px 80px;
+  position: relative; padding: 72px 56px 80px;
 }
 .lp-hero-grid {
   display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
@@ -1439,12 +1439,12 @@ html:not(.app) .desktop-page { display: block; }
 /* Tablet portrait: the walk's trace pins to the top as a band and the
    stop panels scroll beneath it. */
 @media (max-width: 900px) {
-  .lp-hero { padding: 90px 32px 70px; }
+  .lp-hero { padding: 60px 32px 70px; }
   .lp-hero-grid { grid-template-columns: 1fr; }
   .lp-trace-wrap { order: -1; }
   .lp-trace-wrap svg { max-width: 260px; margin: 0; }
   .lp-trace-hint { text-align: left; }
-  .lp-bar { padding: 18px 24px 30px; }
+  .lp-bar { padding: 14px 20px 20px; }
   .lp-bar nav { display: none; }
   .lp-walk { grid-template-columns: 1fr; gap: 0; padding: 0 32px; }
   .lp-pin { height: 38svh; z-index: 5; background: linear-gradient(var(--bg) 88%, rgba(6, 42, 53, 0)); padding: 60px 0 16px; }
