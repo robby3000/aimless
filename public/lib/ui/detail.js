@@ -499,7 +499,7 @@ async function buildIndexFiles() {
   savePrefs();
   return {
     str, blob: new Blob([str], { type: 'text/html' }),
-    feed, feedBlob: new Blob([feed], { type: 'application/rss+xml' }),
+    feed, feedBlob: new Blob([feed], { type: 'application/xml' }),
     unchanged,
   };
 }
@@ -613,7 +613,7 @@ document.getElementById('publish-download').addEventListener('click', () => {
     [publishBuilt.htmlName, publishBuilt.htmlBlob, 'text/html'],
     [publishBuilt.imageName, publishBuilt.jpgBlob, 'image/jpeg'],
     [publishBuilt.indexName, publishBuilt.indexBlob, 'text/html'],
-    [publishBuilt.feedName, publishBuilt.feedBlob, 'application/rss+xml'],
+    [publishBuilt.feedName, publishBuilt.feedBlob, 'application/xml'],
   ];
   parts.forEach(([name, blob, type], i) => setTimeout(() => downloadFile(name, blob, type), i * 300));
 });
@@ -644,13 +644,13 @@ document.getElementById('publish-listed').addEventListener('change', async (e) =
   if (db) await put(db, 'walks', walk);
   const index = await buildIndexFiles();
   downloadFile('index.html', index.blob, 'text/html');
-  setTimeout(() => downloadFile('feed.xml', index.feedBlob, 'application/rss+xml'), 300);
+  setTimeout(() => downloadFile('feed.xml', index.feedBlob, 'application/xml'), 300);
   showToast('index.html and feed.xml updated - upload them to your aimless folder');
 });
 document.getElementById('publish-update-index').addEventListener('click', async () => {
   const index = await buildIndexFiles();
   downloadFile('index.html', index.blob, 'text/html');
-  setTimeout(() => downloadFile('feed.xml', index.feedBlob, 'application/rss+xml'), 300);
+  setTimeout(() => downloadFile('feed.xml', index.feedBlob, 'application/xml'), 300);
   showToast(index.unchanged ? 'index and feed unchanged - nothing new to upload' : 'index.html and feed.xml downloaded');
 });
 document.getElementById('publish-share-link').addEventListener('click', async () => {
