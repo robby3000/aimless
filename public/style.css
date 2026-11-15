@@ -737,6 +737,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 .sheet-row + .sheet-heading, .sheet-check + .sheet-heading { padding-top: 14px; }
 .sheet-check { display: flex; align-items: center; gap: 10px; padding: 2px 20px 10px 58px; font-size: 0.78rem; color: var(--fg-dim); }
 .sheet-check input { accent-color: var(--accent); margin: 0; }
+.sheet-note { margin: 0; padding: 0 20px 10px; font-size: 0.78rem; color: var(--fg-dim); }
 @media (prefers-reduced-motion: reduce) {
   .sheet-overlay, .sheet { transition: none; }
 }

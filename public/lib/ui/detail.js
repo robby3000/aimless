@@ -75,7 +75,9 @@ let siteBase = '';   // the walker's website, as a base URL ending in '/'
 let neocitiesIndex = '';   // last emitted aimless/index.html - "(unchanged)" tag compares against it
 let neocitiesFeed = '';    // last emitted aimless/feed.xml - same compare
 let neocitiesRing = '';    // last emitted aimless/ring.json - same compare
-let cardMark = true;   // www.aimless.earth on the share card and OG image (opt-out)
+let cardMark = true;   // www.aimless.earth on the share card and OG image.
+                       // Always on - the opt-out was removed from the export
+                       // sheet; a supporter perk may re-gate it one day.
 
 function applySkin() {
   skinStyle.textContent = scopeCSS(getSkin(currentSkin).css, '#detail-content');
@@ -813,24 +815,7 @@ document.getElementById('publish-update-index').addEventListener('click', async 
   setTimeout(() => downloadFile('feed.xml', index.feedBlob, 'application/xml'), 300);
   showToast(index.unchanged ? 'index and feed unchanged - nothing new to upload' : 'index.html and feed.xml downloaded');
 });
-document.getElementById('publish-share-link').addEventListener('click', async () => {
-  const url = currentDetailWalk?.neocities?.pageUrl;
-  if (!url) return;
-  if (navigator.share) {
-    try {
-      await navigator.share({ title: currentDetailWalk.seed, url });
-    } catch (err) {
-      if (err.name !== 'AbortError') console.warn('Share failed:', err);
-    }
-    return;
-  }
-  try {
-    await navigator.clipboard.writeText(url);
-    showToast('Link copied');
-  } catch {
-    showToast('Could not copy link');
-  }
-});
+document.getElementById('publish-share-link').addEventListener('click', sharePageLink);
 document.getElementById('publish-open').addEventListener('click', () => {
   const url = currentDetailWalk?.neocities?.pageUrl;
   if (url) window.open(url, '_blank', 'noopener');
@@ -1754,7 +1739,7 @@ async function drawCard(ctx, w, h, walk, photo, card) {   // photo: { dataUrl?, 
 
 // The attribution mark, bottom right in the skin's card typeface: white
 // with a soft shadow over a photo, the skin's ink on a bare card.
-// Opt-out via the export sheet checkbox (cardMark pref).
+// Always on (cardMark); the export-sheet opt-out is gone.
 const MARK_TEXT = 'www.aimless.earth';
 function drawMark(ctx, w, h, card, onPhoto) {
   const size = Math.round(Math.max(w, h) * 0.022);
@@ -1841,7 +1826,8 @@ document.getElementById('btn-detail-export').addEventListener('click', () => {
   document.getElementById('row-add-text').hidden = !eligible;
   document.getElementById('row-remove-text').hidden = !(eligible && hasText);
   document.getElementById('add-text-title').textContent = hasText ? 'Replace text' : 'Add text';
-  document.getElementById('export-mark').checked = cardMark;
+  // A published walk's best share is its link; the row only exists then.
+  document.getElementById('row-share-link').hidden = !currentDetailWalk.neocities?.pageUrl;
   exportSheetCtl.open();
 });
 
@@ -1867,10 +1853,27 @@ document.addEventListener('keydown', (e) => {
   if (!photoHintOverlay.hidden) dismissPhotoHint();
 });
 
-document.getElementById('export-mark').addEventListener('change', (e) => {
-  cardMark = e.target.checked;
-  savePrefs();
-});
+// The published page's link through the platform share sheet, with a
+// clipboard copy as the desktop fallback. Shared by the export sheet's
+// Share page link row and the publish dialog's Share link button.
+async function sharePageLink() {
+  const url = currentDetailWalk?.neocities?.pageUrl;
+  if (!url) return;
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: currentDetailWalk.seed, url });
+    } catch (err) {
+      if (err.name !== 'AbortError') console.warn('Share failed:', err);
+    }
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    showToast('Link copied');
+  } catch {
+    showToast('Could not copy link');
+  }
+}
 
 // Sheet row dispatch. Each action body is the verbatim logic from the old
 // per-button handlers; only the trigger changed.
@@ -1881,7 +1884,9 @@ exportSheet.addEventListener('click', async (e) => {
   if (!action || !currentDetailWalk) return;
   exportSheetCtl.close();
 
-  if (action === 'share-html') {
+  if (action === 'share-link') {
+    await sharePageLink();
+  } else if (action === 'share-html') {
     const html = await buildCurrentDetailHTML();
     const filename = `aimless-${currentDetailWalk.seed}.html`;
     const file = new File([html], filename, { type: 'text/html' });
@@ -2000,7 +2005,7 @@ export async function loadDetailPrefs(prefs) {
   neocitiesIndex = prefs.neocitiesIndex ?? '';
   neocitiesFeed = prefs.neocitiesFeed ?? '';
   neocitiesRing = prefs.neocitiesRing ?? '';
-  cardMark = prefs.cardMark ?? true;
+  cardMark = true;
   setHiddenFilters(prefs.hiddenFilters);
   if (isFilterHidden(currentFilter)) currentFilter = visibleFilters()[0]?.id || 'original';
   renderManageList();

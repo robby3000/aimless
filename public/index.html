@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-a938de18">
+  <meta name="aimless-build" content="aimless-v0.2.0-d9477640">
   <meta name="description" content="A walking app with no map. An arrow leads you to hidden waypoints; at each one, a verse and a photograph.">
   <!-- Share card for aimless.earth links. og:image must be absolute:
        crawlers do not resolve relative paths, and the all-relative
@@ -491,7 +491,7 @@
       <h2>After</h2>
       <p>You get a self-contained HTML artifact of your walk that you can download or share: the shape you walked, your photos, and the words your coordinates generated. The My Voice option has no cards of its own; you can attach your own text at export. Open a walk from the Archive to style it: pick a skin, filter the photos. Long-press a photo to select it, again to deselect.</p>
       <h2>Sharing</h2>
-      <p>A walk can leave your phone three ways: the Card, a square image of the route over your featured photo; the HTML file, one self-contained document with no scripts, so it opens cleanly on iOS and inside WhatsApp, Signal, Telegram, Discord or email; and a live page on your own website, usually the best option for Facebook and anywhere that renders a link preview. The Card and the link preview carry a small www.aimless.earth in the corner; untick the box in the export sheet to leave it off.</p>
+      <p>A walk can leave your phone three ways: the Card, a square image of the route over your featured photo; the HTML file, one self-contained document with no scripts, so it opens cleanly on iOS and inside WhatsApp, Signal, Telegram, Discord or email; and a live page on your own website, usually the best option for Facebook and anywhere that renders a link preview. The Card and the link preview carry a small www.aimless.earth in the corner.</p>
       <h2>Offline and privacy</h2>
       <p>Everything runs on your device and works offline once loaded. Nothing is uploaded. A walk leaves the phone only as a file you choose to export, so export the ones you want to keep. Installing to the home screen gives the storage the best protection and gives a full-screen experience.</p>
       <h2>FAQ</h2>
@@ -662,16 +662,22 @@
   <div id="export-sheet-overlay" class="sheet-overlay" hidden></div>
   <div id="export-sheet" class="sheet" role="dialog" aria-label="Export" hidden>
     <div class="sheet-handle"></div>
+    <p class="sheet-note">To post a walk as a link with a preview, publish it on your website first - then share the link anywhere.</p>
+    <div class="sheet-heading">Publish</div>
+    <button class="sheet-row" data-export="website"><span class="row-ico">&#9741;</span><span class="row-text"><span class="row-title">Your website</span><span class="row-sub">Neocities, GitHub Pages or any web host</span></span></button>
     <div class="sheet-heading">Share</div>
+    <button class="sheet-row" data-export="share-link" id="row-share-link" hidden>
+      <span class="row-ico">&#8599;</span>
+      <span class="row-text"><span class="row-title">Share page link</span><span class="row-sub">Post the published link anywhere</span></span>
+    </button>
     <button class="sheet-row" data-export="share-html">
       <span class="row-ico">&#8682;</span>
-      <span class="row-text"><span class="row-title">Share walk</span><span class="row-sub">Send the HTML via the share menu</span></span>
+      <span class="row-text"><span class="row-title">Share walk file</span><span class="row-sub">Send the HTML via the share menu (messaging apps, email)</span></span>
     </button>
     <button class="sheet-row" data-export="card">
       <span class="row-ico">&#9993;</span>
-      <span class="row-text"><span class="row-title">Card</span><span class="row-sub">Send a card via the share menu</span></span>
+      <span class="row-text"><span class="row-title">Card</span><span class="row-sub">Export and send a card via the share menu</span></span>
     </button>
-    <label class="sheet-check"><input type="checkbox" id="export-mark" checked> Add www.aimless.earth to cards and link previews</label>
     <div class="sheet-heading">Save</div>
     <button class="sheet-row" data-export="download-html">
       <span class="row-ico">&lt;/&gt;</span>
@@ -681,8 +687,6 @@
       <span class="row-ico">&#9874;</span>
       <span class="row-text"><span class="row-title">Route</span><span class="row-sub">To open your walk routes in mapping apps</span></span>
     </button>
-    <div class="sheet-heading">Publish</div>
-    <button class="sheet-row" data-export="website"><span class="row-ico">&#9741;</span><span class="row-text"><span class="row-title">Your website</span><span class="row-sub">Neocities, GitHub Pages or any web host</span></span></button>
     <button class="sheet-row" data-export="add-text" id="row-add-text" hidden>
       <span class="row-ico">&#9998;</span>
       <span class="row-text"><span class="row-title" id="add-text-title">Add text</span><span class="row-sub">Select a text file — blocks map to photos in order</span></span>
