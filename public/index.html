@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-f344eb43">
+  <meta name="aimless-build" content="aimless-v0.2.0-a938de18">
   <meta name="description" content="A walking app with no map. An arrow leads you to hidden waypoints; at each one, a verse and a photograph.">
   <!-- Share card for aimless.earth links. og:image must be absolute:
        crawlers do not resolve relative paths, and the all-relative
@@ -574,6 +574,10 @@
         <p>Want a page of your own design instead? Edit <code>index.html</code> by hand or paste it into an LLM with a creative prompt: it already lists each walk's page, preview image, title and date. Aimless only knows about walks published from this device.</p>
       </details>
       <details>
+        <summary>How can I remove a published walk from its web server?</summary>
+        <p>Go to the export menu for that walk (export &gt;&gt;&gt; Your website) and untick 'Listed on the site index'. This recreates the <code>index.html</code> and <code>feed.xml</code> files without that walk (they should download to your phone). Upload these files to your web server to replace the current files. Then, still in your web server file browser, delete the walk's HTML file and its share-image JPG file - you can easily identify them because they have the walk date in their filenames.</p>
+      </details>
+      <details>
         <summary>What is the feed.xml file?</summary>
         <p>An RSS feed of your listed walks, rebuilt whenever the index is. Upload it into the <code>aimless</code> folder with the rest and it lives at <code>yoursite/aimless/feed.xml</code>: feed readers can subscribe to it, and it is the file a posting bot would watch if you ever automate "new walk" announcements elsewhere.</p>
         <p>It lists only the walks you already chose to show on the index, nothing more. Untick a walk and it leaves the feed on the next rebuild. If you never use it, the file costs a kilobyte and can simply be ignored.</p>
@@ -587,10 +591,6 @@
         <summary>What is the ring.json file?</summary>
         <p>It is the list the webring reads. When you tick "Add to the Aimless webring" on a build, Aimless writes <code>ring.json</code> beside the index: your site's public roll of ring walks, and nothing else. Upload it with the rest and it lives at <code>yoursite/aimless/ring.json</code>.</p>
         <p>aimless.earth checks that file once a day and moves your ticked walks into the ring. No emails, no account. A walk you untick and rebuild drops off the list, and out of the ring at the next check. If you never join the ring, the file never appears in your uploads.</p>
-      </details>
-      <details>
-        <summary>How can I remove a published walk?</summary>
-        <p>Go to the export menu for that walk (export &gt;&gt;&gt; Your website) and untick 'Listed on the site index'. This recreates the <code>index.html</code> and <code>feed.xml</code> files without that walk (they should download to your phone). Upload these files to your web server to replace the current files. Then, still in your web server file browser, delete the walk's HTML file and its share-image JPG file - you can easily identify them because they have the walk date in their filenames.</p>
       </details>
       <details>
         <summary>Why is there no map?</summary>
