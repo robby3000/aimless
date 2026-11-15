@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-847f9f51">
+  <meta name="aimless-build" content="aimless-v0.2.0-f736bc61">
   <meta name="description" content="A walking app with no map. An arrow leads you to hidden waypoints; at each one, a verse and a photograph.">
   <!-- Share card for aimless.earth links. og:image must be absolute:
        crawlers do not resolve relative paths, and the all-relative
@@ -781,8 +781,9 @@
       <div class="publish-step" id="publish-step-published" hidden>
         <div class="publish-heading" id="publish-heading-published">Your web page</div>
         <div class="publish-url" id="publish-url-published"></div>
+        <button class="link-btn" id="publish-change-site-2">change site</button>
         <div class="publish-url publish-url-index" id="publish-index-url" hidden></div>
-        <p class="publish-note">Built <span id="publish-built-when"></span>. <span id="publish-ring-status" hidden>· in the webring</span></p>
+        <p class="publish-note">Built <span id="publish-built-when"></span>. <span id="publish-ring-status" hidden>· in the webring</span><span id="publish-base-note" hidden></span></p>
         <label class="publish-check"><input type="checkbox" id="publish-listed"> Listed on the site index</label>
         <div class="publish-actions-col">
           <button id="publish-share-link">Share link</button>
@@ -954,8 +955,11 @@
     infoVersion.addEventListener('click', () => {
       if (!swReg) { showToast('No service worker'); return; }
       showToast('Checking for update…');
-      swReg.update().catch(() => {});
-      setTimeout(() => { if (!swUpdateFound) showToast('You have the latest'); }, 3000);
+      // "Latest" only when the check completed and found nothing - a failed
+      // fetch or a still-installing worker must not masquerade as good news.
+      swReg.update()
+        .then(() => setTimeout(() => { if (!swUpdateFound) showToast('You have the latest'); }, 1500))
+        .catch(() => showToast('Could not check - are you online?'));
     });
 
     // "Tell someone": the native share sheet where it exists, the clipboard

@@ -193,6 +193,16 @@ Things that will each cost an afternoon. Full detail in `roadmap.md` §5.
   `.desktop-page`. **Use `#app` to force the real app on desktop** — every headless/manual
   desktop test needs it. Phones can't regress (coarse pointer → app), and no-JS visitors get
   the readable page rather than a dead shell.
+- **The Info-screen version stamp is the loaded page's stamp, not the worker's.** A new SW
+  can be installed and active while the open document still reports the old build — only a
+  reload picks up the new shell, so a missed update toast leaves the app looking "stuck" at
+  an old stamp while every further check honestly reports "latest". Debugging a phone that
+  won't update: `curl` the origin's `sw.js` for the live stamp, read the phone's version
+  line, then open the site in a plain browser tab — the registration is shared across the
+  PWA and tabs, so updating in one updates all. After `dev-serve.sh` or a GitHub push, tell
+  the user the expected stamp rather than just "reload". And remember `reg.update()` can
+  fail silently when the phone can't reach the origin — an offline PWA still opens fine
+  from cache.
 
 ## Conventions
 

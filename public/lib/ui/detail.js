@@ -793,8 +793,18 @@ function renderPublishedStep() {
   indexEl.textContent = `index: ${pub.pageUrl.replace(/[^/]*$/, '')}`;
   document.getElementById('publish-built-when').textContent = pub.builtAt ? formatWalkDate(pub.builtAt) : 'earlier';
   document.getElementById('publish-ring-status').hidden = pub.ring !== true;
+  // A build minted under a different site than the current one still points
+  // at the old host - say so, since a rebuild re-targets the current site.
+  const staleBase = pub.base && siteBase && pub.base !== siteBase;
+  const baseNote = document.getElementById('publish-base-note');
+  baseNote.hidden = !staleBase;
+  if (staleBase) baseNote.textContent = ` · built for ${siteLabel(pub.base)} - rebuild for the current site`;
   document.getElementById('publish-listed').checked = pub.indexed === true;
 }
+document.getElementById('publish-change-site-2').addEventListener('click', () => {
+  siteInput.value = siteBase;
+  showPublishStep('site');
+});
 // "Listed on the site index" is curation, not decoration: the index
 // file is regenerated and downloaded on the spot, because the toggle
 // means nothing until the new index.html reaches the site.
