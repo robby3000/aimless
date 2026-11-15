@@ -6,11 +6,12 @@
 // never a silent break.
 
 import { validateFilter } from './filters.js';
+import { validateSkinRecord } from './skin-import.js';
 
 export const BACKUP_SCHEMA = 'aimless-backup';
 export const BACKUP_VERSION = 1;
 
-export function buildBackup({ walks = [], photos = [], filters = [], prefs = null, exportedAt = new Date().toISOString() } = {}) {
+export function buildBackup({ walks = [], photos = [], filters = [], skins = [], prefs = null, exportedAt = new Date().toISOString() } = {}) {
   return {
     schema: BACKUP_SCHEMA,
     version: BACKUP_VERSION,
@@ -18,6 +19,7 @@ export function buildBackup({ walks = [], photos = [], filters = [], prefs = nul
     walks,
     photos,
     filters,
+    skins,
     prefs,
   };
 }
@@ -48,6 +50,15 @@ function isValidFilter(filter) {
   }
 }
 
+function isValidSkin(skin) {
+  try {
+    validateSkinRecord(skin);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // Parse backup JSON into validated record lists. Throws with user-facing
 // messages for structural problems; per-record failures are dropped into
 // `skipped` counts instead.
@@ -62,14 +73,14 @@ export function parseBackup(input) {
   if (parsed.schema !== BACKUP_SCHEMA) throw new Error('Not an Aimless backup');
   if (typeof parsed.version !== 'number' || parsed.version < 1) throw new Error('Not an Aimless backup');
   if (parsed.version > BACKUP_VERSION) throw new Error('Backup is from a newer version');
-  for (const key of ['walks', 'photos', 'filters']) {
+  for (const key of ['walks', 'photos', 'filters', 'skins']) {
     if (parsed[key] !== undefined && !Array.isArray(parsed[key])) throw new Error('Malformed backup file');
   }
   if (parsed.prefs !== undefined && parsed.prefs !== null && (typeof parsed.prefs !== 'object' || Array.isArray(parsed.prefs))) {
     throw new Error('Malformed backup file');
   }
 
-  const skipped = { walks: 0, photos: 0, filters: 0 };
+  const skipped = { walks: 0, photos: 0, filters: 0, skins: 0 };
   const keep = (list, valid, bucket) => (list || []).filter((record) => {
     if (valid(record)) return true;
     skipped[bucket] += 1;
@@ -80,6 +91,7 @@ export function parseBackup(input) {
     walks: keep(parsed.walks, isValidWalk, 'walks'),
     photos: keep(parsed.photos, isValidPhoto, 'photos'),
     filters: keep(parsed.filters, isValidFilter, 'filters'),
+    skins: keep(parsed.skins, isValidSkin, 'skins'),
     prefs: parsed.prefs ?? null,
     skipped,
   };

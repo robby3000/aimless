@@ -82,7 +82,8 @@ public/
     platform.js         # UA detection: isIOS, isInAppBrowser, isStandalone
     inner.js            # The Inner voice: I Ching hexagram from coordinates (docs/iching/)
     filters.js          # Filter Spec presets ({id,name,spec}) + Wobbletone translation
-    backup.js           # app-data archive: buildBackup/parseBackup over walks+photos+filters+prefs
+    skin-import.js      # .aimlessskin file format: validateSkinRecord/parseSkinFile/skinFileJson
+    backup.js           # app-data archive: buildBackup/parseBackup over walks+photos+filters+skins+prefs
     filter-renderer.js  # thin engine adapter: cover-fit + renderToCanvas (share cards)
     engine/             # wobbletone-engine git submodule — shared CPU renderer (do not edit here)
     kml.js              # KML route export (plan + trace + stop placemarks)
@@ -106,7 +107,7 @@ test/
   geo.test.js  rng.test.js  walk.test.js  deck.test.js  proximity.test.js  skins.test.js
   platform.test.js  export.test.js  inner.test.js  filters.test.js  backup.test.js  filter-renderer.test.js
   kml.test.js  walk-nav.test.js  engine.test.js  surprise.test.js  oracle.test.js
-  publish.test.js  markup.test.js
+  publish.test.js  markup.test.js  skin-import.test.js
 scripts/
   make-icons.mjs      # npm run icons
   stamp-sw.mjs        # npm run stamp -- rewrites the sw.js cache name
@@ -202,6 +203,14 @@ schema v2) and resolve through `getFilter` after the built-ins. Exported keepsak
 of scripts and filter machinery — `export.test.js` asserts it. Published
 pages for the walker's website are the same artifact plus OpenGraph head tags (`opts.title` /
 `opts.headHtml`); still script-free, still covered by the same test.
+
+**Imported skins (.aimlessskin files)** are the premium/supporter channel: JSON records
+(`{format, version, id, name, css, icon, trace, card}`) validated by `skin-import.js`,
+persisted in the `skins` store (Dexie schema v3), resolved by `getSkin` after the built-ins
+with fallback to Default. The skin rail's `+` token opens the import/manage sheet. They ride
+backups (merge-by-id) and embed in exports like built-ins — premium is a perk, not DRM.
+Format spec and the pack tool (`pack-skin.mjs`) live in
+`docs/ignore/new-html-skins-wip/premium-skin-format.md`.
 
 **Per-photo filter resolution** is `effectiveSpec(photo, fallback)`: `photo.filterSpec`
 (a Surprise roll) beats `photo.filterId` (a named pick) beats the global pref. Detail render,

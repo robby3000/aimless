@@ -33,8 +33,18 @@ const FILTER = {
   },
 };
 
+const SKIN = {
+  id: 'fieldnotes',
+  name: 'Field Notes',
+  createdAt: 4000,
+  css: '.stop { color: #111; }',
+  icon: 'dark',
+  trace: { planStroke: '#111111', traceStroke: '#222222', originFill: '#333333', stopFill: '#444444' },
+  card: { bg: '#ffffff', fg: '#000000', accent: '#ff0000', font: "400 52px Georgia, serif" },
+};
+
 test('buildBackup produces the schema envelope and round-trips', () => {
-  const backup = buildBackup({ walks: [WALK], photos: [PHOTO], filters: [FILTER], prefs: { stops: 7 } });
+  const backup = buildBackup({ walks: [WALK], photos: [PHOTO], filters: [FILTER], skins: [SKIN], prefs: { stops: 7 } });
   assert.equal(backup.schema, BACKUP_SCHEMA);
   assert.equal(backup.version, BACKUP_VERSION);
   assert.ok(backup.exportedAt);
@@ -43,8 +53,9 @@ test('buildBackup produces the schema envelope and round-trips', () => {
   assert.deepEqual(parsed.photos, [PHOTO]);
   assert.equal(parsed.filters.length, 1);
   assert.equal(parsed.filters[0].id, 'rainy');
+  assert.deepEqual(parsed.skins, [SKIN]);
   assert.deepEqual(parsed.prefs, { stops: 7 });
-  assert.deepEqual(parsed.skipped, { walks: 0, photos: 0, filters: 0 });
+  assert.deepEqual(parsed.skipped, { walks: 0, photos: 0, filters: 0, skins: 0 });
 });
 
 test('parseBackup rejects non-JSON and non-object input', () => {
@@ -80,11 +91,15 @@ test('parseBackup skips invalid records and counts them', () => {
     walks: [WALK, { id: 42 }, 'nope', { stops: [] }],
     photos: [PHOTO, { id: 'x' }, { id: 'y', walkId: 'w', dataUrl: 123 }],
     filters: [FILTER, { id: 'BAD ID', name: 'x', spec: {} }, { name: 'no spec' }],
+    skins: [SKIN, { id: 'BAD ID', name: 'x', css: '.x{}', icon: 'dark',
+                   trace: { planStroke: '#111111', traceStroke: '#222222', originFill: '#333333', stopFill: '#444444' },
+                   card: { bg: '#ffffff', fg: '#000000', accent: '#ff0000', font: 'x' } }],
   });
   assert.equal(parsed.walks.length, 1);
   assert.equal(parsed.photos.length, 1);
   assert.equal(parsed.filters.length, 1);
-  assert.deepEqual(parsed.skipped, { walks: 3, photos: 2, filters: 2 });
+  assert.equal(parsed.skins.length, 1);
+  assert.deepEqual(parsed.skipped, { walks: 3, photos: 2, filters: 2, skins: 1 });
 });
 
 test('parseBackup defaults missing sections to empty', () => {

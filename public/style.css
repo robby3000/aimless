@@ -628,6 +628,10 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
   width: 56px; height: 56px; flex-shrink: 0;
   border-radius: 4px; background: var(--bg);
 }
+.skin-swatch {
+  width: 18px; height: 18px; flex-shrink: 0; margin-top: 2px;
+  border-radius: 50%; border: 1px solid var(--fg-dim);
+}
 .filter-card-info { flex: 1; min-width: 0; }
 .filter-card-info .filter-name {
   font-weight: 500;
@@ -1071,8 +1075,11 @@ body > nav button.active {
    #detail-content), exactly as the HTML export embeds them, so a skin
    applies fully here rather than fighting hard-coded dark card styles. */
 #screen-detail { gap: 12px; overflow: hidden; }
-/* The walk result scrolls; the control block under it stays put. */
-#detail-content { flex: 1; min-height: 0; overflow-y: auto; }
+/* The walk result scrolls; the control block under it stays put. The
+   width is forced: a skin's scoped `body { margin: 0 auto }` lands on
+   #detail-content, and auto margins override the column layout's stretch
+   — skins that declare a container then collapse to zero width. */
+#detail-content { flex: 1; min-height: 0; width: 100%; overflow-y: auto; }
 #detail-content img { max-width: 100%; }
 /* Same .photo-frame rules the export embeds — baked pixels, no filter markup. */
 .photo-frame {

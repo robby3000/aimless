@@ -18,7 +18,8 @@ import { unreachableRate } from '../proximity.js';
 import { formatKm, bounds } from '../geo.js';
 import { buildHTMLExport, downloadFile, voiceName, formatWalkDate, parseMyVoiceText, esc } from '../export.js';
 import { buildKmlString } from '../kml.js';
-import { SKINS, getSkin, scopeCSS, BASE_CSS } from '../skins.js';
+import { SKINS, getSkin, allSkins, setImportedSkins, scopeCSS, BASE_CSS } from '../skins.js';
+import { parseSkinFile, skinFileJson } from '../skin-import.js';
 import { FILTERS, getFilter, allFilters, visibleFilters, setImportedFilters, importFilterSpec, importFilterPayload,
          filterSpecJson, setHiddenFilters, hiddenFilters, hideFilter, unhideFilter, isFilterHidden,
          effectiveFilterId, effectiveSpec } from '../filters.js';
@@ -162,6 +163,11 @@ function makeRail(el, onSelect, canSettle = () => true) {
 
 const detailRail = makeRail(railDetail, async (value) => {
   if (railMode === 'skin') {
+    if (value === 'add') {
+      renderSkinManageList();
+      skinsSheetCtl.open();
+      return;
+    }
     currentSkin = value;
     applySkin();
     savePrefs();
@@ -223,14 +229,14 @@ const detailRail = makeRail(railDetail, async (value) => {
 function renderDetailRail() {
   if (railMode === 'filter') railHasSave = hasSavableSpec();
   railDetail.innerHTML = railMode === 'skin'
-    ? SKINS.map((s) => `<div class="rail-item" data-value="${s.id}">${s.name}</div>`).join('')
+    ? allSkins().map((s) => `<div class="rail-item" data-value="${s.id}">${s.name}</div>`).join('') + ADD_TOKEN
     : visibleFilters().map((f) => `<div class="rail-item" data-value="${f.id}">${f.name}</div>`).join('') + SURPRISE_TOKEN + (railHasSave ? SAVE_TOKEN : '') + ADD_TOKEN;
   detailRail.refresh();
   if (railMode === 'skin') detailRail.setValue(currentSkin);
   else syncFilterRailToSelection();
   railModeSkin.classList.toggle('active', railMode === 'skin');
   railModeFilter.classList.toggle('active', railMode === 'filter');
-  if (railMode === 'filter') watchAddToken();
+  watchAddToken();
 }
 
 function setRailMode(mode) {
@@ -253,7 +259,7 @@ function watchAddToken() {
     for (const e of entries) {
       if (e.intersectionRatio >= 0.8 && !addFilterToastShown) {
         addFilterToastShown = true;
-        showToast('Add custom filters');
+        showToast(railMode === 'skin' ? 'Import skins' : 'Add custom filters');
         addObserver.disconnect();
       }
     }
@@ -391,6 +397,138 @@ elFilterFile.addEventListener('change', async () => {
   elFilterFile.value = '';
   if (!file) return;
   applyFilterImport(await file.text());
+});
+
+// --- Skin management ---
+// Imported skins (.aimlessskin files) persist in the 'skins' store and ride
+// the picker rail after the built-ins. The management UI lives in the
+// #skins-sheet bottom sheet, mirroring the filters sheet.
+const elSkinJson = document.getElementById('skin-json');
+const elSkinFile = document.getElementById('skin-file');
+const elSkinImportStatus = document.getElementById('skin-import-status');
+const elSkinManageList = document.getElementById('skin-manage-list');
+
+export async function refreshImportedSkins() {
+  const db = await dbPromise;
+  setImportedSkins(db ? await all(db, 'skins') : []);
+  // Imported skins only ride the rail in skin mode — in filter mode the
+  // rebuild happens next time the user switches back.
+  if (railMode === 'skin') renderDetailRail();
+  renderSkinManageList();
+}
+
+// Newest imports first (createdAt desc; missing timestamps keep store order).
+function importedSkinsSorted() {
+  const imported = allSkins().slice(SKINS.length);
+  if (imported.some((s) => s.createdAt)) {
+    return [...imported].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  }
+  return [...imported].reverse();
+}
+
+function skinCard(s, custom) {
+  return `<article class="filter-card">` +
+    `<div class="filter-card-head">` +
+    `<span class="skin-swatch" style="background:${esc(s.trace.traceStroke)}"></span>` +
+    `<div class="filter-card-info">` +
+    `<div class="filter-name">${esc(s.name)}</div>` +
+    `<div class="filter-effects">${custom ? 'imported' : 'built-in'}</div>` +
+    `</div>` +
+    (custom ? `<button class="filter-card-delete" data-skin-delete="${s.id}" aria-label="Delete skin" title="Delete skin">✕</button>` : '') +
+    `</div>` +
+    `<div class="filter-card-actions">` +
+    (custom ? `<button class="filter-card-export" data-skin-export="${s.id}">export</button>` : '') +
+    `</div></article>`;
+}
+
+function renderSkinManageList() {
+  const customs = importedSkinsSorted().map((s) => skinCard(s, true)).join('');
+  const builtins = SKINS.map((s) => skinCard(s, false)).join('');
+  elSkinManageList.innerHTML =
+    (customs ? `<div class="filter-sub">Imported</div>${customs}` : '') +
+    `<div class="filter-sub">Built-in</div>${builtins}`;
+}
+
+async function applySkinImport(json) {
+  const db = await dbPromise;
+  try {
+    const { records, errors } = parseSkinFile(json);
+    const now = Date.now();
+    if (!db) {
+      const next = allSkins().slice(SKINS.length);
+      for (const record of records) {
+        record.createdAt = record.createdAt || now;
+        const at = next.findIndex((s) => s.id === record.id);
+        if (at >= 0) next[at] = record; else next.push(record);
+      }
+      setImportedSkins(next);
+    } else {
+      for (const record of records) {
+        record.createdAt = record.createdAt || now;
+        await put(db, 'skins', record);
+      }
+    }
+    await refreshImportedSkins();
+    const last = records[records.length - 1];
+    // An imported skin applies like a rail pick: persist it onto the walk.
+    currentSkin = last.id;
+    savePrefs();
+    detailRail.setValue(last.id);
+    if (currentDetailWalk) {
+      currentDetailWalk.skin = last.id;
+      if (db) await put(db, 'walks', currentDetailWalk);
+      showWalkDetail(currentDetailWalk.id);
+    }
+    elSkinImportStatus.textContent = records.length === 1 && !errors.length
+      ? `Imported "${last.name}".`
+      : `Imported ${records.length} skins.` + (errors.length ? ` Skipped ${errors.length}: ${errors[0]}` : '');
+    elSkinJson.value = '';
+  } catch (err) {
+    elSkinImportStatus.textContent = err.message;
+  }
+}
+
+// Export an imported skin as a .aimlessskin file — the same shape the
+// importer accepts, so the file round-trips.
+async function exportSkin(id) {
+  const skin = allSkins().find((s) => s.id === id);
+  if (!skin) return;
+  await shareOrDownloadFile(`${skin.id}.aimlessskin`, skinFileJson(skin), 'Aimless skin');
+}
+
+document.getElementById('btn-skin-apply').addEventListener('click', () => {
+  applySkinImport(elSkinJson.value);
+});
+document.getElementById('btn-skin-file').addEventListener('click', () => elSkinFile.click());
+elSkinFile.addEventListener('change', async () => {
+  const file = elSkinFile.files && elSkinFile.files[0];
+  elSkinFile.value = '';
+  if (!file) return;
+  applySkinImport(await file.text());
+});
+
+elSkinManageList.addEventListener('click', async (e) => {
+  const t = e.target.closest('[data-skin-delete], [data-skin-export]');
+  if (!t) return;
+  if (t.dataset.skinDelete) {
+    const id = t.dataset.skinDelete;
+    const name = getSkin(id)?.name || id;
+    if (!await askConfirm(`Delete ${name} skin?`)) return;
+    const db = await dbPromise;
+    if (db) await del(db, 'skins', id);
+    if (currentSkin === id) {
+      currentSkin = 'default';
+      if (currentDetailWalk) {
+        currentDetailWalk.skin = 'default';
+        if (db) await put(db, 'walks', currentDetailWalk);
+      }
+      savePrefs();
+    }
+    await refreshImportedSkins();
+    if (currentDetailWalk) showWalkDetail(currentDetailWalk.id);
+  } else if (t.dataset.skinExport) {
+    exportSkin(t.dataset.skinExport);
+  }
 });
 
 // --- Publish dialog (website hand-off) ---
@@ -1659,8 +1797,10 @@ function makeSheet(sheetEl, overlayEl) {
 
 const exportSheet = document.getElementById('export-sheet');
 const filtersSheet = document.getElementById('filters-sheet');
+const skinsSheet = document.getElementById('skins-sheet');
 const exportSheetCtl = makeSheet(exportSheet, document.getElementById('export-sheet-overlay'));
 const filtersSheetCtl = makeSheet(filtersSheet, document.getElementById('filters-sheet-overlay'));
+const skinsSheetCtl = makeSheet(skinsSheet, document.getElementById('skins-sheet-overlay'));
 
 document.getElementById('btn-detail-export').addEventListener('click', () => {
   if (!currentDetailWalk) return;
@@ -1821,6 +1961,7 @@ export function detailPrefValues() {
 // index.html. Awaited so imported filters exist before the rails render.
 export async function loadDetailPrefs(prefs) {
   await refreshImportedFilters();
+  await refreshImportedSkins();
   currentSkin = prefs.skin ?? 'default';
   currentFilter = prefs.filter ?? 'original';
   seenPhotoSelectHint = prefs.seenPhotoSelectHint ?? false;

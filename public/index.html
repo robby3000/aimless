@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-30d91e5c">
+  <meta name="aimless-build" content="aimless-v0.2.0-ac1a8441">
   <meta name="description" content="A walking app with no map. An arrow leads you to hidden waypoints; at each one, a verse and a photograph.">
   <!-- Share card for aimless.earth links. og:image must be absolute:
        crawlers do not resolve relative paths, and the all-relative
@@ -631,6 +631,23 @@
     <div id="filter-manage-list" class="filter-manage-list"></div>
   </div>
 
+  <!-- Skins bottom sheet (import + manage; used by Walk Detail) -->
+  <div id="skins-sheet-overlay" class="sheet-overlay" hidden></div>
+  <div id="skins-sheet" class="sheet" role="dialog" aria-label="Skins" hidden>
+    <div class="sheet-handle"></div>
+    <div class="sheet-heading">Skins</div>
+    <div class="filter-manage-import">
+      <textarea id="skin-json" rows="4" spellcheck="false" placeholder="Paste .aimlessskin file contents, or choose the file"></textarea>
+      <input type="file" id="skin-file" accept=".aimlessskin,.json,application/json" hidden>
+      <div class="filter-import-actions">
+        <button id="btn-skin-file">choose file</button>
+        <button id="btn-skin-apply">import</button>
+      </div>
+      <div id="skin-import-status" class="status-msg"></div>
+    </div>
+    <div id="skin-manage-list" class="filter-manage-list"></div>
+  </div>
+
   <!-- Export bottom sheet (used by Walk Detail) -->
   <div id="export-sheet-overlay" class="sheet-overlay" hidden></div>
   <div id="export-sheet" class="sheet" role="dialog" aria-label="Export" hidden>
@@ -788,6 +805,7 @@
     import { buildHexIndex, innerCard } from './lib/inner.js';
     import { oracleCard } from './lib/oracle.js';
     import { allFilters } from './lib/filters.js';
+    import { allSkins } from './lib/skins.js';
     import { buildBackup, parseBackup, resolveRestoredFilter } from './lib/backup.js';
     import { resolveNavTarget, canStartNewWalk } from './lib/walk-nav.js';
 
@@ -2196,10 +2214,10 @@
     async function backupData() {
       const db = await dbPromise;
       if (!db) return showToast('Storage unavailable');
-      const [walks, photos, filters] = await Promise.all([
-        all(db, 'walks'), all(db, 'photos'), all(db, 'filters'),
+      const [walks, photos, filters, skins] = await Promise.all([
+        all(db, 'walks'), all(db, 'photos'), all(db, 'filters'), all(db, 'skins'),
       ]);
-      if (!walks.length && !filters.length) return showToast('Nothing to back up');
+      if (!walks.length && !filters.length && !skins.length) return showToast('Nothing to back up');
       const prefs = await getPrefs(db, DEFAULT_PREFS);
       const name = await askText({
         label: 'File name',
@@ -2207,7 +2225,7 @@
       });
       if (!name) return;
       const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'aimless-backup';
-      const text = JSON.stringify(buildBackup({ walks, photos, filters, prefs }), null, 2) + '\n';
+      const text = JSON.stringify(buildBackup({ walks, photos, filters, skins, prefs }), null, 2) + '\n';
       const result = await detail.shareOrDownloadFile(`${slug}.json`, text, 'Aimless backup', { allowText: false });
       if (result === 'downloaded') showToast('Sharing unavailable; downloaded backup');
     }
@@ -2226,7 +2244,7 @@
       const walkIds = new Set((await all(db, 'walks')).map((w) => w.id));
       const photoIds = new Set((await all(db, 'photos')).map((p) => p.id));
       const filterById = new Map(allFilters().map((f) => [f.id, f]));
-      const added = { walks: 0, photos: 0, filters: 0 };
+      const added = { walks: 0, photos: 0, filters: 0, skins: 0 };
       let already = 0;
       for (const w of backup.walks) {
         if (walkIds.has(w.id)) { already += 1; continue; }
@@ -2251,6 +2269,15 @@
         filterById.set(record.id, record);
         added.filters += 1;
       }
+      // Skins merge by id only: a record already installed (or shadowing a
+      // built-in) is skipped — restore adds, never overwrites.
+      const skinIds = new Set([...allSkins().map((s) => s.id), ...(await all(db, 'skins')).map((s) => s.id)]);
+      for (const s of backup.skins) {
+        if (skinIds.has(s.id)) { already += 1; continue; }
+        await put(db, 'skins', s);
+        skinIds.add(s.id);
+        added.skins += 1;
+      }
       // Restored prefs are stored but not applied to the live session -
       // they take effect on the next launch.
       if (backup.prefs) {
@@ -2259,11 +2286,13 @@
         await setPrefs(db, picked);
       }
       await detail.refreshImportedFilters();
+      await detail.refreshImportedSkins();
       renderArchive();
-      const skipped = backup.skipped.walks + backup.skipped.photos + backup.skipped.filters;
+      const skipped = backup.skipped.walks + backup.skipped.photos + backup.skipped.filters + backup.skipped.skins;
       let msg = `Restored ${added.walks} walk${added.walks === 1 ? '' : 's'}, ` +
         `${added.photos} photo${added.photos === 1 ? '' : 's'}, ` +
-        `${added.filters} filter${added.filters === 1 ? '' : 's'}`;
+        `${added.filters} filter${added.filters === 1 ? '' : 's'}, ` +
+        `${added.skins} skin${added.skins === 1 ? '' : 's'}`;
       if (already) msg += ` (${already} already present)`;
       if (skipped) msg += ` - ${skipped} malformed record${skipped === 1 ? '' : 's'} skipped`;
       showToast(msg);

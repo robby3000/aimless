@@ -1179,7 +1179,24 @@ footer { margin-top: 8px; }
 
 /** Find a skin by id, falling back to the default. */
 export function getSkin(id) {
-  return SKINS.find((s) => s.id === id) ?? SKINS[0];
+  return SKINS.find((s) => s.id === id) ?? importedSkins.find((s) => s.id === id) ?? SKINS[0];
+}
+
+// Imported skins (.aimlessskin files) persist in the 'skins' store and ride
+// the picker rail after the built-ins. This list hydrates at startup and
+// after every import/delete — records are validated at import time, so
+// hydration only normalises and sorts.
+let importedSkins = [];
+
+export function setImportedSkins(list) {
+  importedSkins = (list || []).slice();
+  importedSkins.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  return importedSkins;
+}
+
+/** Built-ins then imports, in rail order. */
+export function allSkins() {
+  return [...SKINS, ...importedSkins];
 }
 
 /**

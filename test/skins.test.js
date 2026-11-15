@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { SKINS, getSkin, scopeCSS, BASE_CSS } from '../public/lib/skins.js';
 
 test('skins have unique ids and non-empty names', () => {
@@ -244,4 +245,14 @@ test('every skin survives scoping (produces output, no dangling braces)', () => 
     const close = (out.match(/}/g) || []).length;
     assert.equal(open, close, `${s.id} has unbalanced braces after scoping`);
   }
+});
+
+test('#detail-content keeps an explicit width (container skins would collapse)', () => {
+  // Skins that put container-type on body have their scoped rule land on
+  // #detail-content. The base skin CSS's `margin: 0 auto` lands there too,
+  // and auto margins override the column layout's stretch — the box would
+  // shrink-to-fit a container's zero-width content. style.css must force it.
+  const css = readFileSync(new URL('../public/style.css', import.meta.url), 'utf8');
+  const rule = css.match(/#detail-content\s*\{[^}]*\}/);
+  assert.ok(rule && /width:\s*100%/.test(rule[0]), '#detail-content lost width: 100%');
 });
