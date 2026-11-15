@@ -39,16 +39,19 @@ export function ringFooterHtml(slug) {
  * maintainer adds the site to the registry's `sites` by hand, and the
  * sync Action picks the site's walks up from its generated manifest.
  */
-export function ringJoinMailto(address, { host, base } = {}) {
+export function ringJoinMailto(address, { host, base, folder } = {}) {
   const subject = 'Aimless webring: add my site';
   const body = [
     'Please add my site to the Aimless webring.',
     '',
     `Site: ${host}`,
-    `Address: ${base}`,
+    `Site address: ${base}`,
+    // The URL the maintainer pastes into sites[].base - trailing slash
+    // and aimless folder included, so curation is one copy.
+    `Ring folder: ${folder}`,
     '',
     "I tick 'Add to the Aimless webring' when I build a walk's page, and upload the ring.json file Aimless makes with it.",
-  ].join('\n');
+  ].filter(Boolean).join('\n');
   return `mailto:${address}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 

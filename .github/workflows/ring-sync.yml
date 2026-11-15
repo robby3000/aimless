@@ -1,0 +1,38 @@
+name: Ring sync
+
+# Fetches each registered site's aimless/ring.json and merges its walks
+# into public/ring/ring.json. Commits only on change; the push then
+# deploys the new registry via pages.yml. The stamp does not move (ring/
+# is excluded), so installed phones get no update toast.
+on:
+  schedule:
+    - cron: '23 6 * * *'   # daily, off the hour
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ring-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node scripts/ring-sync.mjs
+      - name: Commit the registry if it changed
+        run: |
+          if [ -n "$(git status --porcelain public/ring/ring.json)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add public/ring/ring.json
+            git commit -m "ring: sync members from site manifests"
+            git push
+          else
+            echo "no changes"
+          fi

@@ -143,11 +143,13 @@ test('ringFooterHtml percent-encodes the slug', () => {
   assert.ok(ringFooterHtml('walk"x').includes('from=walk%22x'));
 });
 
-test('ringJoinMailto encodes subject and body with host and base', () => {
-  const url = ringJoinMailto(RING_JOIN_ADDRESS, { host: 'rob.neocities.org', base: 'https://rob.neocities.org/' });
+test('ringJoinMailto encodes subject and body with host, base and folder', () => {
+  const url = ringJoinMailto(RING_JOIN_ADDRESS, { host: 'rob.neocities.org', base: 'https://rob.neocities.org/', folder: 'https://rob.neocities.org/aimless/' });
   assert.ok(url.startsWith(`mailto:${RING_JOIN_ADDRESS}?subject=`));
   const parsed = new URL(url);
-  assert.ok(decodeURIComponent(parsed.search).includes('rob.neocities.org'));
-  assert.ok(decodeURIComponent(parsed.search).includes('https://rob.neocities.org/'));
+  const decoded = decodeURIComponent(parsed.search);
+  assert.ok(decoded.includes('rob.neocities.org'));
+  assert.ok(decoded.includes('https://rob.neocities.org/'));
+  assert.ok(decoded.includes('https://rob.neocities.org/aimless/'));
   assert.ok(!parsed.search.includes(' '));
 });

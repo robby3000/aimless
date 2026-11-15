@@ -841,7 +841,7 @@ document.getElementById('publish-open').addEventListener('click', () => {
 // manifest - there is no per-walk ask.
 document.getElementById('publish-join-ring').addEventListener('click', () => {
   if (!siteBase) return;
-  location.href = ringJoinMailto(RING_JOIN_ADDRESS, { host: siteLabel(siteBase), base: siteBase });
+  location.href = ringJoinMailto(RING_JOIN_ADDRESS, { host: siteLabel(siteBase), base: siteBase, folder: `${siteBase}aimless/` });
 });
 document.getElementById('publish-rebuild').addEventListener('click', () => {
   showPublishStep('consent');
