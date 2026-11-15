@@ -25,7 +25,8 @@ import { FILTERS, getFilter, allFilters, visibleFilters, setImportedFilters, imp
          effectiveFilterId, effectiveSpec } from '../filters.js';
 import { renderToCanvas } from '../engine/canvas.js';
 import { renderPhotoToCanvas } from '../filter-renderer.js';
-import { nextBuildSlug, normalizeSiteBase, siteBaseFromPrefs, siteLabel, siteTargets, uploadSteps, defaultDescription, ogHeadHtml, publishedEntries, indexHtml, feedXml } from '../publish.js';
+import { nextBuildSlug, normalizeSiteBase, siteBaseFromPrefs, siteLabel, siteTargets, uploadSteps, defaultDescription, ogHeadHtml, publishedEntries, indexHtml, feedXml, siteRingJson } from '../publish.js';
+import { RING_JOIN_ADDRESS, ringJoinMailto } from '../ring.js';
 import { traceSVG } from '../markup.js';
 import { askConfirm, askText } from './modals.js';
 
@@ -73,6 +74,7 @@ let seenPhotoSelectHint = false;
 let siteBase = '';   // the walker's website, as a base URL ending in '/'
 let neocitiesIndex = '';   // last emitted aimless/index.html - "(unchanged)" tag compares against it
 let neocitiesFeed = '';    // last emitted aimless/feed.xml - same compare
+let neocitiesRing = '';    // last emitted aimless/ring.json - same compare
 let cardMark = true;   // www.aimless.earth on the share card and OG image (opt-out)
 
 function applySkin() {
@@ -603,6 +605,8 @@ function renderPublishConsent() {
   publishCount.textContent = `${publishDesc.value.length}/200`;
   // New builds default to listed; a previously-built walk keeps its choice.
   document.getElementById('publish-indexed').checked = walk.neocities?.indexed ?? true;
+  // The ring is opt-in every build: unticked by default, honoured on rebuild.
+  document.getElementById('publish-ring').checked = walk.neocities?.ring ?? false;
 }
 publishDesc.addEventListener('input', () => {
   publishCount.textContent = `${publishDesc.value.length}/200`;
@@ -631,13 +635,19 @@ async function buildIndexFiles() {
     subtitle: `walks on ${siteLabel(siteBase)}`,
   });
   const feed = feedXml(entries, { base: siteBase });
-  const unchanged = str === neocitiesIndex && feed === neocitiesFeed;
+  // The webring manifest is emitted beside the index, but only while at
+  // least one published walk is ring-ticked - siteRingJson is null then,
+  // and the hand-off simply lists no ring.json.
+  const ring = siteRingJson(walks) ?? '';
+  const unchanged = str === neocitiesIndex && feed === neocitiesFeed && ring === neocitiesRing;
   neocitiesIndex = str;
   neocitiesFeed = feed;
+  neocitiesRing = ring;
   savePrefs();
   return {
     str, blob: new Blob([str], { type: 'text/html' }),
     feed, feedBlob: new Blob([feed], { type: 'application/xml' }),
+    ring, ringBlob: ring ? new Blob([ring], { type: 'application/json' }) : null,
     unchanged,
   };
 }
@@ -672,9 +682,14 @@ document.getElementById('btn-publish-build').addEventListener('click', async () 
       alt: `The route of an Aimless walk on ${formatWalkDate(walk.started)}`,
       feedUrl: `${targets.indexUrl}feed.xml`,
     });
+    const ringChecked = document.getElementById('publish-ring').checked;
     // The published page's footer links back to the walk index alongside
-    // it: an extra path for visitors who land on one page.
-    const html = await buildCurrentDetailHTML({ title, headHtml, indexHref: targets.indexUrl, feedHref: `${targets.indexUrl}feed.xml` });
+    // it: an extra path for visitors who land on one page. A ring-ticked
+    // build also bakes the three webring hops in.
+    const html = await buildCurrentDetailHTML({
+      title, headHtml, indexHref: targets.indexUrl, feedHref: `${targets.indexUrl}feed.xml`,
+      ...(ringChecked ? { ring: { slug } } : {}),
+    });
 
     walk.neocities = {
       base: siteBase,
@@ -685,6 +700,7 @@ document.getElementById('btn-publish-build').addEventListener('click', async () 
       builtAt: Date.now(),
       description,
       indexed: document.getElementById('publish-indexed').checked,
+      ring: ringChecked,
     };
     currentDetailWalk = walk;
     if (db) await put(db, 'walks', walk);
@@ -700,18 +716,22 @@ document.getElementById('btn-publish-build').addEventListener('click', async () 
       imageName: targets.imageName,
       indexName: 'index.html',
       feedName: 'feed.xml',
+      ringName: 'ring.json',
       htmlBlob: new Blob([html], { type: 'text/html' }),
       jpgBlob,
       indexBlob: index.blob,
       feedBlob: index.feedBlob,
+      ringBlob: index.ringBlob,
     };
-    const files = document.getElementById('publish-files');
-    files.replaceChildren(...[
+    const fileRows = [
       [targets.htmlName, publishBuilt.htmlBlob.size, ''],
       [targets.imageName, jpgBlob.size, ''],
       [publishBuilt.indexName, publishBuilt.indexBlob.size, index.unchanged ? 'unchanged' : ''],
       [publishBuilt.feedName, publishBuilt.feedBlob.size, index.unchanged ? 'unchanged' : ''],
-    ].map(([name, size, note]) => {
+    ];
+    if (index.ringBlob) fileRows.push([publishBuilt.ringName, index.ringBlob.size, index.unchanged ? 'unchanged' : '']);
+    const files = document.getElementById('publish-files');
+    files.replaceChildren(...fileRows.map(([name, size, note]) => {
       const li = document.createElement('li');
       const nameEl = document.createElement('span');
       nameEl.className = 'file-name';
@@ -753,6 +773,7 @@ document.getElementById('publish-download').addEventListener('click', () => {
     [publishBuilt.indexName, publishBuilt.indexBlob, 'text/html'],
     [publishBuilt.feedName, publishBuilt.feedBlob, 'application/xml'],
   ];
+  if (publishBuilt.ringBlob) parts.push([publishBuilt.ringName, publishBuilt.ringBlob, 'application/json']);
   parts.forEach(([name, blob, type], i) => setTimeout(() => downloadFile(name, blob, type), i * 300));
 });
 document.getElementById('publish-open-host').addEventListener('click', () => {
@@ -769,6 +790,7 @@ function renderPublishedStep() {
   indexEl.hidden = false;
   indexEl.textContent = `index: ${pub.pageUrl.replace(/[^/]*$/, '')}`;
   document.getElementById('publish-built-when').textContent = pub.builtAt ? formatWalkDate(pub.builtAt) : 'earlier';
+  document.getElementById('publish-ring-status').hidden = pub.ring !== true;
   document.getElementById('publish-listed').checked = pub.indexed === true;
 }
 // "Listed on the site index" is curation, not decoration: the index
@@ -812,6 +834,14 @@ document.getElementById('publish-share-link').addEventListener('click', async ()
 document.getElementById('publish-open').addEventListener('click', () => {
   const url = currentDetailWalk?.neocities?.pageUrl;
   if (url) window.open(url, '_blank', 'noopener');
+});
+// Joining the ring is one email per site, ever: a pre-filled mailto
+// asking for this site's address to be added to the registry's sites.
+// Once a site is in, its ring-ticked walks arrive by themselves via the
+// manifest - there is no per-walk ask.
+document.getElementById('publish-join-ring').addEventListener('click', () => {
+  if (!siteBase) return;
+  location.href = ringJoinMailto(RING_JOIN_ADDRESS, { host: siteLabel(siteBase), base: siteBase });
 });
 document.getElementById('publish-rebuild').addEventListener('click', () => {
   showPublishStep('consent');
@@ -1953,6 +1983,7 @@ export function detailPrefValues() {
     siteBase,
     neocitiesIndex,
     neocitiesFeed,
+    neocitiesRing,
     cardMark,
   };
 }
@@ -1968,6 +1999,7 @@ export async function loadDetailPrefs(prefs) {
   siteBase = siteBaseFromPrefs(prefs);
   neocitiesIndex = prefs.neocitiesIndex ?? '';
   neocitiesFeed = prefs.neocitiesFeed ?? '';
+  neocitiesRing = prefs.neocitiesRing ?? '';
   cardMark = prefs.cardMark ?? true;
   setHiddenFilters(prefs.hiddenFilters);
   if (isFilterHidden(currentFilter)) currentFilter = visibleFilters()[0]?.id || 'original';
