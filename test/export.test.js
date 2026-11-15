@@ -103,6 +103,17 @@ test('the footer links the RSS feed when feedHref is given, omits it otherwise',
   assert.ok(!withoutFeed.includes('feed.xml'));
 });
 
+test('the footer separates its items with a marked interpunct', async () => {
+  const both = await buildHTMLExport(WALK, [], '<svg></svg>', '', 'sky', {
+    indexHref: 'https://rob.neocities.org/aimless/',
+    feedHref: 'https://rob.neocities.org/aimless/feed.xml',
+  });
+  const footer = both.slice(both.indexOf('<footer>'));
+  assert.equal(footer.match(/<span class="footer-sep">·<\/span>/g).length, 2);
+  const bare = await buildHTMLExport(WALK, [], '<svg></svg>');
+  assert.ok(!bare.includes('footer-sep'));
+});
+
 test('the footer no longer says "self-contained"', async () => {
   const html = await buildHTMLExport(WALK, [], '<svg></svg>');
   assert.ok(!html.includes('self-contained'));

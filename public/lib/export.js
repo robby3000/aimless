@@ -234,9 +234,12 @@ export async function buildHTMLExport(walk, photos, svgTrace, skinCss = '', icon
   // Published walks link their Neocities walk index from the footer: an
   // ordinary relative/absolute anchor, script-free, so visitors landing on
   // one page can reach the rest. Only emitted when the artifact knows the
-  // index URL — standalone keepsakes carry no site link.
-  const indexLinkHtml = opts.indexHref ? ` <a href="${esc(opts.indexHref)}">Walk index</a>` : '';
-  const feedLinkHtml = opts.feedHref ? ` <a href="${esc(opts.feedHref)}">RSS</a>` : '';
+  // index URL — standalone keepsakes carry no site link. Each extra link is
+  // prefixed by a marked interpunct so the footer items never run together,
+  // whatever the skin's spacing does to plain text nodes.
+  const sep = ' <span class="footer-sep">·</span> ';
+  const indexLinkHtml = opts.indexHref ? `${sep}<a href="${esc(opts.indexHref)}">Walk index</a>` : '';
+  const feedLinkHtml = opts.feedHref ? `${sep}<a href="${esc(opts.feedHref)}">RSS</a>` : '';
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -262,7 +265,7 @@ ${embeddedCss}
   <div class="trace">${svgTrace}</div>
   ${stopCards}
   ${myVoiceTail}
-  <footer>Created with <a href="https://aimless.earth">Aimless</a>.${indexLinkHtml}${feedLinkHtml}</footer>
+  <footer>Created with <a href="https://aimless.earth">Aimless</a>${indexLinkHtml}${feedLinkHtml}</footer>
 </body>
 </html>`;
 }
