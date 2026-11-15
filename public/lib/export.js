@@ -4,6 +4,7 @@
 import { unreachableRate } from './proximity.js';
 import { formatKm } from './geo.js';
 import { BASE_CSS, PRINT_CSS } from './skins.js';
+import { ringFooterHtml } from './ring.js';
 
 
 export const esc = (value) => String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -137,7 +138,8 @@ function myVoiceBlockHtml(block) {
  *   beside it; `title` replaces the default `<title>`
  *   text (escaped); `headHtml` is emitted verbatim on its own line after
  *   the viewport meta, for caller-built OG tags (see publish.js
- *   `ogHeadHtml`).
+ *   `ogHeadHtml`); `ring: { slug }` adds the webring's prev/random/next
+ *   links to the footer for ring-ticked published walks.
  */
 export async function buildHTMLExport(walk, photos, svgTrace, skinCss = '', icon = 'sky', opts = {}) {
   const photoDataUrls = new Map();
@@ -240,6 +242,9 @@ export async function buildHTMLExport(walk, photos, svgTrace, skinCss = '', icon
   const sep = ' <span class="footer-sep">·</span> ';
   const indexLinkHtml = opts.indexHref ? `${sep}<a href="${esc(opts.indexHref)}">Walk index</a>` : '';
   const feedLinkHtml = opts.feedHref ? `${sep}<a href="${esc(opts.feedHref)}">RSS</a>` : '';
+  // Webring members chain to the hub: three static anchors baked at
+  // build time, so the artifact still runs no code - the hub resolves.
+  const ringNavHtml = opts.ring?.slug ? ringFooterHtml(opts.ring.slug) : '';
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -265,7 +270,7 @@ ${embeddedCss}
   <div class="trace">${svgTrace}</div>
   ${stopCards}
   ${myVoiceTail}
-  <footer>Created with <a href="https://aimless.earth">Aimless</a>${indexLinkHtml}${feedLinkHtml}</footer>
+  <footer>Created with <a href="https://aimless.earth">Aimless</a>${indexLinkHtml}${feedLinkHtml}${ringNavHtml}</footer>
 </body>
 </html>`;
 }

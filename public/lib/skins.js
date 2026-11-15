@@ -109,6 +109,9 @@ label.stop-face, label.stop-back, label.zoom-face, label.zoom-back { display: no
 .myvoice-tail p { margin: 0 0 1.1em; font-size: 1.1rem; line-height: 1.6; overflow-wrap: break-word; }
 footer { margin-top: 32px; color: var(--fg-dim); font-size: 0.8rem; text-align: center; }
 footer a { color: inherit; }
+/* Webring nav on published artifacts: a quiet row inside the footer, so
+   it inherits each skin's dim footer styling. */
+.ring { display: flex; justify-content: center; flex-wrap: wrap; gap: 4px 16px; margin-top: 10px; }
 .app-icon { width: 44px; height: 44px; vertical-align: -8px; margin-right: 6px; }
 /* Skins restyle photos via the bare img selector; the app icon must keep
    its own look, so pin it back with a more specific rule. */

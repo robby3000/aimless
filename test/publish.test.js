@@ -18,6 +18,7 @@ import {
   publishedEntries,
   indexHtml,
   feedXml,
+  siteRingJson,
 } from '../public/lib/publish.js';
 
 // Local-time constructors keep these fixtures timezone-independent.
@@ -417,3 +418,35 @@ test('ogHeadHtml adds the RSS discovery link only when feedUrl is given', () => 
 });
 
 
+
+test('siteRingJson lists only ring-ticked published walks', () => {
+  const ringWalk = {
+    ...WALK,
+    seed: 'in the ring',
+    neocities: { slug: 'walk-20261004-k3f9z2', ring: true, indexed: false },
+  };
+  const listedNotRing = {
+    ...WALK,
+    id: 'walk-1796941200001',
+    neocities: { slug: 'walk-20261004-000001', ring: false, indexed: true },
+  };
+  const ringNotBuilt = { ...WALK, id: 'walk-1796941200002', neocities: { ring: true } };
+  const manifest = JSON.parse(siteRingJson([ringWalk, listedNotRing, ringNotBuilt]));
+  assert.equal(manifest.version, 1);
+  assert.deepEqual(manifest.walks, [{ slug: 'walk-20261004-k3f9z2', title: 'in the ring', date: '2026-10-04' }]);
+});
+
+test('siteRingJson keeps the rebuild -N suffix and sorts by slug', () => {
+  const walks = [
+    { ...WALK, id: 'walk-1796941200002', neocities: { slug: 'walk-20261005-bbbb02', ring: true } },
+    { ...WALK, neocities: { slug: 'walk-20261004-k3f9z2-2', ring: true } },
+  ];
+  const manifest = JSON.parse(siteRingJson(walks));
+  assert.deepEqual(manifest.walks.map((w) => w.slug), ['walk-20261004-k3f9z2-2', 'walk-20261005-bbbb02']);
+  assert.equal(manifest.walks[0].date, '2026-10-04');
+});
+
+test('siteRingJson is null when nothing is in the ring', () => {
+  assert.equal(siteRingJson([]), null);
+  assert.equal(siteRingJson([{ ...WALK, neocities: { slug: 'walk-20261004-k3f9z2', indexed: true } }]), null);
+});

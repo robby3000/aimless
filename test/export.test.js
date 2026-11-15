@@ -114,6 +114,28 @@ test('the footer separates its items with a marked interpunct', async () => {
   assert.ok(!bare.includes('footer-sep'));
 });
 
+test('the footer carries the three webring links only when opts.ring is set', async () => {
+  const ringed = await buildHTMLExport(WALK, [], '<svg></svg>', '', 'sky', { ring: { slug: 'walk-20261004-k3f9z2' } });
+  const footer = ringed.slice(ringed.indexOf('<footer>'));
+  assert.ok(footer.includes('<nav class="ring">'));
+  for (const dir of ['prev', 'random', 'next']) {
+    assert.ok(footer.includes(`dir=${dir}`));
+  }
+  assert.ok(footer.includes('from=walk-20261004-k3f9z2'));
+  const bare = await buildHTMLExport(WALK, [], '<svg></svg>');
+  assert.ok(!bare.includes('class="ring"'));
+  assert.ok(!bare.includes('aimless.earth/ring/'));
+});
+
+test('a ringed artifact is still script-free and filter-free', async () => {
+  const html = await buildHTMLExport(WALK, [{ stopSeq: 0, dataUrl: 'data:image/jpeg;base64,QUJD' }], '<svg></svg>', '', 'sky', {
+    ring: { slug: 'walk-20261004-k3f9z2' },
+    indexHref: 'https://rob.neocities.org/aimless/',
+    feedHref: 'https://rob.neocities.org/aimless/feed.xml',
+  });
+  assertNoScriptOrFilters(html);
+});
+
 test('the footer no longer says "self-contained"', async () => {
   const html = await buildHTMLExport(WALK, [], '<svg></svg>');
   assert.ok(!html.includes('self-contained'));

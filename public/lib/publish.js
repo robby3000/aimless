@@ -288,6 +288,28 @@ ${BASE_CSS}
  * empty feed is still a valid channel - a first-timer can upload it
  * before their first build and subscribers see the walk when it lands.
  */
+/**
+ * aimless/ring.json on the walker's site: the manifest the webring sync
+ * fetches to learn which of this site's walks are in the ring. Returns
+ * null when no published walk has neocities.ring - the file is only
+ * emitted when there is something to list. Ring membership is its own
+ * flag, independent of the index listing. The slug is the real uploaded
+ * filename (rebuild -N suffix included) and the date matches the slug's
+ * local date, not UTC.
+ */
+export function siteRingJson(walks) {
+  const ringWalks = walks
+    .filter((w) => w.neocities?.slug && w.neocities.ring === true)
+    .map((w) => {
+      const d = new Date(w.started);
+      const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      return { slug: w.neocities.slug, title: w.seed, date };
+    })
+    .sort((a, b) => a.slug.localeCompare(b.slug));
+  if (ringWalks.length === 0) return null;
+  return `${JSON.stringify({ version: 1, walks: ringWalks }, null, 2)}\n`;
+}
+
 export function feedXml(entries, opts = {}) {
   const folder = `${opts.base}${PUBLISH_FOLDER}/`;
   const title = opts.title || `Aimless walks on ${siteLabel(opts.base)}`;
