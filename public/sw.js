@@ -50,6 +50,7 @@ const PRECACHE = [
   './lib/oracle.js',
   './lib/surprise.js',
   './lib/publish.js',
+  './lib/ring.js',
   './lib/engine/version.js',
   './lib/engine/spec.js',
   './lib/engine/registry.js',
@@ -138,6 +139,11 @@ self.addEventListener('fetch', (event) => {
 
   // Only handle same-origin GET.
   if (url.origin !== self.location.origin || event.request.method !== 'GET') return;
+
+  // The webring hub and its registry must always reach the network:
+  // cacheFirst matches with ignoreSearch, which would freeze both the
+  // redirect and ring.json at whatever they were on first visit.
+  if (url.pathname.startsWith(`${ROOT}ring/`)) return;
 
   // App-shell consistency: everything — navigations, JS modules, JSON —
   // serves from this worker's cache version. Network-first HTML could feed a
