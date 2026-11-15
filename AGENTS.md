@@ -92,6 +92,8 @@ public/
     oracle.js           # oracle voices: coordinate -> 4 pool indices (titles/l1/l2/l3)
     publish.js          # website hand-off (Neocities, GitHub Pages, any host): slug,
                         # site address -> base URL, upload steps, OG head, target URLs
+    ring.js             # the webring: hub resolver (resolveRing), registry + manifest
+                        # validators, footer links, join mailto. Pure, no DOM
     ui/
       modals.js         # promise dialogs: askConfirm, askText (self-wiring, no deps)
       detail.js         # Walk Detail: artifact view, skin/filter rails, filter management,
@@ -103,14 +105,21 @@ public/
     crow.json  threshold.json  lattice.json    # oracle pools (the seeded-deck format is replaced)
     stray.json small.json slow.json echo.json  # oracle pools
     inner.json          # 64 hexagrams: number, hex_font, binary, title, haiku
+  ring/
+    index.html          # the webring hub: redirects ?from=&dir= through resolveRing,
+                        # lists members otherwise; NOT precached, sw.js bypasses it
+    ring.json           # the registry: `sites` hand-edited, `members` maintained by
+                        # the ring-sync Action; excluded from the stamp hash
 test/
   geo.test.js  rng.test.js  walk.test.js  deck.test.js  proximity.test.js  skins.test.js
   platform.test.js  export.test.js  inner.test.js  filters.test.js  backup.test.js  filter-renderer.test.js
   kml.test.js  walk-nav.test.js  engine.test.js  surprise.test.js  oracle.test.js
-  publish.test.js  markup.test.js  skin-import.test.js
+  publish.test.js  markup.test.js  skin-import.test.js  ring.test.js
 scripts/
   make-icons.mjs      # npm run icons
   stamp-sw.mjs        # npm run stamp -- rewrites the sw.js cache name
+  ring-sync.mjs       # merges registered sites' aimless/ring.json manifests into
+                      # the registry's members; run by ring-sync.yml, safe by hand
   dev-serve.sh        # push public/ to a dev box + restart a tailnet-only TLS static
                       # server for phone testing; box details live in gitignored
                       # scripts/dev-serve.env (see docs/ignore/local-ops.md)
@@ -118,6 +127,7 @@ scripts/
 docs/                 # GITIGNORED, local only — planning, specs, drafts in docs/ignore/
 .github/workflows/
   pages.yml           # test + stamp check, then deploy public/ to GitHub Pages
+  ring-sync.yml       # daily + dispatch: runs ring-sync.mjs, commits the registry
 package.json          # no dependencies; "test": "node --test test/**/*.test.js"
 .gitignore            # has a belt-and-braces block: never commit exports, photos, or secrets
 ```
@@ -259,7 +269,20 @@ hosts; renaming stored data would cost a migration for nothing visible. The old
 `neocitiesSitename` pref is read through `siteBaseFromPrefs`.
 Nothing else goes in the footer: Neocities rejects `.kml` uploads, and embedded route links
 leaked GPS into every shared copy — footer KML was removed for both reasons. Route export
-survives only as the explicit **Export Route** action (a real `.kml` download).
+survives only as the explicit **Export Route** action (a real `.kml` download). The one
+sanctioned addition is `nav.ring`: three static hub links baked only into ring-ticked
+published builds (`opts.ring`), never into plain share/HTML exports.
+
+**Curating the ring** (`docs/20261003-aimless-webring-dev-plan.md`): joining is one email
+per site — the publish sheet's "Join the webring" sends a pre-filled request to
+`social@aimless.earth`. To approve, append `{host, base}` to `sites` in
+`public/ring/ring.json` (`base` is the site's `aimless/` folder URL, trailing slash
+included — the join email supplies it verbatim), run `npm test` (validates the file), and
+push. The daily `ring-sync` Action fetches each site's generated `aimless/ring.json` and
+moves ring-ticked walks into `members` itself — no per-walk human step. Removing a site
+removes all its walks; removed walks' footer links degrade to the hub's pending page, not
+a 404. `public/ring/` is not precached and is excluded from the stamp, so a sync or
+curation edit never disturbs installed phones.
 
 Vanilla ES modules. Pure logic in `public/lib/*.js`, tested with `node --test`; DOM code lives in
 `public/index.html` (go/walk/archive/done screens + boot) and `public/lib/ui/` (self-wiring
