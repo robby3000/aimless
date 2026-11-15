@@ -24,13 +24,20 @@ const SW = join(PUBLIC, 'sw.js');
 // relative locally) — including it makes the stamp machine-dependent.
 const EXCLUDE = new Set(['sw.js', '.DS_Store', '.git']);
 
+// Whole subtrees the stamp must not move on. ring/ is the webring hub and
+// its registry: curated by hand and rewritten by the sync Action between
+// releases, so including it would push an update toast to every installed
+// phone on each curation edit.
+const EXCLUDE_DIRS = new Set(['ring']);
+
 /** Every file under public/, as paths relative to public/, sorted. */
 function walk(dir) {
   const out = [];
   for (const entry of readdirSync(dir)) {
     const abs = join(dir, entry);
-    if (statSync(abs).isDirectory()) out.push(...walk(abs));
-    else if (!EXCLUDE.has(entry) && !EXCLUDE.has(relative(PUBLIC, abs))) out.push(abs);
+    if (statSync(abs).isDirectory()) {
+      if (!EXCLUDE_DIRS.has(relative(PUBLIC, abs))) out.push(...walk(abs));
+    } else if (!EXCLUDE.has(entry) && !EXCLUDE.has(relative(PUBLIC, abs))) out.push(abs);
   }
   return out.sort();
 }
