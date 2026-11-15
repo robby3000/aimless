@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-9a261beb">
+  <meta name="aimless-build" content="aimless-v0.2.0-f344eb43">
   <meta name="description" content="A walking app with no map. An arrow leads you to hidden waypoints; at each one, a verse and a photograph.">
   <!-- Share card for aimless.earth links. og:image must be absolute:
        crawlers do not resolve relative paths, and the all-relative
@@ -582,6 +582,11 @@
         <summary>What is the Aimless webring?</summary>
         <p>An old-web chain between published walks. Tick "Add to the Aimless webring" when you build a page and its footer grows three links - previous, random and next - that carry visitors between ring members' pages. Your page's address is listed on <a href="https://aimless.earth/ring/" target="_blank" rel="noopener">aimless.earth/ring/</a>.</p>
         <p>Joining your site is a one-time step: tap "Join the webring" on a published walk's sheet to send a pre-filled email. Once the site is in, ring-ticked walks arrive by themselves - the <code>ring.json</code> file in your uploads is what the ring reads. Untick the box and rebuild to take a walk out again.</p>
+      </details>
+      <details>
+        <summary>What is the ring.json file?</summary>
+        <p>It is the list the webring reads. When you tick "Add to the Aimless webring" on a build, Aimless writes <code>ring.json</code> beside the index: your site's public roll of ring walks, and nothing else. Upload it with the rest and it lives at <code>yoursite/aimless/ring.json</code>.</p>
+        <p>aimless.earth checks that file once a day and moves your ticked walks into the ring. No emails, no account. A walk you untick and rebuild drops off the list, and out of the ring at the next check. If you never join the ring, the file never appears in your uploads.</p>
       </details>
       <details>
         <summary>How can I remove a published walk?</summary>
