@@ -733,7 +733,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; }
 }
 .sheet-row .row-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .sheet-row .row-title { font-weight: 500; }
-.sheet-row .row-sub { font-size: 0.78rem; color: var(--fg-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sheet-row .row-sub { font-size: 0.78rem; color: var(--fg-dim); }
 .sheet-row + .sheet-heading, .sheet-check + .sheet-heading { padding-top: 14px; }
 .sheet-check { display: flex; align-items: center; gap: 10px; padding: 2px 20px 10px 58px; font-size: 0.78rem; color: var(--fg-dim); }
 .sheet-check input { accent-color: var(--accent); margin: 0; }
