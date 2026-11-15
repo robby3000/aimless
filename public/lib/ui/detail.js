@@ -1938,6 +1938,37 @@ exportSheet.addEventListener('click', async (e) => {
     } else {
       downloadFile(filename, cardBlob, 'image/png');
     }
+  } else if (action === 'images') {
+    // Every photo as a filtered JPEG file - the share sheet offers
+    // Save to Photos, a carousel post, Files, wherever.
+    const db = await dbPromise;
+    const photos = db ? await byIndex(db, 'photos', 'walkId', currentDetailWalk.id) : [];
+    photos.sort((a, b) => a.stopSeq - b.stopSeq);
+    if (!photos.length) { showToast('No photos on this walk'); return; }
+    const files = [];
+    try {
+      for (const [i, photo] of photos.entries()) {
+        const { img } = await photoSource(photo);
+        if (!img) continue;
+        const canvas = renderDetailCanvas(img, photo, effectiveSpec(photo, 'original'), PREVIEW_MAX_DIM);
+        const blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', 0.9));
+        if (blob) files.push(new File([blob], `aimless-${currentDetailWalk.seed}-${i + 1}.jpg`, { type: 'image/jpeg' }));
+      }
+    } catch (err) {
+      console.error('Photo render failed:', err);
+      alert(`This filter could not render on this device: ${err.message}`);
+      return;
+    }
+    if (!files.length) { showToast('Could not render the photos'); return; }
+    if (navigator.canShare && navigator.canShare({ files })) {
+      try {
+        await navigator.share({ files, title: `Aimless walk ${currentDetailWalk.seed}` });
+      } catch (err) {
+        if (err.name !== 'AbortError') console.warn('Share failed:', err);
+      }
+    } else {
+      files.forEach((f, i) => setTimeout(() => downloadFile(f.name, f, f.type), i * 300));
+    }
   } else if (action === 'website') {
     siteInput.value = siteBase;
     openPublish(siteBase ? (currentDetailWalk.neocities?.pageUrl ? 'published' : 'consent') : 'site');
