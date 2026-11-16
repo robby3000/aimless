@@ -289,10 +289,13 @@ per site — the publish sheet's "Join the webring" sends a pre-filled request t
 `public/ring/ring.json` (`base` is the site's `aimless/` folder URL, trailing slash
 included — the join email supplies it verbatim), run `npm test` (validates the file), and
 push. The daily `ring-sync` Action fetches each site's generated `aimless/ring.json` and
-moves ring-ticked walks into `members` itself — no per-walk human step. Removing a site
-removes all its walks; removed walks' footer links degrade to the hub's pending page, not
-a 404. `public/ring/` is not precached and is excluded from the stamp, so a sync or
-curation edit never disturbs installed phones.
+moves ring-ticked walks into `members` itself — no per-walk human step. Every run also
+re-fetches every claimed walk's page: anything not answering 200 with the `aimless.earth`
+marker is left out (logged, never fatal), so deleted-but-still-listed walks prune
+themselves and restored pages re-enter on their own. Removing a site removes all its
+walks; removed walks' footer links degrade to the hub's pending page, not a 404.
+`public/ring/` is not precached and is excluded from the stamp, so a sync or curation
+edit never disturbs installed phones.
 
 Vanilla ES modules. Pure logic in `public/lib/*.js`, tested with `node --test`; DOM code lives in
 `public/index.html` (go/walk/archive/done screens + boot) and `public/lib/ui/` (self-wiring

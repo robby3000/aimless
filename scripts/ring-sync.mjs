@@ -8,10 +8,14 @@
 //
 //   node scripts/ring-sync.mjs
 //
-// Zero dependencies (roadmap A2). Exits 1 on a malformed registry or
-// manifest, a fetch failure that is not a plain 404, or a new member
-// page that does not answer with the Aimless marker - nothing is
-// written in those cases, so a transient outage can't wipe the ring.
+// Zero dependencies (roadmap A2). Liveness, not just claims: EVERY
+// claimed walk's page is fetched each run and must answer 200 with the
+// Aimless marker, or it is left out - a walk deleted from its site but
+// still in the manifest simply stops being offered, and comes back on
+// its own if the page returns. Exits 1 on a malformed registry or
+// manifest, or a manifest fetch failure that is not a plain 404 -
+// nothing is written in those cases, so a broken sync can't silently
+// shrink the ring.
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -47,20 +51,28 @@ for (const site of registry.sites) {
   }
 }
 
-// Existing members keep their position; newly discovered walks append.
-const keep = registry.members.filter((m) => claimed.has(m.slug));
-const have = new Set(registry.members.map((m) => m.slug));
-const add = [...claimed.values()].filter((m) => !have.has(m.slug));
-
-// A new member's page must answer and look like an Aimless page: one
-// fetch each, which catches both typos and hostile manifests.
-for (const m of add) {
-  const res = await fetch(m.url, { headers: { accept: 'text/html' } });
-  if (!res.ok) throw new Error(`new member ${m.url}: HTTP ${res.status}`);
-  if (!(await res.text()).includes('aimless.earth')) {
-    throw new Error(`new member ${m.url}: no Aimless marker`);
-  }
+// A member earns its place by answering: every claimed walk's page must
+// return 200 and look like an Aimless page. Dead claims - a page deleted
+// but still in the manifest, a typo'd slug, a down page - are skipped
+// with a warning rather than failing the run: one broken member must
+// never wedge the sync for everyone else, and a restored page re-enters
+// on the next run. URLs are derived from the curated site base, so the
+// marker check is the only content verification needed.
+const MARKER = 'aimless.earth';
+const live = [];
+const dead = [];
+for (const m of claimed.values()) {
+  const res = await fetch(m.url, { headers: { accept: 'text/html' } }).catch(() => null);
+  if (res?.ok && (await res.text()).includes(MARKER)) live.push(m);
+  else dead.push(m.slug);
 }
+if (dead.length) console.log(`ring-sync: dead pages skipped: ${dead.join(', ')}`);
+
+// Existing members keep their position; live new walks append.
+const liveSlugs = new Set(live.map((m) => m.slug));
+const keep = registry.members.filter((m) => liveSlugs.has(m.slug));
+const have = new Set(registry.members.map((m) => m.slug));
+const add = live.filter((m) => !have.has(m.slug));
 
 const members = [...keep, ...add];
 const removed = registry.members.length - keep.length;
