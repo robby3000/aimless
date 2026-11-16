@@ -10,7 +10,8 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: write   # commit the updated registry
+  issues: write     # the audit-report issue on each change
 
 concurrency:
   group: ring-sync

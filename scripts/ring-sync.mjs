@@ -86,3 +86,35 @@ registry.updated = new Date().toISOString().slice(0, 10);
 validateRegistry(registry);
 writeFileSync(REGISTRY_PATH, `${JSON.stringify(registry, null, 2)}\n`);
 console.log(`ring-sync: ${members.length} members (+${add.length}, -${removed})`);
+
+// Audit report: a GitHub issue listing the run's changes so the
+// maintainer can eyeball walks from unvetted sites. Repo watching turns
+// issue creation into the notification email for free. Best-effort - a
+// failed report must not take the registry write down with it, and a
+// site earns "trusted" via a `trusted: true` flag in its sites entry.
+const trusted = new Map(registry.sites.map((s) => [s.host, s.trusted === true]));
+const unvetted = add.filter((m) => !trusted.get(m.site));
+const vetted = add.filter((m) => trusted.get(m.site));
+const lines = [];
+if (unvetted.length) lines.push('## New members - unvetted sites', ...unvetted.map((m) => `- ${m.url}`));
+if (vetted.length) lines.push('## New members - trusted sites', ...vetted.map((m) => `- ${m.url}`));
+if (dead.length) lines.push('## Dead claims skipped', ...dead.map((s) => `- ${s}`));
+if (removed) lines.push('## Removed', `${removed} member(s) left the ring`);
+
+const repo = process.env.GITHUB_REPOSITORY;
+const token = process.env.GITHUB_TOKEN;
+if (!repo || !token) {
+  console.log('ring-sync: no GITHUB_REPOSITORY/GITHUB_TOKEN - report skipped');
+} else {
+  try {
+    const date = new Date().toISOString().slice(0, 10);
+    const res = await fetch(`https://api.github.com/repos/${repo}/issues`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${token}`, accept: 'application/vnd.github+json', 'content-type': 'application/json' },
+      body: JSON.stringify({ title: `Ring sync ${date}: ${add.length} new, ${removed} removed`, body: lines.join('\n') }),
+    });
+    console.log(res.ok ? 'ring-sync: report issue created' : `ring-sync: issue creation failed: HTTP ${res.status}`);
+  } catch (err) {
+    console.log(`ring-sync: issue creation failed: ${err.message}`);
+  }
+}
