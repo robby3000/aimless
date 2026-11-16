@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-c7b1d6cd">
+  <meta name="aimless-build" content="aimless-v0.2.0-d479f27c">
   <meta name="description" content="A walking app with no map. An arrow leads you to hidden waypoints; at each one, a verse and a photograph.">
   <!-- Share card for aimless.earth links. og:image must be absolute:
        crawlers do not resolve relative paths, and the all-relative
@@ -589,7 +589,16 @@
       </details>
       <details>
         <summary>Is the webring moderated?</summary>
-        <p>Lightly, by hand. Every site is added by the maintainer after a join request, and each walk lives on its maker's own website - the ring only links. A site or a walk can be removed at any time. To report one, email social@aimless.earth.</p>
+        <p>Lightly, by hand. Every site is added by the maintainer after a join request, and each walk lives on its maker's own website - the ring only links. A site or a walk can be removed at any time. To report one, email contact@aimless.earth.</p>
+      </details>
+      <details>
+        <summary>How does a walk leave the webring?</summary>
+        <p>Rebuild it with "Add to the Aimless webring" unticked and upload the new files, including the updated <code>ring.json</code>. The walk drops off the ring's list at the next daily check, and any old links to it land on a gentle waiting page, never an error.</p>
+        <p>Deleting the page from your site works too, but upload the updated <code>ring.json</code> as well, or the ring may keep pointing at it for a day.</p>
+      </details>
+      <details>
+        <summary>Why does a webring link say "still forming"?</summary>
+        <p>That is the ring's waiting room, not a broken page. It means the walk the link pointed at is not in the ring right now - it may be new, removed, or waiting on the next daily sync. The page offers a random walk to carry the visitor onward.</p>
       </details>
       <details>
         <summary>What is the ring.json file?</summary>
