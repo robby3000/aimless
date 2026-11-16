@@ -130,13 +130,14 @@ test('public/ring/ring.json is a valid registry', () => {
 
 // --- footer + join ---
 
-test('ringFooterHtml bakes three escaped hub links', () => {
+test('ringFooterHtml bakes escaped hub links plus a hub index link', () => {
   const html = ringFooterHtml('walk-20261004-k3f9z2');
   assert.match(html, /<nav class="ring">/);
   const dirs = [...html.matchAll(/dir=(\w+)/g)].map((m) => m[1]);
   assert.deepEqual(dirs, ['prev', 'random', 'next']);
   assert.ok(html.includes(`${RING_HUB}?from=walk-20261004-k3f9z2&amp;dir=`));
   assert.ok(!html.includes('&dir='));
+  assert.ok(html.includes(`<a href="${RING_HUB}">webring</a>`));
 });
 
 test('ringFooterHtml percent-encodes the slug', () => {

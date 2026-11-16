@@ -114,7 +114,7 @@ test('the footer separates its items with a marked interpunct', async () => {
   assert.ok(!bare.includes('footer-sep'));
 });
 
-test('the footer carries the three webring links only when opts.ring is set', async () => {
+test('the footer carries the webring links only when opts.ring is set', async () => {
   const ringed = await buildHTMLExport(WALK, [], '<svg></svg>', '', 'sky', { ring: { slug: 'walk-20261004-k3f9z2' } });
   const footer = ringed.slice(ringed.indexOf('<footer>'));
   assert.ok(footer.includes('<nav class="ring">'));
@@ -122,6 +122,7 @@ test('the footer carries the three webring links only when opts.ring is set', as
     assert.ok(footer.includes(`dir=${dir}`));
   }
   assert.ok(footer.includes('from=walk-20261004-k3f9z2'));
+  assert.ok(footer.includes('<a href="https://aimless.earth/ring/">webring</a>'));
   const bare = await buildHTMLExport(WALK, [], '<svg></svg>');
   assert.ok(!bare.includes('class="ring"'));
   assert.ok(!bare.includes('aimless.earth/ring/'));

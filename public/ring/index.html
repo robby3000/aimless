@@ -29,6 +29,7 @@ a { color: var(--accent); }
 .howto { margin-top: 28px; font-size: 0.9rem; }
 footer { margin-top: 40px; color: var(--fg-dim); font-size: 0.8rem; text-align: center; }
 footer a { color: inherit; }
+footer .policy { margin-bottom: 14px; text-align: left; }
 </style>
 </head>
 <body>
@@ -38,7 +39,10 @@ footer a { color: inherit; }
   <noscript>
     <p>The ring needs JavaScript to walk on. <a href="https://aimless.earth">Aimless</a> is a walking app with no map.</p>
   </noscript>
-  <footer>Made by <a href="https://aimless.earth">Aimless</a>. Go Nowhere, Somewhere.</footer>
+  <footer>
+    <p class="policy">A hand-kept chain: every site is added by the maintainer, and every walk is its maker's own page on their own site. A site or a walk can be removed at any time - report one to <a href="mailto:social@aimless.earth">social@aimless.earth</a>.</p>
+    Made by <a href="https://aimless.earth">Aimless</a>. Go Nowhere, Somewhere.
+  </footer>
 <script type="module">
   import { resolveRing } from '../lib/ring.js';
 

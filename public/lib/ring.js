@@ -31,6 +31,7 @@ export function ringFooterHtml(slug) {
   <a href="${RING_HUB}?from=${from}&amp;dir=prev">previous walk</a>
   <a href="${RING_HUB}?from=${from}&amp;dir=random">random walk</a>
   <a href="${RING_HUB}?from=${from}&amp;dir=next">next walk</a>
+  <a href="${RING_HUB}">webring</a>
 </nav>`;
 }
 
