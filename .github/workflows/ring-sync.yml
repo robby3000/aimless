@@ -12,6 +12,7 @@ on:
 permissions:
   contents: write   # commit the updated registry
   issues: write     # the audit-report issue on each change
+  actions: write    # dispatch pages.yml - a GITHUB_TOKEN push can't trigger workflows
 
 concurrency:
   group: ring-sync
@@ -31,6 +32,8 @@ jobs:
           # the script takes its "no token" path and skips the report issue.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Commit the registry if it changed
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           if [ -n "$(git status --porcelain public/ring/ring.json)" ]; then
             git config user.name "github-actions[bot]"
@@ -38,6 +41,9 @@ jobs:
             git add public/ring/ring.json
             git commit -m "ring: sync members from site manifests"
             git push
+            # A GITHUB_TOKEN push cannot trigger other workflows, so the
+            # Pages deploy is dispatched explicitly or the registry never ships.
+            gh workflow run pages.yml --ref main
           else
             echo "no changes"
           fi
