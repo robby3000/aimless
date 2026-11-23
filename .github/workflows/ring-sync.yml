@@ -26,6 +26,10 @@ jobs:
         with:
           node-version: '22'
       - run: node scripts/ring-sync.mjs
+        env:
+          # GITHUB_TOKEN is a secret, not an exported env var - without this
+          # the script takes its "no token" path and skips the report issue.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Commit the registry if it changed
         run: |
           if [ -n "$(git status --porcelain public/ring/ring.json)" ]; then
