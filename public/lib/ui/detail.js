@@ -28,6 +28,7 @@ import { renderPhotoToCanvas } from '../filter-renderer.js';
 import { nextBuildSlug, normalizeSiteBase, siteBaseFromPrefs, siteLabel, siteTargets, uploadSteps, defaultDescription, ogHeadHtml, publishedEntries, indexHtml, feedXml, siteRingJson } from '../publish.js';
 import { RING_JOIN_ADDRESS, ringJoinMailto } from '../ring.js';
 import { traceSVG } from '../markup.js';
+import { isIOS } from '../platform.js';
 import { askConfirm, askText } from './modals.js';
 
 // Injected by index.html — shared with the go/walk/archive screens.
@@ -1838,6 +1839,18 @@ document.getElementById('btn-detail-export').addEventListener('click', () => {
   document.getElementById('add-text-title').textContent = hasText ? 'Replace text' : 'Add text';
   // A published walk's best share is its link; the row only exists then.
   document.getElementById('row-share-link').hidden = !currentDetailWalk.neocities?.pageUrl;
+  // iOS's share sheet already carries "Save N Images" into Photos, so the
+  // direct-download row only exists where it adds a path: on Android the
+  // download lands in ~/Download, which the media scanner indexes into the
+  // gallery; on desktop it is an ordinary file download.
+  const iosShareCoversSave = isIOS(navigator.userAgent, navigator.maxTouchPoints > 0);
+  document.getElementById('row-save-images').hidden = iosShareCoversSave;
+  document.getElementById('images-row-sub').textContent = iosShareCoversSave
+    ? 'Send every photo via the share menu - includes Save to Photos'
+    : 'Send every photo via the share menu';
+  document.getElementById('save-images-sub').textContent = /Android/i.test(navigator.userAgent)
+    ? 'Download each photo - lands in your gallery'
+    : 'Download each photo';
   exportSheetCtl.open();
 });
 
@@ -1883,6 +1896,40 @@ async function sharePageLink() {
   } catch {
     showToast('Could not copy link');
   }
+}
+
+// Every walk photo as a filtered JPEG File, or null when the walk has
+// none or they cannot be rendered. Shared by the export sheet's share
+// and save-to-files rows.
+async function walkPhotoFiles() {
+  const db = await dbPromise;
+  const photos = db ? await byIndex(db, 'photos', 'walkId', currentDetailWalk.id) : [];
+  photos.sort((a, b) => a.stopSeq - b.stopSeq);
+  if (!photos.length) { showToast('No photos on this walk'); return null; }
+  const files = [];
+  try {
+    for (const [i, photo] of photos.entries()) {
+      const { img } = await photoSource(photo);
+      if (!img) continue;
+      const canvas = renderDetailCanvas(img, photo, effectiveSpec(photo, 'original'), PREVIEW_MAX_DIM);
+      const blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', 0.9));
+      if (blob) files.push(new File([blob], `aimless-${currentDetailWalk.seed}-${i + 1}.jpg`, { type: 'image/jpeg' }));
+    }
+  } catch (err) {
+    console.error('Photo render failed:', err);
+    alert(`This filter could not render on this device: ${err.message}`);
+    return null;
+  }
+  if (!files.length) { showToast('Could not render the photos'); return null; }
+  return files;
+}
+
+// Stagger the per-file clicks so the browser doesn't drop a burst of
+// same-tick downloads. The toast sets expectations: on Android these
+// land in the gallery's Downloads album.
+function downloadPhotoFiles(files) {
+  files.forEach((f, i) => setTimeout(() => downloadFile(f.name, f, f.type), i * 300));
+  showToast(`Downloading ${files.length} photo${files.length === 1 ? '' : 's'}`);
 }
 
 // Sheet row dispatch. Each action body is the verbatim logic from the old
@@ -1949,27 +1996,12 @@ exportSheet.addEventListener('click', async (e) => {
       downloadFile(filename, cardBlob, 'image/png');
     }
   } else if (action === 'images') {
-    // Every photo as a filtered JPEG file - the share sheet offers
-    // Save to Photos, a carousel post, Files, wherever.
-    const db = await dbPromise;
-    const photos = db ? await byIndex(db, 'photos', 'walkId', currentDetailWalk.id) : [];
-    photos.sort((a, b) => a.stopSeq - b.stopSeq);
-    if (!photos.length) { showToast('No photos on this walk'); return; }
-    const files = [];
-    try {
-      for (const [i, photo] of photos.entries()) {
-        const { img } = await photoSource(photo);
-        if (!img) continue;
-        const canvas = renderDetailCanvas(img, photo, effectiveSpec(photo, 'original'), PREVIEW_MAX_DIM);
-        const blob = await new Promise((r) => canvas.toBlob(r, 'image/jpeg', 0.9));
-        if (blob) files.push(new File([blob], `aimless-${currentDetailWalk.seed}-${i + 1}.jpg`, { type: 'image/jpeg' }));
-      }
-    } catch (err) {
-      console.error('Photo render failed:', err);
-      alert(`This filter could not render on this device: ${err.message}`);
-      return;
-    }
-    if (!files.length) { showToast('Could not render the photos'); return; }
+    // The share sheet is itself the save route where the platform
+    // provides one: iOS offers "Save N Images" into Photos, and some
+    // Android galleries accept image shares. When file share isn't
+    // supported at all, fall back to the same downloads Save images does.
+    const files = await walkPhotoFiles();
+    if (!files) return;
     if (navigator.canShare && navigator.canShare({ files })) {
       try {
         await navigator.share({ files, title: `Aimless walk ${currentDetailWalk.seed}` });
@@ -1977,8 +2009,13 @@ exportSheet.addEventListener('click', async (e) => {
         if (err.name !== 'AbortError') console.warn('Share failed:', err);
       }
     } else {
-      files.forEach((f, i) => setTimeout(() => downloadFile(f.name, f, f.type), i * 300));
+      downloadPhotoFiles(files);
     }
+  } else if (action === 'images-save') {
+    // Hidden on iOS (the share sheet covers it). On Android these
+    // downloads are the reliable route into the gallery.
+    const files = await walkPhotoFiles();
+    if (files) downloadPhotoFiles(files);
   } else if (action === 'website') {
     siteInput.value = siteBase;
     openPublish(siteBase ? (currentDetailWalk.neocities?.pageUrl ? 'published' : 'consent') : 'site');

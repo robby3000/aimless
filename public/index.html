@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#062a35">
   <!-- rewritten by scripts/stamp-sw.mjs alongside the sw.js cache name;
        excluded from the fingerprint by normalization (see stamp-sw.mjs) -->
-  <meta name="aimless-build" content="aimless-v0.2.0-d479f27c">
+  <meta name="aimless-build" content="aimless-v0.2.0-058baad3">
   <meta name="description" content="A walking app with no map. An arrow leads you to hidden waypoints; at each one, a verse and a photograph.">
   <!-- Share card for aimless.earth links. og:image must be absolute:
        crawlers do not resolve relative paths, and the all-relative
@@ -691,6 +691,10 @@
       <span class="row-ico">&#9993;</span>
       <span class="row-text"><span class="row-title">Card</span><span class="row-sub">Export and send a card via the share menu</span></span>
     </button>
+    <button class="sheet-row" data-export="images">
+      <span class="row-ico">&#9635;</span>
+      <span class="row-text"><span class="row-title">Share images</span><span class="row-sub" id="images-row-sub">Send every photo via the share menu</span></span>
+    </button>
     <div class="sheet-heading">Save</div>
     <button class="sheet-row" data-export="download-html">
       <span class="row-ico">&lt;/&gt;</span>
@@ -700,9 +704,9 @@
       <span class="row-ico">&#9874;</span>
       <span class="row-text"><span class="row-title">Route</span><span class="row-sub">To open your walk routes in mapping apps</span></span>
     </button>
-    <button class="sheet-row" data-export="images">
-      <span class="row-ico">&#9635;</span>
-      <span class="row-text"><span class="row-title">Images</span><span class="row-sub">Export all images from this walk via the share menu</span></span>
+    <button class="sheet-row" data-export="images-save" id="row-save-images" hidden>
+      <span class="row-ico">&#8681;</span>
+      <span class="row-text"><span class="row-title">Save images</span><span class="row-sub" id="save-images-sub">Download each photo</span></span>
     </button>
     <button class="sheet-row" data-export="add-text" id="row-add-text" hidden>
       <span class="row-ico">&#9998;</span>
