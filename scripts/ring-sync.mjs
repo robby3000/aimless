@@ -68,6 +68,14 @@ for (const m of claimed.values()) {
 }
 if (dead.length) console.log(`ring-sync: dead pages skipped: ${dead.join(', ')}`);
 
+// A registered site whose manifest contributes nothing this run - a
+// [] or 404 manifest, or every claimed page dead. Logged on every run
+// so a quiet site is a standing fact in the Action output, and named
+// in the audit issue whenever a change also fires.
+const contributing = new Set(live.map((m) => m.site));
+const zeroSites = registry.sites.filter((s) => !contributing.has(s.host)).map((s) => s.host);
+if (zeroSites.length) console.log(`ring-sync: sites contributing no walks: ${zeroSites.join(', ')}`);
+
 // Existing members keep their position; live new walks append.
 const liveSlugs = new Set(live.map((m) => m.slug));
 const keep = registry.members.filter((m) => liveSlugs.has(m.slug));
@@ -100,6 +108,7 @@ if (unvetted.length) lines.push('## New members - unvetted sites', ...unvetted.m
 if (vetted.length) lines.push('## New members - trusted sites', ...vetted.map((m) => `- ${m.url}`));
 if (dead.length) lines.push('## Dead claims skipped', ...dead.map((s) => `- ${s}`));
 if (removed) lines.push('## Removed', `${removed} member(s) left the ring`);
+if (zeroSites.length) lines.push('## Registered sites contributing no walks', ...zeroSites.map((h) => `- ${h}`));
 
 const repo = process.env.GITHUB_REPOSITORY;
 const token = process.env.GITHUB_TOKEN;
